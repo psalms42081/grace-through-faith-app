@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import Colors, { PathB } from "@/constants/colors";
 
 interface RelatedContentProps {
   bookId: number;
@@ -44,14 +44,14 @@ export default function RelatedContent({
           style={({ pressed }) => [
             styles.toolCard,
             {
-              backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
+              backgroundColor: isDark ? theme.backgroundCard : PathB.surfaceCard,
               borderColor: theme.border,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
         >
-          <View style={[styles.toolIcon, { backgroundColor: "#C9933A18" }]}>
-            <Ionicons name="language-outline" size={20} color="#C9933A" />
+          <View style={[styles.toolIcon, { backgroundColor: "rgba(31,26,18,0.08)" }]}>
+            <Ionicons name="language-outline" size={20} color={PathB.ink} />
           </View>
           <Text
             style={[
@@ -85,14 +85,14 @@ export default function RelatedContent({
           style={({ pressed }) => [
             styles.toolCard,
             {
-              backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
+              backgroundColor: isDark ? theme.backgroundCard : PathB.surfaceCard,
               borderColor: theme.border,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
         >
-          <View style={[styles.toolIcon, { backgroundColor: "#E8456B18" }]}>
-            <Ionicons name="heart-outline" size={20} color="#E8456B" />
+          <View style={[styles.toolIcon, { backgroundColor: "rgba(31,26,18,0.08)" }]}>
+            <Ionicons name="heart-outline" size={20} color={PathB.ink} />
           </View>
           <Text
             style={[
@@ -124,8 +124,8 @@ export default function RelatedContent({
             style={({ pressed }) => [
               styles.actionBtn,
               {
-                backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
-                borderColor: theme.border,
+                backgroundColor: PathB.coral,
+                borderColor: PathB.coral,
                 opacity: pressed ? 0.85 : 1,
               },
             ]}
@@ -133,12 +133,12 @@ export default function RelatedContent({
             <Ionicons
               name="arrow-forward-outline"
               size={18}
-              color={theme.accent}
+              color="#fff"
             />
             <Text
               style={[
                 styles.actionText,
-                { color: theme.text, fontFamily: "Inter_600SemiBold" },
+                { color: "#fff", fontFamily: "Inter_600SemiBold" },
               ]}
             >
               Continue Reading
@@ -146,7 +146,7 @@ export default function RelatedContent({
             <Text
               style={[
                 styles.actionMeta,
-                { color: theme.textMuted, fontFamily: "Inter_400Regular" },
+                { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular" },
               ]}
             >
               {bookName} {chapter + 1}
@@ -154,7 +154,7 @@ export default function RelatedContent({
             <Ionicons
               name="chevron-forward"
               size={16}
-              color={theme.textMuted}
+              color="#fff"
             />
           </Pressable>
         )}
@@ -172,13 +172,13 @@ export default function RelatedContent({
           style={({ pressed }) => [
             styles.actionBtn,
             {
-              backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6",
+              backgroundColor: isDark ? theme.backgroundCard : PathB.surfaceCard,
               borderColor: theme.border,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
         >
-          <Ionicons name="layers-outline" size={18} color={theme.accent} />
+          <Ionicons name="layers-outline" size={18} color={PathB.ink} />
           <Text
             style={[
               styles.actionText,

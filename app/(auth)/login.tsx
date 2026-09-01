@@ -16,6 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -93,7 +96,7 @@ export default function LoginScreen() {
           {resetMode ? (
             <>
               <View style={s.resetInfo}>
-                <Ionicons name="information-circle" size={20} color="#C9933A" />
+                <Ionicons name="information-circle" size={20} color={PathB.ink} />
                 <Text style={s.resetInfoText}>
                   Password reset is available from your profile after signing in. If you cannot access your account, please create a new one.
                 </Text>
@@ -183,19 +186,19 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5EFE0" },
+  container: { flex: 1, backgroundColor: PathB.surface },
   scroll: { flexGrow: 1, padding: 24 },
   header: { alignItems: "center", marginTop: 32, marginBottom: 32, gap: 8 },
   brandMark: { width: 56, height: 56, borderRadius: 12 },
   title: {
     fontSize: 28,
-    color: "#2C1810",
+    color: PathB.ink,
     fontFamily: "Lora_700Bold",
     marginTop: 12,
   },
   subtitle: {
     fontSize: 14,
-    color: "#6B6660",
+    color: HV2.inkMutedText,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
@@ -212,20 +215,20 @@ const s = StyleSheet.create({
   form: { gap: 6 },
   label: {
     fontSize: 13,
-    color: "#6B6660",
+    color: HV2.inkMutedText,
     fontFamily: "Inter_500Medium",
     marginTop: 8,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: "#FFFDF6",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    color: "#2C1810",
+    color: PathB.ink,
     fontFamily: "Inter_400Regular",
     borderWidth: 1,
-    borderColor: "#DDD0B8",
+    borderColor: SWEEP_LIGHT.border,
   },
   passwordRow: { position: "relative" as const },
   passwordInput: { paddingRight: 48 },
@@ -235,7 +238,7 @@ const s = StyleSheet.create({
     top: 16,
   },
   primaryBtn: {
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center" as const,
@@ -254,24 +257,24 @@ const s = StyleSheet.create({
     gap: 6,
     marginTop: 28,
   },
-  footerText: { color: "#6B6660", fontSize: 14, fontFamily: "Inter_400Regular" },
-  linkText: { color: "#C9933A", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  footerText: { color: HV2.inkMutedText, fontSize: 14, fontFamily: "Inter_400Regular" },
+  linkText: { color: PathB.ink, fontSize: 14, fontFamily: "Inter_600SemiBold" },
   skipBtn: { alignItems: "center" as const, marginTop: 16 },
-  skipText: { color: "#6B6660", fontSize: 13, fontFamily: "Inter_400Regular" },
+  skipText: { color: HV2.inkMutedText, fontSize: 13, fontFamily: "Inter_400Regular" },
   forgotBtn: { alignItems: "center" as const, marginTop: 12 },
-  forgotText: { color: "#C9933A", fontSize: 13, fontFamily: "Inter_500Medium" },
+  forgotText: { color: HV2.inkMutedText, fontSize: 13, fontFamily: "Inter_500Medium" },
   resetInfo: {
     flexDirection: "row" as const,
     alignItems: "flex-start" as const,
     gap: 10,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(201, 147, 58, 0.08)",
+    backgroundColor: SWEEP_LIGHT.backgroundSecondary,
     marginTop: 12,
     marginBottom: 8,
   },
   resetInfoText: {
-    color: "#6B6660",
+    color: HV2.inkMutedText,
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     flex: 1,

@@ -9,11 +9,15 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { Stack, router } from "expo-router";
+import { Stack, router, Redirect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
+import { ENABLE_ORG_TOOLS } from "@/lib/feature-flags";
 
 type Step = "choice" | "join" | "register-church" | "register-conference";
 
@@ -28,6 +32,10 @@ export default function OrgOnboardingScreen() {
   const [success, setSuccess] = useState("");
 
   const topPad = Platform.OS === "web" ? 67 + insets.top : insets.top;
+
+  if (!ENABLE_ORG_TOOLS) {
+    return <Redirect href="/(tabs)/home-v2" />;
+  }
 
   const handleJoin = async () => {
     if (!joinCode.trim()) {
@@ -109,7 +117,7 @@ export default function OrgOnboardingScreen() {
         {step === "choice" && (
           <>
             <View style={s.iconWrap}>
-              <Ionicons name="people" size={56} color="#C9933A" />
+              <Ionicons name="people" size={56} color={PathB.coral} />
             </View>
             <Text style={s.title}>Join or Register an Organization</Text>
             <Text style={s.subtitle}>
@@ -117,12 +125,12 @@ export default function OrgOnboardingScreen() {
             </Text>
 
             <Pressable style={s.directoryLink} onPress={() => router.push("/church-connect" as any)}>
-              <Ionicons name="search-outline" size={18} color="#C9933A" />
+              <Ionicons name="search-outline" size={18} color={HV2.inkMutedText} />
               <Text style={s.directoryLinkText}>Looking for a local church? Find it in the directory</Text>
             </Pressable>
 
             <Pressable style={s.optionCard} onPress={() => setStep("join")}>
-              <Ionicons name="enter-outline" size={28} color="#C9933A" />
+              <Ionicons name="enter-outline" size={28} color={PathB.ink} />
               <View style={s.optionTextWrap}>
                 <Text style={s.optionTitle}>Join a Church</Text>
                 <Text style={s.optionDesc}>I have a join code from my church administrator</Text>
@@ -131,7 +139,7 @@ export default function OrgOnboardingScreen() {
             </Pressable>
 
             <Pressable style={s.optionCard} onPress={() => setStep("register-church")}>
-              <Ionicons name="home-outline" size={28} color="#C9933A" />
+              <Ionicons name="home-outline" size={28} color={PathB.ink} />
               <View style={s.optionTextWrap}>
                 <Text style={s.optionTitle}>Register My Church</Text>
                 <Text style={s.optionDesc}>I'm a leader setting up my church</Text>
@@ -140,7 +148,7 @@ export default function OrgOnboardingScreen() {
             </Pressable>
 
             <Pressable style={s.optionCard} onPress={() => setStep("register-conference")}>
-              <Ionicons name="globe-outline" size={28} color="#C9933A" />
+              <Ionicons name="globe-outline" size={28} color={PathB.ink} />
               <View style={s.optionTextWrap}>
                 <Text style={s.optionTitle}>Register a Conference</Text>
                 <Text style={s.optionDesc}>Manage multiple churches under one conference</Text>
@@ -157,7 +165,7 @@ export default function OrgOnboardingScreen() {
         {step === "join" && (
           <>
             <Pressable onPress={() => { setStep("choice"); setError(""); }} style={s.backBtn}>
-              <Ionicons name="arrow-back" size={22} color="#C9933A" />
+              <Ionicons name="arrow-back" size={22} color={PathB.ink} />
               <Text style={s.backText}>Back</Text>
             </Pressable>
             <Text style={s.title}>Join a Church</Text>
@@ -194,7 +202,7 @@ export default function OrgOnboardingScreen() {
         {(step === "register-church" || step === "register-conference") && (
           <>
             <Pressable onPress={() => { setStep("choice"); setError(""); }} style={s.backBtn}>
-              <Ionicons name="arrow-back" size={22} color="#C9933A" />
+              <Ionicons name="arrow-back" size={22} color={PathB.ink} />
               <Text style={s.backText}>Back</Text>
             </Pressable>
             <Text style={s.title}>
@@ -239,19 +247,19 @@ export default function OrgOnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0D0D15" },
+  container: { flex: 1, backgroundColor: PathB.surface },
   iconWrap: { alignItems: "center", marginBottom: 20 },
   title: {
     fontSize: 24,
     fontFamily: "Lora_700Bold",
-    color: "#E8DCC8",
+    color: PathB.ink,
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: "#888",
+    color: HV2.inkMutedText,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 16,
@@ -267,32 +275,32 @@ const s = StyleSheet.create({
   directoryLinkText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: "#C9933A",
+    color: HV2.inkMutedText,
     textAlign: "center",
     flexShrink: 1,
   },
   optionCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1A1A24",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 14,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#2A2A35",
+    borderColor: SWEEP_LIGHT.border,
     gap: 14,
   },
   optionTextWrap: { flex: 1 },
   optionTitle: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: "#E8DCC8",
+    color: PathB.ink,
     marginBottom: 2,
   },
   optionDesc: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: "#888",
+    color: HV2.inkMutedText,
   },
   skipBtn: {
     alignItems: "center",
@@ -302,7 +310,7 @@ const s = StyleSheet.create({
   skipText: {
     fontSize: 15,
     fontFamily: "Inter_500Medium",
-    color: "#C9933A",
+    color: HV2.inkMutedText,
   },
   backBtn: {
     flexDirection: "row",
@@ -313,17 +321,17 @@ const s = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontFamily: "Inter_500Medium",
-    color: "#C9933A",
+    color: PathB.ink,
   },
   input: {
-    backgroundColor: "#1A1A24",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#2A2A35",
+    borderColor: SWEEP_LIGHT.border,
     padding: 16,
     fontSize: 16,
     fontFamily: "Inter_400Regular",
-    color: "#E8DCC8",
+    color: PathB.ink,
     marginBottom: 16,
   },
   error: {
@@ -341,7 +349,7 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
   primaryBtn: {
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

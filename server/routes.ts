@@ -198,7 +198,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/map-embed", (req, res) => {
     const { markers, centerLat, centerLng, zoom, userLat, userLng } = req.query;
-    const markersData = markers ? JSON.parse(decodeURIComponent(markers as string)) : [];
+    let markersData: Array<{ id?: string; name?: string; lat?: number; lng?: number; selected?: boolean }> = [];
+    if (markers && typeof markers === "string") {
+      try {
+        const parsed = JSON.parse(markers);
+        if (Array.isArray(parsed)) {
+          markersData = parsed.filter((m) =>
+            m && Number.isFinite(Number(m.lat)) && Number.isFinite(Number(m.lng)),
+          );
+        }
+      } catch {
+        markersData = [];
+      }
+    }
     const cLat = parseFloat(centerLat as string) || 39.8283;
     const cLng = parseFloat(centerLng as string) || -98.5795;
     const z = parseInt(zoom as string) || 4;
@@ -214,9 +226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body,#map{width:100%;height:100%}
-.sel-m{background:#C9933A;border:2px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 0 6px rgba(201,147,58,0.6)}
-.def-m{background:#E8456B;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 4px rgba(0,0,0,0.3)}
-.usr-m{background:#4A90D9;border:3px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 8px rgba(74,144,217,0.5)}
+.sel-m{background:#E8604C;border:2px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 0 6px rgba(232,96,76,0.55)}
+.def-m{background:#1F1A12;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 4px rgba(0,0,0,0.3)}
+.usr-m{background:#6B6660;border:3px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 8px rgba(107,102,96,0.45)}
 </style>
 </head>
 <body>
@@ -232,7 +244,7 @@ ms.forEach(function(m){
   var cls=m.selected?'sel-m':'def-m';
   var sz=m.selected?16:14;
   var mk=L.marker([m.lat,m.lng],{icon:L.divIcon({className:'',html:'<div class="'+cls+'"></div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}).addTo(map);
-  mk.bindPopup('<div style="font-family:sans-serif;text-align:center;min-width:140px;"><b style="font-size:13px;">'+m.name+'</b><br><a href="https://www.google.com/maps/dir/?api=1&destination='+m.lat+','+m.lng+'" target="_blank" style="display:inline-block;margin-top:6px;padding:5px 12px;background:#C9933A;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">Get Directions</a></div>',{offset:[0,-4]});
+  mk.bindPopup('<div style="font-family:sans-serif;text-align:center;min-width:140px;"><b style="font-size:13px;">'+m.name+'</b><br><a href="https://www.google.com/maps/dir/?api=1&destination='+m.lat+','+m.lng+'" target="_blank" style="display:inline-block;margin-top:6px;padding:5px 12px;background:#E8604C;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;">Get Directions</a></div>',{offset:[0,-4]});
   mk.on('click',function(){map.flyTo([m.lat,m.lng],16,{duration:0.5});window.parent.postMessage(JSON.stringify({type:'markerPress',id:m.id}),'*');});
   bounds.push([m.lat,m.lng]);
 });

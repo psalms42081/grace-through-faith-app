@@ -1,4 +1,4 @@
-import React, { Component, useState, useCallback } from "react";
+import React, { Component, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,9 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Alert,
   ActivityIndicator,
   TextInput,
   Modal,
-  Share,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
@@ -18,14 +16,27 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import Colors from "@/constants/colors";
-import { useTheme } from "@/hooks/useTheme";
-import { useProStatus } from "@/contexts/ProContext";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
+import { ENABLE_ORG_TOOLS } from "@/lib/feature-flags";
 import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { useProStatus } from "@/contexts/ProContext";
+import { apiRequest } from "@/lib/query-client";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+
+const C = {
+  surface: PathB.surface,
+  card: PathB.surfaceCard,
+  ink: PathB.ink,
+  inkMuted: HV2.inkMutedText,
+  coral: PathB.coral,
+  coralInk: PathB.coralInk,
+  pill: SWEEP_LIGHT.backgroundSecondary,
+  border: SWEEP_LIGHT.border,
+};
 
 class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -33,17 +44,17 @@ class ProfileErrorBoundary extends Component<{ children: React.ReactNode }, { er
   render() {
     if (this.state.error) {
       return (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: "#0D0D15" }}>
-          <Ionicons name="alert-circle-outline" size={48} color="#C9933A" />
-          <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", marginTop: 16, textAlign: "center" }}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: C.surface }}>
+          <Ionicons name="alert-circle-outline" size={48} color={C.coral} />
+          <Text style={{ color: C.ink, fontSize: 18, fontWeight: "700", marginTop: 16, textAlign: "center" }}>
             Something went wrong
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginTop: 8, textAlign: "center" }}>
+          <Text style={{ color: C.inkMuted, fontSize: 13, marginTop: 8, textAlign: "center" }}>
             {this.state.error.message}
           </Text>
           <Pressable
             onPress={() => this.setState({ error: null })}
-            style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: "#C9933A", borderRadius: 10 }}
+            style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: C.coral, borderRadius: 10 }}
           >
             <Text style={{ color: "#fff", fontWeight: "600" }}>Try Again</Text>
           </Pressable>
@@ -62,34 +73,31 @@ interface WeeklyStreakData {
   lastReadDate: string | null;
 }
 
-interface GrowthData {
-  deepStudyMinutes: number;
-  totalSessions: number;
-  wordsLearned: number;
-  booksExplored: number;
-  totalBooks: number;
-}
-
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-const BADGES = [
-  { id: "first-read", icon: "book", label: "First Steps", check: (s: number) => s >= 1 },
-  { id: "week-warrior", icon: "flame", label: "Week Warrior", check: (s: number) => s >= 7 },
-  { id: "perfect-week", icon: "star", label: "Perfect Week", check: (_s: number, pw: number) => pw >= 1 },
-  { id: "month-strong", icon: "shield-checkmark", label: "Month Strong", check: (s: number) => s >= 30 },
-  { id: "deep-diver", icon: "telescope", label: "Deep Diver", check: (_s: number, _pw: number, ts: number) => ts >= 1 },
-  { id: "explorer", icon: "map", label: "Explorer", check: (_s: number, _pw: number, _ts: number, be: number) => be >= 10 },
-  { id: "scholar", icon: "school", label: "Scholar", check: (_s: number, _pw: number, _ts: number, be: number) => be >= 33 },
-  { id: "centurion", icon: "trophy", label: "Centurion", check: (s: number) => s >= 100 },
-] as const;
+type ActivityKind = "bookmark" | "highlight" | "note";
+
+type ActivityItem = {
+  key: string;
+  kind: ActivityKind;
+  label: string;
+  sub: string;
+  at: number;
+};
+
+function activityTimestamp(value: unknown): number {
+  if (!value) return 0;
+  const ms = new Date(value as string).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
 
 function ProfileScreenInner() {
-  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const theme = SWEEP_LIGHT;
 
   const { isPatron } = useProStatus();
-  const { user, isGuest, isAuthenticated, logout } = useAuth();
+  const { user, isGuest, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -104,7 +112,7 @@ function ProfileScreenInner() {
 
   const { data: leaderStatus } = useQuery<{ request: { id: string; status: string } | null }>({
     queryKey: ["/api/leader-requests/my-status"],
-    enabled: isAuthenticated && !isLeader && user?.role !== "admin",
+    enabled: ENABLE_ORG_TOOLS && isAuthenticated && !isLeader && user?.role !== "admin",
   });
 
   const leaderRequestMutation = useMutation({
@@ -126,16 +134,12 @@ function ProfileScreenInner() {
     queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${uid}`)],
   });
 
-  const { data: growthData } = useQuery<GrowthData>({
-    queryKey: [`/api/analytics/growth?userId=${uid}`],
-  });
-
   const { data: myOrgData, isLoading: orgLoading } = useQuery<{
     organization: { id: string; name: string; type: string; joinCode: string; memberCount: number } | null;
     role: string | null;
   }>({
     queryKey: ["/api/organizations/my-org"],
-    enabled: isAuthenticated,
+    enabled: ENABLE_ORG_TOOLS && isAuthenticated,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -164,7 +168,7 @@ function ProfileScreenInner() {
     id: string; name: string; joinCode: string; memberCount: number;
   }[]>({
     queryKey: [`/api/organizations/${myOrgData?.organization?.id}/churches`],
-    enabled: isAuthenticated && isConference && !!myOrgData?.organization?.id,
+    enabled: ENABLE_ORG_TOOLS && isAuthenticated && isConference && !!myOrgData?.organization?.id,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -215,9 +219,6 @@ function ProfileScreenInner() {
   const perfectWeeks = weeklyData?.perfectWeeks ?? 0;
   const todayIdx = new Date().getDay();
 
-  const booksExplored = growthData?.booksExplored ?? 0;
-  const totalSessions = growthData?.totalSessions ?? 0;
-
   const initials = (() => {
     const name = user?.displayName || "";
     const parts = name.trim().split(/\s+/);
@@ -225,21 +226,44 @@ function ProfileScreenInner() {
     return name.slice(0, 2).toUpperCase() || "G";
   })();
 
-  const handleShareProfile = useCallback(async () => {
-    const profileName = user?.displayName || "Guest";
-    const message = `Check out my faith journey on Informed Ministries! I'm ${profileName} with a ${streak}-day reading streak.`;
-    if (Platform.OS === "web") {
-      await Clipboard.setStringAsync(message);
-      showToast("Profile copied to clipboard!", "success");
-    } else {
-      try { await Share.share({ message }); } catch {}
-    }
-  }, [user?.displayName, streak, showToast]);
+  const activityItems = useMemo<ActivityItem[]>(() => {
+    const items: ActivityItem[] = [];
+    (recentBookmarks ?? []).forEach((b, i) => {
+      items.push({
+        key: `bk-${b.id ?? i}`,
+        kind: "bookmark",
+        label: "Saved a verse",
+        sub: b.label || (b.bookName && b.chapter && b.verse ? `${b.bookName} ${b.chapter}:${b.verse}` : b.verseId),
+        at: activityTimestamp(b.createdAt),
+      });
+    });
+    (recentHighlights ?? []).forEach((h, i) => {
+      items.push({
+        key: `hl-${h.id ?? i}`,
+        kind: "highlight",
+        label: "Highlighted a verse",
+        sub: h.bookName && h.chapter && h.verse
+          ? `${h.bookName} ${h.chapter}:${h.verse}`
+          : h.verseId,
+        at: activityTimestamp(h.createdAt),
+      });
+    });
+    (recentNotes ?? []).forEach((n, i) => {
+      items.push({
+        key: `nt-${n.id ?? i}`,
+        kind: "note",
+        label: "Added a note",
+        sub: n.content,
+        at: activityTimestamp(n.createdAt ?? n.updatedAt),
+      });
+    });
+    return items.sort((a, b) => b.at - a.at).slice(0, 5);
+  }, [recentBookmarks, recentHighlights, recentNotes]);
 
   return (
     <>
     <ScrollView
-      style={[st.container, { backgroundColor: theme.background }]}
+      style={[st.container, { backgroundColor: C.surface }]}
       contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: bottomPad + 120 }}
       showsVerticalScrollIndicator={false}
     >
@@ -250,87 +274,78 @@ function ProfileScreenInner() {
           style={{ position: "absolute", top: 0, right: 20, zIndex: 10 }}
           testID="profile-settings-gear"
         >
-          <Ionicons name="settings-outline" size={24} color="#C9933A" />
+          <Ionicons name="settings-outline" size={24} color={C.coral} />
         </Pressable>
-        <View style={[st.avatarCircle, { backgroundColor: theme.accent }]}>
+        <View style={st.avatarCircle}>
           <Text style={st.avatarInitials}>{initials}</Text>
         </View>
-        <Text style={[st.userName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+        <Text style={[st.userName, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
           {isAuthenticated ? (user?.displayName || "User") : "Guest"}
         </Text>
-        <Text style={[st.userSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+        <Text style={[st.userSub, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>
           {isAuthenticated ? (user?.email || "Informed Ministries") : "Informed Ministries"}
         </Text>
         {isPatron && (
           <View style={st.patronBadge}>
-            <Ionicons name="shield-checkmark" size={14} color="#C9933A" />
+            <Ionicons name="shield-checkmark" size={14} color={C.inkMuted} />
             <Text style={st.patronBadgeText}>{t("profile.missionPartner")}</Text>
           </View>
         )}
         {isGuest ? (
           <Pressable
             onPress={() => router.push("/(auth)/login")}
-            style={[st.authBtn, { backgroundColor: theme.accent }]}
+            style={st.authBtn}
             testID="profile-sign-in"
           >
             <Ionicons name="log-in-outline" size={16} color="#fff" />
             <Text style={[st.authBtnText, { fontFamily: "Inter_600SemiBold" }]}>{t("profile.signIn")}</Text>
           </Pressable>
-        ) : (
-          <Pressable
-            onPress={handleShareProfile}
-            style={st.sharePill}
-            testID="profile-share"
-          >
-            <Ionicons name="share-outline" size={15} color="#C9933A" />
-            <Text style={[st.sharePillText, { fontFamily: "Inter_600SemiBold" }]}>Share Profile</Text>
-          </Pressable>
-        )}
+        ) : null}
       </View>
 
       <View style={st.tilesRow}>
         <Pressable
-          style={({ pressed }) => [st.tile, { backgroundColor: isDark ? "#111118" : "#F5F3EE", opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.push("/library" as any)}
         >
-          <View style={[st.tileIcon, { backgroundColor: "rgba(201,147,58,0.12)" }]}>
-            <Ionicons name="bookmark" size={22} color="#C9933A" />
+          <View style={[st.tileIcon, { backgroundColor: PathB.coral + "14" }]}>
+            <Ionicons name="bookmark" size={22} color={C.coral} />
           </View>
-          <Text style={[st.tileLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Saved</Text>
+          <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Saved</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [st.tile, { backgroundColor: isDark ? "#111118" : "#F5F3EE", opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.push("/prayer-journal" as any)}
         >
-          <View style={[st.tileIcon, { backgroundColor: "rgba(139,92,246,0.12)" }]}>
-            <Ionicons name="journal" size={22} color="#8B5CF6" />
+          <View style={[st.tileIcon, { backgroundColor: C.pill }]}>
+            <Ionicons name="journal" size={22} color={C.inkMuted} />
           </View>
-          <Text style={[st.tileLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Prayer</Text>
+          <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Prayer</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => [st.tile, { backgroundColor: isDark ? "#111118" : "#F5F3EE", opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => showToast("Giving features coming soon", "info")}
         >
-          <View style={[st.tileIcon, { backgroundColor: "rgba(239,68,68,0.12)" }]}>
-            <Ionicons name="heart" size={22} color="#EF4444" />
+          <View style={[st.tileIcon, { backgroundColor: C.pill }]}>
+            <Ionicons name="heart" size={22} color={C.inkMuted} />
           </View>
-          <Text style={[st.tileLabel, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
+          <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
         </Pressable>
       </View>
 
       <Pressable
-        style={({ pressed }) => [st.streakCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6", opacity: pressed ? 0.97 : 1 }]}
+        style={({ pressed }) => [st.streakCard, { opacity: pressed ? 0.97 : 1 }]}
         onPress={() => setStreakSheetOpen(true)}
       >
         <View style={st.streakTop}>
           <View style={st.streakLeft}>
-            <Ionicons name="flame" size={28} color="#FF6B35" />
+            <Ionicons name="flame" size={28} color={C.coral} />
             <View>
-              <Text style={[st.streakNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-              <Text style={[st.streakSubLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>day streak</Text>
+              <Text style={[st.streakNum, { color: C.ink, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+              <Text style={[st.streakSubLabel, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>day streak</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+          <Ionicons name="chevron-forward" size={18} color={C.inkMuted} />
         </View>
         {weeklyData && (
           <View style={st.streakWeekRow}>
@@ -339,14 +354,14 @@ function ProfileScreenInner() {
               const didRead = daysRead[i];
               return (
                 <View key={i} style={st.streakDayCol}>
-                  <Text style={[st.streakDayLabel, { color: isToday ? theme.accent : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                  <Text style={[st.streakDayLabel, { color: isToday ? C.coralInk : C.inkMuted, fontFamily: "Inter_500Medium" }]}>
                     {label}
                   </Text>
                   <View
                     style={[
                       st.streakDot,
-                      didRead && { backgroundColor: theme.accent },
-                      isToday && !didRead && { borderColor: theme.accent, borderWidth: 2 },
+                      didRead && { backgroundColor: C.coral },
+                      isToday && !didRead && { borderColor: C.coral, borderWidth: 2 },
                     ]}
                   >
                     {didRead && <Ionicons name="checkmark" size={12} color="#fff" />}
@@ -358,144 +373,65 @@ function ProfileScreenInner() {
         )}
       </Pressable>
 
-      <View style={st.badgesSection}>
-        <Text style={[st.badgesTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>Badges</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.badgesScroll}>
-          {BADGES.map((badge) => {
-            const earned = badge.check(streak, perfectWeeks, totalSessions, booksExplored);
-            return (
-              <View key={badge.id} style={st.badgeItem}>
-                <View style={[st.badgeCircle, earned ? { backgroundColor: "rgba(201,147,58,0.15)", borderColor: "#C9933A" } : { backgroundColor: "rgba(128,128,128,0.08)", borderColor: "rgba(128,128,128,0.2)" }]}>
-                  <Ionicons name={badge.icon as any} size={24} color={earned ? "#C9933A" : theme.textMuted} />
-                </View>
-                <Text style={[st.badgeLabel, { color: earned ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]} numberOfLines={1}>
-                  {badge.label}
-                </Text>
-              </View>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {isAuthenticated && (
-        <View style={st.activitySection}>
-          <Text style={[st.sectionTitle, { fontFamily: "Lora_700Bold", color: "#FFFFFF" }]}>Activity</Text>
-          {recentBookmarks?.slice(0, 3).map((b, i) => (
-            <View key={`bk-${i}`} style={st.activityRow}>
-              <View style={st.activityIcon}>
-                <Ionicons name="bookmark" size={16} color="#C9933A" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
-                  Saved a verse
-                </Text>
-                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                  {b.label || b.verseId}
-                </Text>
-              </View>
-            </View>
-          ))}
-          {recentHighlights?.slice(0, 3).map((h, i) => (
-            <View key={`hl-${i}`} style={st.activityRow}>
-              <View style={[st.activityIcon, { backgroundColor: "rgba(234,179,8,0.15)" }]}>
-                <Ionicons name="color-wand" size={16} color="#EAB308" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
-                  Highlighted a verse
-                </Text>
-                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                  {h.bookName && h.chapter && h.verse
-                    ? `${h.bookName} ${h.chapter}:${h.verse}`
-                    : h.verseId}
-                </Text>
-              </View>
-            </View>
-          ))}
-          {recentNotes?.slice(0, 3).map((n, i) => (
-            <View key={`nt-${i}`} style={st.activityRow}>
-              <View style={[st.activityIcon, { backgroundColor: "rgba(99,102,241,0.15)" }]}>
-                <Ionicons name="create-outline" size={16} color="#6366F1" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
-                  Added a note
-                </Text>
-                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                  {n.content}
-                </Text>
-              </View>
-            </View>
-          ))}
-          {!recentBookmarks?.length && !recentHighlights?.length && !recentNotes?.length && (
-            <Text style={[st.activityEmpty, { fontFamily: "Inter_400Regular" }]}>
-              Your reading activity will appear here.
-            </Text>
-          )}
-        </View>
-      )}
-
-      <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
-
       {isAuthenticated && (
         <View style={st.sectionPad} testID="profile-my-church-section">
-          <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[st.sectionTitle, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
             My Church & Groups
           </Text>
           {myChurchLoading ? (
-            <ActivityIndicator color="#C9933A" style={{ marginVertical: 16 }} />
+            <ActivityIndicator color={C.coral} style={{ marginVertical: 16 }} />
           ) : claimedChurch ? (
             <View
-              style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}
+              style={st.orgCard}
               testID="profile-my-church-set"
             >
               <Pressable
                 onPress={() => router.push(`/church/${claimedChurch.id}` as any)}
                 style={st.orgHeader}
               >
-                <Ionicons name="business-outline" size={24} color="#C9933A" />
+                <Ionicons name="business-outline" size={24} color={C.coral} />
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[st.orgName, { color: theme.text }]}>{claimedChurch.name}</Text>
-                  <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                  <Text style={[st.orgName, { color: C.ink }]}>{claimedChurch.name}</Text>
+                  <Text style={[st.orgMeta, { color: C.inkMuted }]}>
                     {claimedChurch.city}{claimedChurch.state ? `, ${claimedChurch.state}` : ""}, {claimedChurch.country}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+                <Ionicons name="chevron-forward" size={18} color={C.inkMuted} />
               </Pressable>
               <Pressable
                 style={[st.orgJoinBtn, { marginTop: 14 }]}
                 onPress={() => router.push("/church-connect" as any)}
               >
-                <Ionicons name="search-outline" size={18} color="#C9933A" />
+                <Ionicons name="search-outline" size={18} color={C.coralInk} />
                 <Text style={st.orgJoinBtnText}>Find a different church</Text>
               </Pressable>
             </View>
           ) : (
             <View
-              style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}
+              style={st.orgCard}
               testID="profile-my-church-empty"
             >
-              <Text style={[st.orgEmptyText, { color: theme.textMuted }]}>
+              <Text style={[st.orgEmptyText, { color: C.inkMuted }]}>
                 You haven't set a church yet.
               </Text>
               <Pressable
                 style={st.orgJoinBtn}
                 onPress={() => router.push("/church-connect" as any)}
               >
-                <Ionicons name="search-outline" size={18} color="#C9933A" />
+                <Ionicons name="search-outline" size={18} color={C.coralInk} />
                 <Text style={st.orgJoinBtnText}>Find a church</Text>
               </Pressable>
             </View>
           )}
           <View
-            style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6", marginTop: 12 }]}
+            style={[st.orgCard, { marginTop: 12 }]}
             testID="profile-groups-placeholder"
           >
             <View style={st.orgHeader}>
-              <Ionicons name="people-outline" size={24} color="#C9933A" />
+              <Ionicons name="people-outline" size={24} color={C.inkMuted} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[st.orgName, { color: theme.text }]}>Groups</Text>
-                <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                <Text style={[st.orgName, { color: C.ink }]}>Groups</Text>
+                <Text style={[st.orgMeta, { color: C.inkMuted }]}>
                   Small groups coming soon
                 </Text>
               </View>
@@ -504,23 +440,58 @@ function ProfileScreenInner() {
         </View>
       )}
 
+      {isAuthenticated && (
+        <View style={st.activitySection}>
+          <Text style={[st.sectionTitle, { fontFamily: "Lora_700Bold", color: C.ink }]}>Activity</Text>
+          {activityItems.map((item) => (
+            <View key={item.key} style={st.activityRow}>
+              <View style={[
+                st.activityIcon,
+                item.kind === "highlight" && { backgroundColor: C.pill },
+                item.kind === "note" && { backgroundColor: C.pill },
+              ]}>
+                <Ionicons
+                  name={item.kind === "bookmark" ? "bookmark" : item.kind === "highlight" ? "color-wand" : "create-outline"}
+                  size={16}
+                  color={item.kind === "bookmark" ? C.coral : C.inkMuted}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.activityLabel, { fontFamily: "Inter_500Medium" }]}>
+                  {item.label}
+                </Text>
+                <Text style={[st.activitySub, { fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                  {item.sub}
+                </Text>
+              </View>
+            </View>
+          ))}
+          {activityItems.length === 0 && (
+            <Text style={[st.activityEmpty, { fontFamily: "Inter_400Regular" }]}>
+              Your reading activity will appear here.
+            </Text>
+          )}
+        </View>
+      )}
+
+      {ENABLE_ORG_TOOLS && (<>
       {isAuthenticated && !orgLoading && (myOrgData?.organization || isLeader) && (
         <View style={st.sectionPad}>
-          <Text style={[st.sectionTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[st.sectionTitle, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
             {isConference ? "My Conference" : "Church organization"}
           </Text>
           {myOrgData?.organization ? (
             <>
-              <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+              <View style={st.orgCard}>
                 <View style={st.orgHeader}>
                   <Ionicons
                     name={isConference ? "globe-outline" : "home-outline"}
                     size={24}
-                    color="#C9933A"
+                    color={C.coral}
                   />
                   <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={[st.orgName, { color: theme.text }]}>{myOrgData.organization.name}</Text>
-                    <Text style={[st.orgMeta, { color: theme.textMuted }]}>
+                    <Text style={[st.orgName, { color: C.ink }]}>{myOrgData.organization.name}</Text>
+                    <Text style={[st.orgMeta, { color: C.inkMuted }]}>
                       {myOrgData.role === "pastor" ? "Administrator" : myOrgData.role === "elder" ? "Elder" : "Member"} · {myOrgData.organization.memberCount} member{myOrgData.organization.memberCount !== 1 ? "s" : ""}
                     </Text>
                   </View>
@@ -531,21 +502,21 @@ function ProfileScreenInner() {
                     onPress={() => handleCopyCode(myOrgData.organization!.joinCode)}
                   >
                     <View>
-                      <Text style={[st.joinCodeLabel, { color: theme.textMuted }]}>
+                      <Text style={[st.joinCodeLabel, { color: C.inkMuted }]}>
                         {isConference ? "Conference Join Code" : "Join Code"}
                       </Text>
-                      <Text style={[st.joinCodeValue, { color: theme.text }]}>{myOrgData.organization.joinCode}</Text>
+                      <Text style={[st.joinCodeValue, { color: C.ink }]}>{myOrgData.organization.joinCode}</Text>
                     </View>
                     <Ionicons
                       name={codeCopied ? "checkmark-circle" : "copy-outline"}
                       size={20}
-                      color={codeCopied ? "#4CAF50" : "#C9933A"}
+                      color={codeCopied ? theme.success : C.coral}
                     />
                   </Pressable>
                 )}
                 <ListItem
                   icon="people"
-                  iconColor="#C9933A"
+                  iconColor={C.coral}
                   title={isConference ? "View Conference Members" : "View Members"}
                   onPress={() => router.push(`/org-members?orgId=${myOrgData.organization!.id}` as any)}
                   style={{ marginTop: 8 }}
@@ -555,20 +526,20 @@ function ProfileScreenInner() {
               {isConference && (
                 <View style={{ marginTop: 20 }}>
                   <View style={st.confChurchesHeader}>
-                    <Text style={[st.confChurchesTitle, { color: theme.text }]}>Congregations</Text>
+                    <Text style={[st.confChurchesTitle, { color: C.ink }]}>Congregations</Text>
                     {isPastorOrElder && (
                       <Pressable onPress={() => setShowAddChurch(!showAddChurch)}>
-                        <Ionicons name={showAddChurch ? "close-circle-outline" : "add-circle-outline"} size={24} color="#C9933A" />
+                        <Ionicons name={showAddChurch ? "close-circle-outline" : "add-circle-outline"} size={24} color={C.coral} />
                       </Pressable>
                     )}
                   </View>
 
                   {showAddChurch && (
-                    <View style={[st.addChurchRow, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+                    <View style={st.addChurchRow}>
                       <TextInput
-                        style={[st.addChurchInput, { color: theme.text, borderColor: isDark ? "#2A2A35" : "#DDD" }]}
+                        style={[st.addChurchInput, { color: C.ink, borderColor: C.border }]}
                         placeholder="New church name"
-                        placeholderTextColor={theme.textMuted}
+                        placeholderTextColor={C.inkMuted}
                         value={addChurchName}
                         onChangeText={setAddChurchName}
                       />
@@ -588,12 +559,12 @@ function ProfileScreenInner() {
 
                   {confChurches && confChurches.length > 0 ? (
                     confChurches.map((church) => (
-                      <View key={church.id} style={[st.confChurchCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
+                      <View key={church.id} style={st.confChurchCard}>
                         <View style={st.confChurchRow}>
-                          <Ionicons name="home-outline" size={20} color="#C9933A" />
+                          <Ionicons name="home-outline" size={20} color={C.coral} />
                           <View style={{ flex: 1, marginLeft: 10 }}>
-                            <Text style={[st.confChurchName, { color: theme.text }]}>{church.name}</Text>
-                            <Text style={[st.confChurchMeta, { color: theme.textMuted }]}>
+                            <Text style={[st.confChurchName, { color: C.ink }]}>{church.name}</Text>
+                            <Text style={[st.confChurchMeta, { color: C.inkMuted }]}>
                               {church.memberCount} member{church.memberCount !== 1 ? "s" : ""}
                             </Text>
                           </View>
@@ -603,15 +574,15 @@ function ProfileScreenInner() {
                             style={st.confChurchCodeBtn}
                             onPress={() => handleCopyCode(church.joinCode)}
                           >
-                            <Ionicons name="key-outline" size={14} color="#C9933A" />
+                            <Ionicons name="key-outline" size={14} color={C.coralInk} />
                             <Text style={st.confChurchCodeText}>{church.joinCode}</Text>
-                            <Ionicons name="copy-outline" size={14} color="#C9933A" />
+                            <Ionicons name="copy-outline" size={14} color={C.coralInk} />
                           </Pressable>
                         )}
                       </View>
                     ))
                   ) : (
-                    <Text style={[st.confChurchesEmpty, { color: theme.textMuted }]}>
+                    <Text style={[st.confChurchesEmpty, { color: C.inkMuted }]}>
                       No churches added yet. Tap + to add one.
                     </Text>
                   )}
@@ -619,15 +590,15 @@ function ProfileScreenInner() {
               )}
             </>
           ) : isLeader ? (
-            <View style={[st.orgCard, { backgroundColor: isDark ? "#1A1A24" : "#FFFDF6" }]}>
-              <Text style={[st.orgEmptyText, { color: theme.textMuted }]}>
+            <View style={st.orgCard}>
+              <Text style={[st.orgEmptyText, { color: C.inkMuted }]}>
                 No church organization yet. Join with a code or register one for members and join codes — this is separate from My Church above.
               </Text>
               <Pressable
                 style={st.orgJoinBtn}
                 onPress={() => router.push("/org-onboarding" as any)}
               >
-                <Ionicons name="add-circle-outline" size={18} color="#C9933A" />
+                <Ionicons name="add-circle-outline" size={18} color={C.coralInk} />
                 <Text style={st.orgJoinBtnText}>Join or register an organization</Text>
               </Pressable>
             </View>
@@ -636,27 +607,27 @@ function ProfileScreenInner() {
       )}
 
       {isAuthenticated && user?.role === "church_leader_pending" && (
-        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "#8B5CF615", borderWidth: 1, borderColor: "#8B5CF640", borderRadius: 16, padding: 16 }}>
+        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: C.pill, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#8B5CF620", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="shield-checkmark" size={20} color="#8B5CF6" />
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: PathB.coral + "20", alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="shield-checkmark" size={20} color={C.coral} />
             </View>
-            <Text style={{ color: theme.text, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Complete Your Leader Setup</Text>
+            <Text style={{ color: C.ink, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Complete Your Leader Setup</Text>
           </View>
-          <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
+          <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
             You registered as a church leader. Submit a request for admin verification, or create your church organization now.
           </Text>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable
               onPress={() => setLeaderFormOpen(true)}
-              style={{ flex: 1, backgroundColor: "#8B5CF6", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+              style={{ flex: 1, backgroundColor: C.coral, borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
             >
               <Ionicons name="document-text-outline" size={16} color="#fff" />
               <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Submit Request</Text>
             </Pressable>
             <Pressable
               onPress={() => router.push("/org-onboarding" as any)}
-              style={{ flex: 1, backgroundColor: "#C9933A", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+              style={{ flex: 1, backgroundColor: C.ink, borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
             >
               <Ionicons name="add-circle-outline" size={16} color="#fff" />
               <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Set Up Org</Text>
@@ -666,19 +637,19 @@ function ProfileScreenInner() {
       )}
 
       {isAuthenticated && user?.role === "church_leader" && !user?.organizationId && (
-        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "#C9933A15", borderWidth: 1, borderColor: "#C9933A40", borderRadius: 16, padding: 16 }}>
+        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: C.pill, borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#C9933A20", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="home" size={20} color="#C9933A" />
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: PathB.coral + "20", alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="home" size={20} color={C.coral} />
             </View>
-            <Text style={{ color: theme.text, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Set Up Your Organization</Text>
+            <Text style={{ color: C.ink, fontSize: 17, fontFamily: "Inter_700Bold", flex: 1 }}>Set Up Your Organization</Text>
           </View>
-          <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
+          <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 14, lineHeight: 20 }}>
             Your leader access is approved! Create your church organization to manage members and share a join code with your congregation.
           </Text>
           <Pressable
             onPress={() => router.push("/org-onboarding" as any)}
-            style={{ backgroundColor: "#C9933A", borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+            style={{ backgroundColor: C.coral, borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
           >
             <Ionicons name="add-circle-outline" size={16} color="#fff" />
             <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Create Organization</Text>
@@ -692,14 +663,14 @@ function ProfileScreenInner() {
           <View style={st.sectionPad}>
             <ListItem
               icon="construct"
-              iconColor="#EF4444"
+              iconColor={C.coral}
               title="Admin Dashboard"
               onPress={() => router.push("/admin-review" as any)}
               style={{ marginBottom: 6 }}
             />
             <ListItem
               icon="business-outline"
-              iconColor="#3B82F6"
+              iconColor={C.inkMuted}
               title="Conference Portal"
               subtitle="Manage church licensing"
               onPress={() => router.push("/conference-portal" as any)}
@@ -715,7 +686,7 @@ function ProfileScreenInner() {
           <View style={st.sectionPad}>
             <ListItem
               icon={leaderStatus?.request?.status === "pending" ? "time-outline" : "shield-checkmark-outline"}
-              iconColor={leaderStatus?.request?.status === "pending" ? "#F59E0B" : "#8B5CF6"}
+              iconColor={C.coral}
               title={leaderStatus?.request?.status === "pending" ? "Leader Access (Pending)" : "Request Leader Access"}
               onPress={() => {
                 if (leaderStatus?.request?.status === "pending") {
@@ -734,19 +705,19 @@ function ProfileScreenInner() {
         <>
           <View style={[st.sectionDivider, { backgroundColor: theme.divider }]} />
           <View style={st.sectionPad}>
-            <Text style={{ color: theme.textSecondary, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+            <Text style={{ color: C.inkMuted, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
               Leader Tools
             </Text>
             <ListItem
               icon="megaphone-outline"
-              iconColor="#8B5CF6"
+              iconColor={C.coral}
               title="Broadcast Announcements"
               onPress={() => router.push("/leader-broadcast" as any)}
               style={{ marginBottom: 6 }}
             />
             <ListItem
               icon="people-outline"
-              iconColor="#3B82F6"
+              iconColor={C.inkMuted}
               title="Church Member Analytics"
               onPress={() => router.push("/leader-analytics" as any)}
               style={{ marginBottom: 6 }}
@@ -754,55 +725,56 @@ function ProfileScreenInner() {
           </View>
         </>
       )}
+      </>)}
 
     </ScrollView>
 
     <Modal visible={streakSheetOpen} animationType="slide" transparent>
       <Pressable style={st.sheetOverlay} onPress={() => setStreakSheetOpen(false)}>
         <View style={{ flex: 1 }} />
-        <Pressable style={[st.sheetContent, { backgroundColor: theme.backgroundCard, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 24 }]}>
+        <Pressable style={[st.sheetContent, { backgroundColor: C.card, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 24 }]}>
           <View style={st.sheetHandle} />
           <View style={st.sheetHeaderRow}>
-            <Text style={[st.sheetTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>Your Streak</Text>
+            <Text style={[st.sheetTitle, { color: C.ink, fontFamily: "Lora_700Bold" }]}>Your Streak</Text>
             <Pressable onPress={() => setStreakSheetOpen(false)} hitSlop={8}>
-              <Ionicons name="close" size={24} color={theme.textMuted} />
+              <Ionicons name="close" size={24} color={C.inkMuted} />
             </Pressable>
           </View>
           <View style={st.sheetStatsRow}>
             <View style={st.sheetStatItem}>
-              <Ionicons name="flame" size={28} color="#FF6B35" />
-              <Text style={[st.sheetStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
-              <Text style={[st.sheetStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Current</Text>
+              <Ionicons name="flame" size={28} color={C.coral} />
+              <Text style={[st.sheetStatNum, { color: C.ink, fontFamily: "Inter_700Bold" }]}>{streak}</Text>
+              <Text style={[st.sheetStatLabel, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>Current</Text>
             </View>
             <View style={st.sheetStatItem}>
-              <Ionicons name="trophy" size={28} color={theme.accent} />
-              <Text style={[st.sheetStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
-              <Text style={[st.sheetStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Longest</Text>
+              <Ionicons name="trophy" size={28} color={C.coral} />
+              <Text style={[st.sheetStatNum, { color: C.ink, fontFamily: "Inter_700Bold" }]}>{longestStreak}</Text>
+              <Text style={[st.sheetStatLabel, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>Longest</Text>
             </View>
             <View style={st.sheetStatItem}>
-              <Ionicons name="star" size={28} color="#E8456B" />
-              <Text style={[st.sheetStatNum, { color: theme.text, fontFamily: "Inter_700Bold" }]}>{perfectWeeks}</Text>
-              <Text style={[st.sheetStatLabel, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Perfect Weeks</Text>
+              <Ionicons name="star" size={28} color={C.coral} />
+              <Text style={[st.sheetStatNum, { color: C.ink, fontFamily: "Inter_700Bold" }]}>{perfectWeeks}</Text>
+              <Text style={[st.sheetStatLabel, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>Perfect Weeks</Text>
             </View>
           </View>
           {weeklyData && (
             <>
-              <Text style={[st.sheetWeekTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>This Week</Text>
+              <Text style={[st.sheetWeekTitle, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>This Week</Text>
               <View style={st.sheetWeekRow}>
                 {DAY_LABELS.map((label, i) => {
                   const isToday = i === todayIdx;
                   const didRead = daysRead[i];
                   return (
                     <View key={i} style={{ alignItems: "center", gap: 8 }}>
-                      <Text style={{ color: isToday ? theme.accent : theme.textMuted, fontSize: 13, fontFamily: "Inter_500Medium" }}>{label}</Text>
-                      <View style={[st.streakDot, didRead && { backgroundColor: theme.accent }, isToday && !didRead && { borderColor: theme.accent, borderWidth: 2 }]}>
+                      <Text style={{ color: isToday ? C.coralInk : C.inkMuted, fontSize: 13, fontFamily: "Inter_500Medium" }}>{label}</Text>
+                      <View style={[st.streakDot, didRead && { backgroundColor: C.coral }, isToday && !didRead && { borderColor: C.coral, borderWidth: 2 }]}>
                         {didRead && <Ionicons name="checkmark" size={12} color="#fff" />}
                       </View>
                     </View>
                   );
                 })}
               </View>
-              <Text style={[st.sheetWeekSummary, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[st.sheetWeekSummary, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>
                 {daysRead.filter(Boolean).length} of 7 days completed
               </Text>
             </>
@@ -811,61 +783,62 @@ function ProfileScreenInner() {
       </Pressable>
     </Modal>
 
+    {ENABLE_ORG_TOOLS && (
     <Modal visible={leaderFormOpen} animationType="slide" transparent>
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
-        <View style={{ backgroundColor: theme.backgroundCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 20, maxHeight: "90%" }}>
+        <View style={{ backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 20, maxHeight: "90%" }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ color: theme.text, fontSize: 20, fontFamily: "Inter_700Bold" }}>Request Leader Access</Text>
+            <Text style={{ color: C.ink, fontSize: 20, fontFamily: "Inter_700Bold" }}>Request Leader Access</Text>
             <Pressable onPress={() => setLeaderFormOpen(false)} hitSlop={8}>
-              <Ionicons name="close" size={24} color={theme.textMuted} />
+              <Ionicons name="close" size={24} color={C.inkMuted} />
             </Pressable>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Full Name</Text>
+            <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Full Name</Text>
             <TextInput
-              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: theme.border }}
+              style={{ backgroundColor: C.surface, color: C.ink, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: C.border }}
               value={leaderForm.fullName}
               onChangeText={(v) => setLeaderForm(f => ({ ...f, fullName: v }))}
               placeholder="Your full name"
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor={C.inkMuted}
             />
-            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Church Name</Text>
+            <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Church Name</Text>
             <TextInput
-              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: theme.border }}
+              style={{ backgroundColor: C.surface, color: C.ink, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: C.border }}
               value={leaderForm.churchName}
               onChangeText={(v) => setLeaderForm(f => ({ ...f, churchName: v }))}
               placeholder="Your church name"
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor={C.inkMuted}
             />
-            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Role</Text>
+            <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Role</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
               {["Pastor", "Elder", "Deacon", "Ministry Leader"].map((r) => (
                 <Pressable
                   key={r}
                   onPress={() => setLeaderForm(f => ({ ...f, role: r }))}
-                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: leaderForm.role === r ? "#8B5CF6" : theme.border, backgroundColor: leaderForm.role === r ? "#8B5CF620" : theme.background }}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: leaderForm.role === r ? C.coral : C.border, backgroundColor: leaderForm.role === r ? PathB.coral + "20" : C.surface }}
                 >
-                  <Text style={{ color: leaderForm.role === r ? "#8B5CF6" : theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium" }}>{r}</Text>
+                  <Text style={{ color: leaderForm.role === r ? C.coralInk : C.inkMuted, fontSize: 14, fontFamily: "Inter_500Medium" }}>{r}</Text>
                 </Pressable>
               ))}
             </View>
-            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Contact Email</Text>
+            <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Contact Email</Text>
             <TextInput
-              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: theme.border }}
+              style={{ backgroundColor: C.surface, color: C.ink, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 12, borderWidth: 1, borderColor: C.border }}
               value={leaderForm.contactEmail}
               onChangeText={(v) => setLeaderForm(f => ({ ...f, contactEmail: v }))}
               placeholder="your@email.com"
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor={C.inkMuted}
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <Text style={{ color: theme.textSecondary, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Description (optional)</Text>
+            <Text style={{ color: C.inkMuted, fontSize: 14, fontFamily: "Inter_500Medium", marginBottom: 6 }}>Description (optional)</Text>
             <TextInput
-              style={{ backgroundColor: theme.background, color: theme.text, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 16, borderWidth: 1, borderColor: theme.border, minHeight: 80, textAlignVertical: "top" }}
+              style={{ backgroundColor: C.surface, color: C.ink, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", marginBottom: 16, borderWidth: 1, borderColor: C.border, minHeight: 80, textAlignVertical: "top" }}
               value={leaderForm.description}
               onChangeText={(v) => setLeaderForm(f => ({ ...f, description: v }))}
               placeholder="Tell us about your ministry..."
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor={C.inkMuted}
               multiline
             />
             <Pressable
@@ -877,7 +850,7 @@ function ProfileScreenInner() {
                 leaderRequestMutation.mutate(leaderForm);
               }}
               disabled={leaderRequestMutation.isPending}
-              style={{ backgroundColor: "#8B5CF6", borderRadius: 12, padding: 14, alignItems: "center", opacity: leaderRequestMutation.isPending ? 0.6 : 1 }}
+              style={{ backgroundColor: C.coral, borderRadius: 12, padding: 14, alignItems: "center", opacity: leaderRequestMutation.isPending ? 0.6 : 1 }}
             >
               {leaderRequestMutation.isPending ? (
                 <ActivityIndicator color="#fff" size="small" />
@@ -889,6 +862,7 @@ function ProfileScreenInner() {
         </View>
       </View>
     </Modal>
+    )}
     </>
   );
 }
@@ -921,15 +895,18 @@ const st = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
+    backgroundColor: C.pill,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   avatarInitials: {
     fontSize: 28,
     fontFamily: "Lora_700Bold",
-    color: "#fff",
+    color: C.ink,
     letterSpacing: 1,
   },
   userName: { fontSize: 26, marginBottom: 4, letterSpacing: -0.2 },
-  userSub: { fontSize: 14, lineHeight: 22, opacity: 0.8 },
+  userSub: { fontSize: 14, lineHeight: 22 },
   patronBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -938,30 +915,14 @@ const st = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: "#C9933A",
-    backgroundColor: "rgba(201,147,58,0.08)",
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.pill,
   },
   patronBadgeText: {
     fontSize: 12,
     fontFamily: "Inter_700Bold",
-    color: "#C9933A",
-  },
-  sharePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(201,147,58,0.3)",
-    backgroundColor: "rgba(201,147,58,0.08)",
-  },
-  sharePillText: {
-    fontSize: 13,
-    color: "#C9933A",
+    color: C.inkMuted,
   },
   authBtn: {
     flexDirection: "row",
@@ -971,6 +932,7 @@ const st = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 11,
     borderRadius: 22,
+    backgroundColor: C.coral,
   },
   authBtnText: {
     fontSize: 14,
@@ -988,6 +950,8 @@ const st = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     gap: 10,
+    backgroundColor: C.card,
+    ...HV2.rowShadow,
   },
   tileIcon: {
     width: 44,
@@ -1004,6 +968,8 @@ const st = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
+    backgroundColor: C.card,
+    ...HV2.cardShadow,
   },
   streakTop: {
     flexDirection: "row",
@@ -1030,7 +996,7 @@ const st = StyleSheet.create({
     marginTop: 18,
     paddingTop: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(128,128,128,0.15)",
+    borderTopColor: C.border,
   },
   streakDayCol: {
     alignItems: "center",
@@ -1041,38 +1007,9 @@ const st = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(128,128,128,0.10)",
+    backgroundColor: C.pill,
     alignItems: "center",
     justifyContent: "center",
-  },
-  badgesSection: {
-    marginBottom: 20,
-  },
-  badgesTitle: {
-    fontSize: 18,
-    paddingHorizontal: 24,
-    marginBottom: 14,
-  },
-  badgesScroll: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  badgeItem: {
-    alignItems: "center",
-    width: 72,
-    gap: 8,
-  },
-  badgeCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-  },
-  badgeLabel: {
-    fontSize: 11,
-    textAlign: "center",
   },
   activitySection: {
     paddingHorizontal: 20,
@@ -1085,28 +1022,28 @@ const st = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: C.border,
     gap: 12,
   },
   activityIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(201,147,58,0.15)",
+    backgroundColor: PathB.coral + "18",
     alignItems: "center",
     justifyContent: "center",
   },
   activityLabel: {
-    color: "#FFFFFF",
+    color: C.ink,
     fontSize: 14,
     marginBottom: 2,
   },
   activitySub: {
-    color: "rgba(255,255,255,0.5)",
+    color: C.inkMuted,
     fontSize: 12,
   },
   activityEmpty: {
-    color: "rgba(255,255,255,0.4)",
+    color: C.inkMuted,
     fontSize: 14,
     textAlign: "center",
     paddingVertical: 20,
@@ -1125,7 +1062,7 @@ const st = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(128,128,128,0.3)",
+    backgroundColor: C.border,
     alignSelf: "center",
     marginBottom: 16,
   },
@@ -1176,7 +1113,8 @@ const st = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(201,147,58,0.15)",
+    borderColor: C.border,
+    backgroundColor: C.card,
   },
   orgHeader: {
     flexDirection: "row",
@@ -1198,7 +1136,7 @@ const st = StyleSheet.create({
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(128,128,128,0.2)",
+    borderTopColor: C.border,
   },
   joinCodeLabel: {
     fontSize: 11,
@@ -1226,12 +1164,12 @@ const st = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#C9933A",
+    borderColor: C.coral,
   },
   orgJoinBtnText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    color: "#C9933A",
+    color: C.coralInk,
   },
   btnDisabled: { opacity: 0.5 },
   confChurchesHeader: {
@@ -1252,7 +1190,8 @@ const st = StyleSheet.create({
     marginBottom: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: "rgba(201,147,58,0.2)",
+    borderColor: C.border,
+    backgroundColor: C.card,
   },
   addChurchInput: {
     flex: 1,
@@ -1265,7 +1204,7 @@ const st = StyleSheet.create({
     backgroundColor: "transparent",
   },
   addChurchBtn: {
-    backgroundColor: "#C9933A",
+    backgroundColor: C.coral,
     borderRadius: 8,
     paddingHorizontal: 18,
     paddingVertical: 10,
@@ -1282,7 +1221,8 @@ const st = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "rgba(201,147,58,0.12)",
+    borderColor: C.border,
+    backgroundColor: C.card,
   },
   confChurchRow: {
     flexDirection: "row",
@@ -1301,7 +1241,7 @@ const st = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(201,147,58,0.1)",
+    backgroundColor: C.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1312,7 +1252,7 @@ const st = StyleSheet.create({
   confChurchCodeText: {
     fontSize: 12,
     fontFamily: "Inter_700Bold",
-    color: "#C9933A",
+    color: C.coralInk,
     letterSpacing: 1,
   },
   confChurchesEmpty: {

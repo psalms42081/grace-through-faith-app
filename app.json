@@ -46,7 +46,16 @@
       }
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Informed Ministries",
+      "shortName": "Informed",
+      "themeColor": "#FBF7EE",
+      "backgroundColor": "#FBF7EE",
+      "display": "standalone",
+      "startUrl": "/",
+      "lang": "en"
     },
     "assets": [
       "./assets/fonts/Ionicons.ttf"
@@ -55,7 +64,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://gracethroughfaith.app"
         }
       ],
       [

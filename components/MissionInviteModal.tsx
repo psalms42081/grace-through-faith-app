@@ -19,9 +19,11 @@ import Animated, {
   FadeIn,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
-function GoldSparkle({ index }: { index: number }) {
+function Sparkle({ index }: { index: number }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(0);
@@ -50,7 +52,7 @@ function GoldSparkle({ index }: { index: number }) {
 
   return (
     <Animated.View style={[sparkStyles.particle, animStyle]}>
-      <Ionicons name="star" size={14 + Math.random() * 8} color="#C9933A" />
+      <Ionicons name="star" size={14 + Math.random() * 8} color={HV2.inkMutedText} />
     </Animated.View>
   );
 }
@@ -72,7 +74,6 @@ export default function MissionInviteModal({
   onDonate,
   isDonating,
 }: MissionInviteModalProps) {
-  const { theme, isDark } = useTheme();
   const [showThankYou, setShowThankYou] = useState(false);
 
   const handleDonate = useCallback(async () => {
@@ -104,28 +105,28 @@ export default function MissionInviteModal({
         {showThankYou ? (
           <Animated.View
             entering={FadeIn.duration(500)}
-            style={[ms.card, { backgroundColor: isDark ? "#111116" : "#FFFDF6", alignItems: "center" }]}
+            style={[ms.card, { backgroundColor: PathB.surfaceCard, alignItems: "center" }]}
           >
             <View style={ms.sparkleContainer}>
               {Array.from({ length: 12 }).map((_, i) => (
-                <GoldSparkle key={i} index={i} />
+                <Sparkle key={i} index={i} />
               ))}
             </View>
 
             <View style={ms.thankIconWrap}>
-              <Ionicons name="heart" size={40} color="#C9933A" />
+              <Ionicons name="heart" size={40} color={PathB.ink} />
             </View>
 
-            <Text style={[ms.thankTitle, { color: theme.text }]}>
+            <Text style={[ms.thankTitle, { color: PathB.ink }]}>
               Thank You, Partner
             </Text>
-            <Text style={[ms.thankSubtitle, { color: theme.textSecondary }]}>
+            <Text style={[ms.thankSubtitle, { color: HV2.inkMutedText }]}>
               Your generosity keeps deep Bible study available to every home. You are now a Mission Partner.
             </Text>
 
-            <View style={[ms.patronBadge, { borderColor: "#C9933A" }]}>
-              <Ionicons name="shield-checkmark" size={20} color="#C9933A" />
-              <Text style={[ms.patronBadgeText, { color: "#C9933A" }]}>
+            <View style={[ms.patronBadge, { borderColor: SWEEP_LIGHT.border }]}>
+              <Ionicons name="shield-checkmark" size={20} color={PathB.ink} />
+              <Text style={[ms.patronBadgeText, { color: PathB.ink }]}>
                 Mission Partner
               </Text>
             </View>
@@ -137,42 +138,42 @@ export default function MissionInviteModal({
         ) : (
           <Animated.View
             entering={FadeInDown.duration(400).springify()}
-            style={[ms.card, { backgroundColor: isDark ? "#111116" : "#FFFDF6" }]}
+            style={[ms.card, { backgroundColor: PathB.surfaceCard }]}
           >
             <Pressable onPress={handleClose} style={ms.closeBtn} testID="mission-close-btn">
-              <Ionicons name="close" size={22} color={theme.textMuted} />
+              <Ionicons name="close" size={22} color={HV2.inkMutedText} />
             </Pressable>
 
             <View style={ms.iconWrap}>
-              <Ionicons name="heart-circle" size={36} color="#C9933A" />
+              <Ionicons name="heart-circle" size={36} color={PathB.ink} />
             </View>
 
-            <Text style={[ms.title, { color: theme.text }]}>
+            <Text style={[ms.title, { color: PathB.ink }]}>
               You're Diving Deep
             </Text>
 
-            <Text style={[ms.body, { color: theme.textSecondary }]}>
+            <Text style={[ms.body, { color: HV2.inkMutedText }]}>
               Our mission is to make deep Bible study available to every home.
             </Text>
 
-            <Text style={[ms.body, { color: theme.textSecondary, marginTop: 10 }]}>
+            <Text style={[ms.body, { color: HV2.inkMutedText, marginTop: 10 }]}>
               Everything is free during beta. When donations open, your support will help bring Scripture, study tools, and discipleship resources to families around the world.
             </Text>
 
-            <View style={[ms.impactRow, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0" }]}>
-              <Ionicons name="people-outline" size={18} color={theme.accent} />
-              <Text style={[ms.impactText, { color: theme.textSecondary }]}>
+            <View style={[ms.impactRow, { backgroundColor: SWEEP_LIGHT.backgroundSecondary }]}>
+              <Ionicons name="people-outline" size={18} color={PathB.ink} />
+              <Text style={[ms.impactText, { color: HV2.inkMutedText }]}>
                 Helping families grow in Scripture every day.
               </Text>
             </View>
 
-            <Text style={[ms.closingLine, { color: theme.textMuted }]}>
+            <Text style={[ms.closingLine, { color: HV2.inkMutedText }]}>
               We'll let you know when donation support is available.
             </Text>
 
-            <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
-              <Ionicons name="time-outline" size={20} color={theme.accent} />
-              <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_500Medium", textAlign: "center" }}>
+            <View style={[ms.comingSoonBox, { backgroundColor: SWEEP_LIGHT.backgroundSecondary, borderColor: SWEEP_LIGHT.border }]}>
+              <Ionicons name="time-outline" size={20} color={HV2.inkMutedText} />
+              <Text style={{ fontSize: 13, color: HV2.inkMutedText, fontFamily: "Inter_500Medium", textAlign: "center" }}>
                 Everything is free during beta. Donation support is coming soon.
               </Text>
             </View>
@@ -182,7 +183,7 @@ export default function MissionInviteModal({
               onPress={handleClose}
               testID="mission-dismiss-btn"
             >
-              <Text style={[ms.dismissText, { color: theme.accent }]}>
+              <Text style={[ms.dismissText, { color: "#fff" }]}>
                 Continue Studying
               </Text>
             </Pressable>
@@ -221,7 +222,7 @@ const ms = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(201,147,58,0.12)",
+    backgroundColor: "rgba(31,26,18,0.08)",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
@@ -274,7 +275,7 @@ const ms = StyleSheet.create({
     marginBottom: 4,
   },
   primaryBtn: {
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: "center",
@@ -286,15 +287,17 @@ const ms = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   dismissBtn: {
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: "center",
     marginBottom: 8,
+    backgroundColor: PathB.coral,
+    borderRadius: 14,
+    alignSelf: "stretch",
   },
   dismissText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    textDecorationLine: "underline" as const,
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
   },
   sparkleContainer: {
     position: "absolute",
@@ -310,7 +313,7 @@ const ms = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(201,147,58,0.15)",
+    backgroundColor: "rgba(31,26,18,0.08)",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",

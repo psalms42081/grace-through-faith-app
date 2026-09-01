@@ -1,47 +1,27 @@
 import React, { useMemo, useCallback, useEffect } from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { WebView } from "react-native-webview";
-import { getApiUrl } from "@/lib/query-client";
-
-interface ChurchMarker {
-  id: string;
-  name: string;
-  lat: string;
-  lng: string;
-}
+import { buildChurchMapEmbedUrl, type ChurchMapMarker } from "@/lib/church-map-url";
 
 interface ChurchMapProps {
-  churches: ChurchMarker[];
+  churches: ChurchMapMarker[];
   userLat?: number;
   userLng?: number;
   selectedChurchId?: string | null;
-  onMarkerPress?: (church: ChurchMarker) => void;
+  onMarkerPress?: (church: ChurchMapMarker) => void;
 }
 
 export default function ChurchMap({ churches, userLat, userLng, selectedChurchId, onMarkerPress }: ChurchMapProps) {
-  const centerLat = userLat || (churches.length > 0 ? parseFloat(churches[0].lat) : 39.8283);
-  const centerLng = userLng || (churches.length > 0 ? parseFloat(churches[0].lng) : -98.5795);
-  const zoom = churches.length > 1 ? 4 : 14;
-
-  const markersData = useMemo(() => churches.map(c => ({
-    id: c.id,
-    name: c.name,
-    lat: parseFloat(c.lat),
-    lng: parseFloat(c.lng),
-    selected: c.id === selectedChurchId,
-  })), [churches, selectedChurchId]);
-
-  const mapUrl = useMemo(() => {
-    const base = getApiUrl();
-    const params = new URLSearchParams();
-    params.set("markers", JSON.stringify(markersData));
-    params.set("centerLat", centerLat.toString());
-    params.set("centerLng", centerLng.toString());
-    params.set("zoom", zoom.toString());
-    if (userLat != null) params.set("userLat", userLat.toString());
-    if (userLng != null) params.set("userLng", userLng.toString());
-    return `${base}/api/map-embed?${params.toString()}`;
-  }, [markersData, centerLat, centerLng, zoom, userLat, userLng]);
+  const mapUrl = useMemo(
+    () =>
+      buildChurchMapEmbedUrl({
+        churches,
+        userLat,
+        userLng,
+        selectedChurchId,
+      }),
+    [churches, userLat, userLng, selectedChurchId],
+  );
 
   useEffect(() => {
     if (Platform.OS !== "web") return;

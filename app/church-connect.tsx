@@ -18,10 +18,21 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
 import ChurchMap from "@/components/ChurchMap";
 import EmptyState from "@/components/ui/EmptyState";
 import { apiRequest } from "@/lib/query-client";
+
+const C = {
+  surface: PathB.surface,
+  card: PathB.surfaceCard,
+  ink: PathB.ink,
+  inkMuted: HV2.inkMutedText,
+  coral: PathB.coral,
+  pill: "#F1EBDD",
+  border: "#E7E0D2",
+};
 
 interface Church {
   id: string;
@@ -50,7 +61,6 @@ if (Platform.OS !== "web") {
 }
 
 export default function ChurchConnectScreen() {
-  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -221,13 +231,13 @@ export default function ChurchConnectScreen() {
   const directoryLink = (
     <Pressable
       onPress={() => Linking.openURL("https://www.adventistdirectory.org")}
-      style={[s.directoryFooter, { borderColor: theme.border }]}
+      style={[s.directoryFooter, { borderColor: C.border }]}
     >
-      <Ionicons name="globe-outline" size={16} color={theme.accent} />
-      <Text style={[s.directoryFooterText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+      <Ionicons name="globe-outline" size={16} color={C.inkMuted} />
+      <Text style={[s.directoryFooterText, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
         Search full Adventist Directory
       </Text>
-      <Ionicons name="open-outline" size={14} color={theme.accent} />
+      <Ionicons name="open-outline" size={14} color={C.inkMuted} />
     </Pressable>
   );
 
@@ -235,11 +245,11 @@ export default function ChurchConnectScreen() {
     <View style={s.tellUsWrap}>
       <Pressable
         onPress={openTellUs}
-        style={[s.tellUsBtn, { borderColor: theme.border }]}
+        style={[s.tellUsBtn, { borderColor: C.border }]}
         testID="church-connect-tell-us"
       >
-        <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.accent} />
-        <Text style={[s.tellUsBtnText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+        <Ionicons name="chatbubble-ellipses-outline" size={16} color={C.inkMuted} />
+        <Text style={[s.tellUsBtnText, { color: C.ink, fontFamily: "Inter_500Medium" }]}>
           Can't find your church? Tell us
         </Text>
       </Pressable>
@@ -250,7 +260,7 @@ export default function ChurchConnectScreen() {
   const noResultsEmpty = (
     <View style={s.cityPromptWrap} testID="church-connect-no-results">
       <EmptyState
-        appearance={isDark ? "dark" : "light"}
+        appearance="light"
         icon="business-outline"
         title={debouncedSearch ? "No churches found" : "No churches found nearby"}
         description={debouncedSearch ? "Try a different city, suburb, or church name" : "Try a different search or expand your radius"}
@@ -265,7 +275,7 @@ export default function ChurchConnectScreen() {
   const citySearchPrompt = (
     <View style={s.cityPromptWrap} testID="church-connect-city-prompt">
       <EmptyState
-        appearance={isDark ? "dark" : "light"}
+        appearance="light"
         icon="search-outline"
         title="Search by city or suburb"
         description="Location isn't available, so we can't list nearby churches. Type a city or suburb above — we don't invent results."
@@ -278,23 +288,23 @@ export default function ChurchConnectScreen() {
   const renderChurchCard = ({ item }: { item: Church }) => (
     <Pressable
       onPress={() => router.push(`/church/${item.id}` as any)}
-      style={[s.card, { backgroundColor: theme.backgroundCard, borderColor: selectedChurchId === item.id ? theme.accent : theme.border }]}
+      style={[s.card, { backgroundColor: C.card, borderColor: selectedChurchId === item.id ? C.coral : C.border }]}
     >
       <View style={s.cardHeader}>
-        <View style={[s.cardIcon, { backgroundColor: theme.accent + "18" }]}>
-          <Ionicons name="business" size={20} color={theme.accent} />
+        <View style={[s.cardIcon, { backgroundColor: C.pill }]}>
+          <Ionicons name="business" size={20} color={C.ink} />
         </View>
         <View style={s.cardInfo}>
-          <Text style={[s.cardName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+          <Text style={[s.cardName, { color: C.ink, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={[s.cardLocation, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+          <Text style={[s.cardLocation, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
             {item.city}{item.state ? `, ${item.state}` : ""}, {item.country}
           </Text>
         </View>
         {item.distance != null ? (
-          <View style={[s.distBadge, { backgroundColor: theme.accent + "15" }]}>
-            <Text style={[s.distText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          <View style={[s.distBadge, { backgroundColor: C.pill }]}>
+            <Text style={[s.distText, { color: C.inkMuted, fontFamily: "Inter_600SemiBold" }]}>
               {formatDistance(item.distance)}
             </Text>
           </View>
@@ -303,15 +313,15 @@ export default function ChurchConnectScreen() {
       <View style={s.cardDetails}>
         {item.serviceTimes ? (
           <View style={s.detailRow}>
-            <Ionicons name="time-outline" size={14} color={theme.textMuted} />
-            <Text style={[s.detailText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+            <Ionicons name="time-outline" size={14} color={C.inkMuted} />
+            <Text style={[s.detailText, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
               {item.serviceTimes}
             </Text>
           </View>
         ) : null}
         <View style={s.detailRow}>
-          <Ionicons name="location-outline" size={14} color={theme.textMuted} />
-          <Text style={[s.detailText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+          <Ionicons name="location-outline" size={14} color={C.inkMuted} />
+          <Text style={[s.detailText, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
             {item.address}
           </Text>
         </View>
@@ -320,51 +330,53 @@ export default function ChurchConnectScreen() {
   );
 
   return (
-    <View style={[s.container, { backgroundColor: theme.background }]}>
+    <View style={[s.container, { backgroundColor: C.surface }]}>
       <View style={[s.header, { paddingTop: topPad + 12 }]}>
         <Pressable onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+          <Ionicons name="arrow-back" size={22} color={C.ink} />
         </Pressable>
-        <Text style={[s.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+        <Text style={[s.title, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
           Church Connect
         </Text>
         <View style={s.viewToggle}>
           <Pressable
             onPress={() => setViewMode("list")}
-            style={[s.toggleBtn, viewMode === "list" && { backgroundColor: theme.accent }]}
+            style={[s.toggleBtn, viewMode === "list" && { backgroundColor: C.coral }]}
+            testID="church-connect-list-toggle"
           >
-            <Ionicons name="list" size={18} color={viewMode === "list" ? "#fff" : theme.textMuted} />
+            <Ionicons name="list" size={18} color={viewMode === "list" ? "#fff" : C.inkMuted} />
           </Pressable>
           <Pressable
             onPress={() => setViewMode("map")}
-            style={[s.toggleBtn, viewMode === "map" && { backgroundColor: theme.accent }]}
+            style={[s.toggleBtn, viewMode === "map" && { backgroundColor: C.coral }]}
+            testID="church-connect-map-toggle"
           >
-            <Ionicons name="map" size={18} color={viewMode === "map" ? "#fff" : theme.textMuted} />
+            <Ionicons name="map" size={18} color={viewMode === "map" ? "#fff" : C.inkMuted} />
           </Pressable>
         </View>
       </View>
 
-      <View style={[s.searchRow, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", borderColor: theme.border }]}>
-        <Ionicons name="search" size={18} color={theme.textMuted} />
+      <View style={[s.searchRow, { backgroundColor: C.pill, borderColor: C.border }]}>
+        <Ionicons name="search" size={18} color={C.inkMuted} />
         <TextInput
           ref={searchInputRef}
-          style={[s.searchInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
+          style={[s.searchInput, { color: C.ink, fontFamily: "Inter_400Regular" }]}
           placeholder="Search by city, suburb, or church name..."
-          placeholderTextColor={theme.textMuted}
+          placeholderTextColor={C.inkMuted}
           value={searchCity}
           onChangeText={setSearchCity}
           testID="church-connect-city-search"
         />
         {searchCity ? (
           <Pressable onPress={() => setSearchCity("")}>
-            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+            <Ionicons name="close-circle" size={18} color={C.inkMuted} />
           </Pressable>
         ) : null}
       </View>
 
       {locationStatus === "granted" && !debouncedSearch ? (
         <View style={s.radiusRow}>
-          <Text style={[s.radiusLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+          <Text style={[s.radiusLabel, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
             Radius:
           </Text>
           {RADIUS_OPTIONS.map((r) => (
@@ -374,8 +386,8 @@ export default function ChurchConnectScreen() {
               style={[
                 s.radiusChip,
                 {
-                  backgroundColor: radiusKm === r ? theme.accent : (isDark ? "#1A1A2E" : "#F5F3EE"),
-                  borderColor: radiusKm === r ? theme.accent : theme.border,
+                  backgroundColor: radiusKm === r ? C.coral : C.pill,
+                  borderColor: radiusKm === r ? C.coral : C.border,
                 },
               ]}
             >
@@ -383,7 +395,7 @@ export default function ChurchConnectScreen() {
                 style={[
                   s.radiusChipText,
                   {
-                    color: radiusKm === r ? "#fff" : theme.textSecondary,
+                    color: radiusKm === r ? "#fff" : C.inkMuted,
                     fontFamily: radiusKm === r ? "Inter_600SemiBold" : "Inter_400Regular",
                   },
                 ]}
@@ -396,16 +408,16 @@ export default function ChurchConnectScreen() {
       ) : null}
 
       {locationStatus === "denied" ? (
-        <Pressable onPress={requestLocation} style={[s.locBanner, { backgroundColor: theme.accent + "12" }]}>
-          <Ionicons name="navigate" size={16} color={theme.accent} />
-          <Text style={[s.locBannerText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+        <Pressable onPress={requestLocation} style={[s.locBanner, { backgroundColor: C.pill }]}>
+          <Ionicons name="navigate" size={16} color={C.inkMuted} />
+          <Text style={[s.locBannerText, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
             Location isn't available. Search by city or suburb, or tap to retry location.
           </Text>
         </Pressable>
       ) : locationStatus === "loading" ? (
-        <View style={[s.locBanner, { backgroundColor: theme.accent + "12" }]}>
-          <ActivityIndicator size="small" color={theme.accent} />
-          <Text style={[s.locBannerText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+        <View style={[s.locBanner, { backgroundColor: C.pill }]}>
+          <ActivityIndicator size="small" color={C.inkMuted} />
+          <Text style={[s.locBannerText, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
             Getting your location...
           </Text>
         </View>
@@ -413,11 +425,11 @@ export default function ChurchConnectScreen() {
 
       {viewMode === "map" ? (
         waitingForLocation ? (
-          <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={C.inkMuted} style={{ marginTop: 40 }} />
         ) : needsCitySearch ? (
           citySearchPrompt
         ) : isLoading ? (
-          <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={C.inkMuted} style={{ marginTop: 40 }} />
         ) : churchList.length === 0 ? (
           noResultsEmpty
         ) : (
@@ -437,16 +449,16 @@ export default function ChurchConnectScreen() {
                 return (
                   <Pressable
                     onPress={() => router.push(`/church/${sel.id}` as any)}
-                    style={[s.mapCard, { backgroundColor: theme.backgroundCard }]}
+                    style={[s.mapCard, { backgroundColor: C.card }]}
                   >
-                    <Text style={[s.mapCardName, { color: theme.text, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
+                    <Text style={[s.mapCardName, { color: C.ink, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
                       {sel.name}
                     </Text>
-                    <Text style={[s.mapCardAddr, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                    <Text style={[s.mapCardAddr, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
                       {sel.address}, {sel.city}
                     </Text>
                     {sel.distance != null ? (
-                      <Text style={[s.mapCardDist, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                      <Text style={[s.mapCardDist, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
                         {formatDistance(sel.distance)} away
                       </Text>
                     ) : null}
@@ -455,7 +467,7 @@ export default function ChurchConnectScreen() {
                         e.stopPropagation();
                         Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${sel.lat},${sel.lng}`);
                       }}
-                      style={[s.directionsBtn, { backgroundColor: theme.accent }]}
+                      style={[s.directionsBtn, { backgroundColor: C.coral }]}
                     >
                       <Ionicons name="navigate-outline" size={15} color="#fff" />
                       <Text style={[s.directionsBtnText, { fontFamily: "Inter_600SemiBold" }]}>Get Directions</Text>
@@ -470,11 +482,11 @@ export default function ChurchConnectScreen() {
       ) : (
         <>
           {waitingForLocation ? (
-            <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={C.inkMuted} style={{ marginTop: 40 }} />
           ) : needsCitySearch ? (
             citySearchPrompt
           ) : isLoading ? (
-            <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={C.inkMuted} style={{ marginTop: 40 }} />
           ) : churchList.length === 0 ? (
             noResultsEmpty
           ) : (
@@ -496,41 +508,41 @@ export default function ChurchConnectScreen() {
         >
           <Pressable style={s.modalBackdrop} onPress={() => !tellSubmitting && setShowTellUs(false)} />
           <ScrollView contentContainerStyle={s.modalScroll} keyboardShouldPersistTaps="handled">
-            <View style={[s.modalCard, { backgroundColor: theme.backgroundCard }]}>
-              <Text style={[s.modalTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+            <View style={[s.modalCard, { backgroundColor: C.card }]}>
+              <Text style={[s.modalTitle, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
                 Can't find your church? Tell us
               </Text>
-              <Text style={[s.modalHint, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              <Text style={[s.modalHint, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>
                 We'll review what you send. It will not appear in the directory until it is verified.
               </Text>
               <TextInput
-                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                style={[s.modalInput, { backgroundColor: C.pill, color: C.ink, borderColor: C.border }]}
                 placeholder="Church name"
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={C.inkMuted}
                 value={tellName}
                 onChangeText={setTellName}
                 testID="church-connect-tell-name"
               />
               <TextInput
-                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                style={[s.modalInput, { backgroundColor: C.pill, color: C.ink, borderColor: C.border }]}
                 placeholder="City"
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={C.inkMuted}
                 value={tellCity}
                 onChangeText={setTellCity}
                 testID="church-connect-tell-city"
               />
               <TextInput
-                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                style={[s.modalInput, { backgroundColor: C.pill, color: C.ink, borderColor: C.border }]}
                 placeholder="Country"
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={C.inkMuted}
                 value={tellCountry}
                 onChangeText={setTellCountry}
                 testID="church-connect-tell-country"
               />
               <TextInput
-                style={[s.modalInput, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", color: theme.text, borderColor: theme.border }]}
+                style={[s.modalInput, { backgroundColor: C.pill, color: C.ink, borderColor: C.border }]}
                 placeholder="Address (optional)"
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={C.inkMuted}
                 value={tellAddress}
                 onChangeText={setTellAddress}
                 testID="church-connect-tell-address"
@@ -539,16 +551,16 @@ export default function ChurchConnectScreen() {
                 <Pressable
                   onPress={() => setShowTellUs(false)}
                   disabled={tellSubmitting}
-                  style={[s.modalActionBtn, { borderColor: theme.border }]}
+                  style={[s.modalActionBtn, { borderColor: C.border }]}
                 >
-                  <Text style={[s.modalActionText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+                  <Text style={[s.modalActionText, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
                     Cancel
                   </Text>
                 </Pressable>
                 <Pressable
                   onPress={submitTellUs}
                   disabled={tellSubmitting}
-                  style={[s.modalActionBtn, { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                  style={[s.modalActionBtn, { backgroundColor: C.coral, borderColor: C.coral }]}
                   testID="church-connect-tell-submit"
                 >
                   {tellSubmitting ? (

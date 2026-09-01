@@ -6,7 +6,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import { Platform, View } from "react-native";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PathB } from "@/constants/colors";
 import { queryClient, asyncStoragePersister, QUERY_PERSIST_BUSTER } from "@/lib/query-client";
 import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
@@ -261,13 +263,30 @@ useEffect(() => {
       ) {
         return;
       }
+      // Web-only: SPA cold-load of `/` should land on Home, not the hidden
+      // index trampoline. Other web paths (including `/read`) are preserved —
+      // replacing them with `/(tabs)` is what blanks `/read` on refresh.
+      if (Platform.OS === "web") {
+        const path = initialPathRef.current || "/";
+        if (path !== "/" && path !== "") {
+          return;
+        }
+        const webTarget = needsOnboarding ? "/onboarding" : "/home-v2";
+        const webTimer = setTimeout(() => router.replace(webTarget as any), 50);
+        return () => clearTimeout(webTimer);
+      }
       const targetRoute = needsOnboarding ? "/onboarding" : "/(tabs)";
       const timer = setTimeout(() => router.replace(targetRoute), 50);
       return () => clearTimeout(timer);
     }
   }, [needsOnboarding, startupReady]);
 
-  if (!startupReady) return null;
+  if (!startupReady) {
+    if (Platform.OS === "web") {
+      return <View style={{ flex: 1, backgroundColor: PathB.surface }} />;
+    }
+    return null;
+  }
 
   return (
     <ErrorBoundary>

@@ -13,11 +13,22 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
 import ChurchMap from "@/components/ChurchMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { useToast } from "@/contexts/ToastContext";
+
+const C = {
+  surface: PathB.surface,
+  card: PathB.surfaceCard,
+  ink: PathB.ink,
+  inkMuted: HV2.inkMutedText,
+  coral: PathB.coral,
+  pill: "#F1EBDD",
+  border: "#E7E0D2",
+};
 
 interface Church {
   id: string;
@@ -38,7 +49,6 @@ interface Church {
 
 export default function ChurchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -86,16 +96,16 @@ export default function ChurchDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[s.loadingContainer, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.accent} />
+      <View style={[s.loadingContainer, { backgroundColor: C.surface }]}>
+        <ActivityIndicator size="large" color={C.inkMuted} />
       </View>
     );
   }
 
   if (!church) {
     return (
-      <View style={[s.loadingContainer, { backgroundColor: theme.background }]}>
-        <Text style={[s.errorText, { color: theme.textSecondary }]}>Church not found</Text>
+      <View style={[s.loadingContainer, { backgroundColor: C.surface }]}>
+        <Text style={[s.errorText, { color: C.inkMuted }]}>Church not found</Text>
       </View>
     );
   }
@@ -103,11 +113,11 @@ export default function ChurchDetailScreen() {
   const serviceTimesList = church.serviceTimes?.split("|").map(s => s.trim()) || [];
 
   return (
-    <View style={[s.container, { backgroundColor: theme.background }]}>
+    <View style={[s.container, { backgroundColor: C.surface }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad + 24 }}>
         <View style={[s.header, { paddingTop: topPad + 12 }]}>
           <Pressable onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={22} color={C.ink} />
           </Pressable>
         </View>
 
@@ -119,17 +129,17 @@ export default function ChurchDetailScreen() {
           />
         </View>
 
-        <View style={[s.infoCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
-          <View style={[s.churchIcon, { backgroundColor: theme.accent + "18" }]}>
-            <Ionicons name="business" size={28} color={theme.accent} />
+        <View style={[s.infoCard, { backgroundColor: C.card, borderColor: C.border }]}>
+          <View style={[s.churchIcon, { backgroundColor: C.pill }]}>
+            <Ionicons name="business" size={28} color={C.ink} />
           </View>
-          <Text style={[s.churchName, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[s.churchName, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
             {church.name}
           </Text>
-          <Text style={[s.churchLocation, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[s.churchLocation, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>
             {church.address}
           </Text>
-          <Text style={[s.churchLocation, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[s.churchLocation, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>
             {church.city}{church.state ? `, ${church.state}` : ""}, {church.country}
           </Text>
         </View>
@@ -138,18 +148,18 @@ export default function ChurchDetailScreen() {
           {!isAuthenticated ? (
             <Pressable
               onPress={() => router.push("/(auth)/login" as any)}
-              style={[s.claimBtnOutline, { borderColor: theme.accent }]}
+              style={[s.claimBtnOutline, { borderColor: C.border }]}
               testID="church-detail-claim"
             >
-              <Ionicons name="log-in-outline" size={18} color={theme.accent} />
-              <Text style={[s.claimBtnOutlineText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+              <Ionicons name="log-in-outline" size={18} color={C.ink} />
+              <Text style={[s.claimBtnOutlineText, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>
                 Sign in to set as My Church
               </Text>
             </Pressable>
           ) : isMyChurch ? (
-            <View style={[s.claimedBanner, { backgroundColor: theme.accent + "18", borderColor: theme.accent }]} testID="church-detail-claimed">
-              <Ionicons name="checkmark-circle" size={18} color={theme.accent} />
-              <Text style={[s.claimedText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+            <View style={[s.claimedBanner, { backgroundColor: C.pill, borderColor: C.border }]} testID="church-detail-claimed">
+              <Ionicons name="checkmark-circle" size={18} color={C.ink} />
+              <Text style={[s.claimedText, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>
                 This is your church
               </Text>
             </View>
@@ -157,7 +167,7 @@ export default function ChurchDetailScreen() {
             <Pressable
               onPress={() => claimMutation.mutate()}
               disabled={claimMutation.isPending}
-              style={[s.claimBtn, { backgroundColor: theme.accent, opacity: claimMutation.isPending ? 0.7 : 1 }]}
+              style={[s.claimBtn, { backgroundColor: C.coral, opacity: claimMutation.isPending ? 0.7 : 1 }]}
               testID="church-detail-claim"
             >
               {claimMutation.isPending ? (
@@ -173,40 +183,40 @@ export default function ChurchDetailScreen() {
         </View>
 
         {serviceTimesList.length > 0 ? (
-          <View style={[s.section, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+          <View style={[s.section, { backgroundColor: C.card, borderColor: C.border }]}>
             <View style={s.sectionHeader}>
-              <Ionicons name="time" size={18} color={theme.accent} />
-              <Text style={[s.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+              <Ionicons name="time" size={18} color={C.inkMuted} />
+              <Text style={[s.sectionTitle, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>
                 Service Times
               </Text>
             </View>
             {serviceTimesList.map((time, i) => (
-              <View key={i} style={[s.timeRow, i > 0 && { borderTopWidth: 1, borderTopColor: theme.border }]}>
-                <Text style={[s.timeText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{time}</Text>
+              <View key={i} style={[s.timeRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.border }]}>
+                <Text style={[s.timeText, { color: C.ink, fontFamily: "Inter_500Medium" }]}>{time}</Text>
               </View>
             ))}
           </View>
         ) : null}
 
-        <View style={[s.section, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+        <View style={[s.section, { backgroundColor: C.card, borderColor: C.border }]}>
           <View style={s.sectionHeader}>
-            <Ionicons name="information-circle" size={18} color={theme.accent} />
-            <Text style={[s.sectionTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+            <Ionicons name="information-circle" size={18} color={C.inkMuted} />
+            <Text style={[s.sectionTitle, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>
               Details
             </Text>
           </View>
           {church.pastorName ? (
             <View style={s.infoRow}>
-              <Ionicons name="person" size={16} color={theme.textMuted} />
-              <Text style={[s.infoLabel, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>Pastor</Text>
-              <Text style={[s.infoValue, { color: theme.text, fontFamily: "Inter_500Medium" }]}>{church.pastorName}</Text>
+              <Ionicons name="person" size={16} color={C.inkMuted} />
+              <Text style={[s.infoLabel, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>Pastor</Text>
+              <Text style={[s.infoValue, { color: C.ink, fontFamily: "Inter_500Medium" }]}>{church.pastorName}</Text>
             </View>
           ) : null}
           {church.membershipSize ? (
             <View style={s.infoRow}>
-              <Ionicons name="people" size={16} color={theme.textMuted} />
-              <Text style={[s.infoLabel, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>Size</Text>
-              <Text style={[s.infoValue, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+              <Ionicons name="people" size={16} color={C.inkMuted} />
+              <Text style={[s.infoLabel, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}>Size</Text>
+              <Text style={[s.infoValue, { color: C.ink, fontFamily: "Inter_500Medium" }]}>
                 {church.membershipSize.charAt(0).toUpperCase() + church.membershipSize.slice(1)} congregation
               </Text>
             </View>
@@ -214,26 +224,26 @@ export default function ChurchDetailScreen() {
         </View>
 
         <View style={s.actionsRow}>
-          <Pressable onPress={openDirections} style={[s.actionBtn, { backgroundColor: theme.accent }]}>
+          <Pressable onPress={openDirections} style={[s.actionBtn, { backgroundColor: C.coral }]}>
             <Ionicons name="navigate" size={18} color="#fff" />
             <Text style={[s.actionBtnText, { fontFamily: "Inter_600SemiBold" }]}>Directions</Text>
           </Pressable>
           {church.contactPhone ? (
             <Pressable
               onPress={() => Linking.openURL(`tel:${church.contactPhone}`)}
-              style={[s.actionBtnOutline, { borderColor: theme.accent }]}
+              style={[s.actionBtnOutline, { borderColor: C.border }]}
             >
-              <Ionicons name="call" size={18} color={theme.accent} />
-              <Text style={[s.actionBtnOutlineText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Call</Text>
+              <Ionicons name="call" size={18} color={C.ink} />
+              <Text style={[s.actionBtnOutlineText, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Call</Text>
             </Pressable>
           ) : null}
           {church.website ? (
             <Pressable
               onPress={() => Linking.openURL(church.website!)}
-              style={[s.actionBtnOutline, { borderColor: theme.accent }]}
+              style={[s.actionBtnOutline, { borderColor: C.border }]}
             >
-              <Ionicons name="globe" size={18} color={theme.accent} />
-              <Text style={[s.actionBtnOutlineText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>Web</Text>
+              <Ionicons name="globe" size={18} color={C.ink} />
+              <Text style={[s.actionBtnOutlineText, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Web</Text>
             </Pressable>
           ) : null}
         </View>
@@ -241,10 +251,10 @@ export default function ChurchDetailScreen() {
         {church.contactEmail ? (
           <Pressable
             onPress={() => Linking.openURL(`mailto:${church.contactEmail}`)}
-            style={[s.emailBtn, { borderColor: theme.border }]}
+            style={[s.emailBtn, { borderColor: C.border }]}
           >
-            <Ionicons name="mail" size={16} color={theme.textSecondary} />
-            <Text style={[s.emailText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+            <Ionicons name="mail" size={16} color={C.inkMuted} />
+            <Text style={[s.emailText, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
               {church.contactEmail}
             </Text>
           </Pressable>

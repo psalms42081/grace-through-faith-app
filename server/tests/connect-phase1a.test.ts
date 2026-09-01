@@ -11,6 +11,7 @@ import {
 import { isVerifiedStreetAddress } from "../../scripts/insert-sda-churches";
 import { liveKitCspConnectSrc } from "../livekit-csp";
 import { getOpenAIApiKey, getOpenAIBaseURL, openaiClientOptions } from "../openai-env";
+import { churchMapEmbedUrl, joinApiPath } from "../../lib/join-api-path";
 
 const repoRoot = path.resolve(process.cwd());
 
@@ -149,6 +150,76 @@ describe("church finder tell-us empty state", () => {
     assert.match(finder, /church-connect-tell-name/);
     assert.match(finder, /church-connect-tell-city/);
     assert.match(finder, /church-connect-tell-country/);
+  });
+});
+
+describe("church map embed URL join", () => {
+  it("does not produce //api when API base has a trailing slash", () => {
+    const trailing = "https://example.com/";
+    const joined = joinApiPath(trailing, "/api/map-embed");
+    assert.equal(joined, "https://example.com/api/map-embed");
+    assert.equal(joined.includes("//api"), false);
+
+    const embed = churchMapEmbedUrl(trailing, new URLSearchParams({ zoom: "4" }));
+    assert.equal(embed.includes("//api"), false);
+    assert.match(embed, /^https:\/\/example\.com\/api\/map-embed\?/);
+
+    const noSlash = joinApiPath("https://example.com", "/api/map-embed");
+    assert.equal(noSlash, "https://example.com/api/map-embed");
+    assert.equal(joinApiPath("http://192.168.1.8:5000/", "/api/map-embed"), "http://192.168.1.8:5000/api/map-embed");
+    assert.equal(
+      joinApiPath("https://gracethroughfaith.app/", "/api/map-embed"),
+      "https://gracethroughfaith.app/api/map-embed",
+    );
+  });
+
+  it("ChurchMap uses the join helper, not string concat of base + /api", () => {
+    const native = readFileSync(path.join(repoRoot, "components/ChurchMap.tsx"), "utf8");
+    const web = readFileSync(path.join(repoRoot, "components/ChurchMap.web.tsx"), "utf8");
+    const builder = readFileSync(path.join(repoRoot, "lib/church-map-url.ts"), "utf8");
+    const qc = readFileSync(path.join(repoRoot, "lib/query-client.ts"), "utf8");
+    assert.match(qc, /return `https:\/\/\$\{host\}\/`/);
+    assert.match(qc, /Platform\.OS === "web"/);
+    assert.match(qc, /window\.location\?\.origin/);
+    assert.match(builder, /churchMapEmbedUrl\(getApiUrl\(\)/);
+    assert.doesNotMatch(native, /\$\{base\}\/api\/map-embed/);
+    assert.doesNotMatch(web, /\$\{base\}\/api\/map-embed/);
+    assert.match(native, /buildChurchMapEmbedUrl/);
+    assert.match(web, /buildChurchMapEmbedUrl/);
+  });
+});
+
+describe("church map-embed route is honest OSM", () => {
+  it("serves Leaflet OSM tiles with no Google Maps key", () => {
+    const routes = readFileSync(path.join(repoRoot, "server/routes.ts"), "utf8");
+    assert.match(routes, /app\.get\("\/api\/map-embed"/);
+    assert.match(routes, /tile\.openstreetmap\.org/);
+    assert.match(routes, /unpkg\.com\/leaflet@1\.9\.4/);
+    assert.doesNotMatch(routes, /maps\.googleapis|GOOGLE_MAPS|AIza/);
+  });
+
+  it("finder toggle and detail header both keep ChurchMap", () => {
+    const finder = readFileSync(path.join(repoRoot, "app/church-connect.tsx"), "utf8");
+    const detail = readFileSync(path.join(repoRoot, "app/church/[id].tsx"), "utf8");
+    assert.match(finder, /church-connect-map-toggle/);
+    assert.match(finder, /<ChurchMap/);
+    assert.match(detail, /<ChurchMap/);
+    assert.match(detail, /s\.mapSection/);
+  });
+});
+
+describe("church connect Path B restyle", () => {
+  it("uses Path B ink/coral/muted tokens and drops gold", () => {
+    const finder = readFileSync(path.join(repoRoot, "app/church-connect.tsx"), "utf8");
+    const detail = readFileSync(path.join(repoRoot, "app/church/[id].tsx"), "utf8");
+    for (const source of [finder, detail]) {
+      assert.match(source, /PathB/);
+      assert.match(source, /PathB\.coral/);
+      assert.match(source, /PathB\.ink/);
+      assert.match(source, /HV2\.inkMutedText/);
+      assert.doesNotMatch(source, /#C9933A/);
+      assert.doesNotMatch(source, /theme\.accent/);
+    }
   });
 });
 

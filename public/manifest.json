@@ -1,0 +1,31 @@
+{
+  "name": "Informed Ministries",
+  "short_name": "Informed",
+  "description": "Bible reading, Sabbath School, and devotionals from Informed Ministries.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF7EE",
+  "theme_color": "#FBF7EE",
+  "icons": [
+    {
+      "src": "/assets/images/informed-ministries-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/informed-ministries-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/informed-ministries-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,14 +1,15 @@
 import { Stack } from "expo-router";
+import { PathB } from "@/constants/colors";
 
 export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
         headerBackButtonDisplayMode: "minimal",
-        headerStyle: { backgroundColor: "#F5EFE0" },
-        headerTintColor: "#C9933A",
-        headerTitleStyle: { fontFamily: "Inter_600SemiBold", color: "#2C1810" },
-        contentStyle: { backgroundColor: "#F5EFE0" },
+        headerStyle: { backgroundColor: PathB.surface },
+        headerTintColor: PathB.ink,
+        headerTitleStyle: { fontFamily: "Inter_600SemiBold", color: PathB.ink },
+        contentStyle: { backgroundColor: PathB.surface },
       }}
     >
       <Stack.Screen name="login" options={{ title: "Sign In" }} />

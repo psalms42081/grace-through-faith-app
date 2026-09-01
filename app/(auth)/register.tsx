@@ -15,6 +15,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
 const PROFILE_OPTIONS = [
   {
@@ -97,7 +100,7 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={s.header}>
-          <Ionicons name="person-add" size={48} color="#C9933A" />
+          <Ionicons name="person-add" size={48} color={PathB.ink} />
           <Text style={s.title}>{t("auth.createAccount")}</Text>
           <Text style={s.subtitle}>
             Save your progress, join prayer groups, and connect with your church family
@@ -177,7 +180,7 @@ export default function RegisterScreen() {
                       <Ionicons
                         name={opt.icon}
                         size={18}
-                        color={active ? "#050507" : "#C9933A"}
+                        color={active ? "#fff" : PathB.ink}
                       />
                     </View>
                     <View style={s.roleText}>
@@ -187,7 +190,7 @@ export default function RegisterScreen() {
                       <Text style={s.roleDesc}>{opt.desc}</Text>
                     </View>
                     {active && (
-                      <Ionicons name="checkmark-circle" size={20} color="#C9933A" />
+                      <Ionicons name="checkmark-circle" size={20} color={PathB.ink} />
                     )}
                   </View>
                 </Pressable>
@@ -223,18 +226,18 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5EFE0" },
+  container: { flex: 1, backgroundColor: PathB.surface },
   scroll: { flexGrow: 1, padding: 24 },
   header: { alignItems: "center", marginTop: 24, marginBottom: 28, gap: 8 },
   title: {
     fontSize: 28,
-    color: "#2C1810",
+    color: PathB.ink,
     fontFamily: "Lora_700Bold",
     marginTop: 12,
   },
   subtitle: {
     fontSize: 14,
-    color: "#6B6660",
+    color: HV2.inkMutedText,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     paddingHorizontal: 20,
@@ -252,20 +255,20 @@ const s = StyleSheet.create({
   form: { gap: 6 },
   label: {
     fontSize: 13,
-    color: "#6B6660",
+    color: HV2.inkMutedText,
     fontFamily: "Inter_500Medium",
     marginTop: 8,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: "#FFFDF6",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    color: "#2C1810",
+    color: PathB.ink,
     fontFamily: "Inter_400Regular",
     borderWidth: 1,
-    borderColor: "#DDD0B8",
+    borderColor: SWEEP_LIGHT.border,
   },
   passwordRow: { position: "relative" as const },
   passwordInput: { paddingRight: 48 },
@@ -276,15 +279,15 @@ const s = StyleSheet.create({
   },
   roleGroup: { gap: 8, marginTop: 4 },
   roleCard: {
-    backgroundColor: "#FFFDF6",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: "#DDD0B8",
+    borderColor: SWEEP_LIGHT.border,
   },
   roleCardActive: {
-    borderColor: "#C9933A",
-    backgroundColor: "rgba(201, 147, 58, 0.06)",
+    borderColor: PathB.ink,
+    backgroundColor: "rgba(31, 26, 18, 0.04)",
   },
   roleRow: {
     flexDirection: "row" as const,
@@ -295,30 +298,30 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(201, 147, 58, 0.12)",
+    backgroundColor: "rgba(31, 26, 18, 0.08)",
     alignItems: "center" as const,
     justifyContent: "center" as const,
   },
   roleIconActive: {
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.ink,
   },
   roleText: { flex: 1 },
   roleTitle: {
     fontSize: 15,
-    color: "#2C1810",
+    color: PathB.ink,
     fontFamily: "Inter_600SemiBold",
   },
   roleTitleActive: {
-    color: "#C9933A",
+    color: PathB.ink,
   },
   roleDesc: {
     fontSize: 12,
-    color: "#6B6660",
+    color: HV2.inkMutedText,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
   primaryBtn: {
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center" as const,
@@ -337,6 +340,6 @@ const s = StyleSheet.create({
     gap: 6,
     marginTop: 28,
   },
-  footerText: { color: "#6B6660", fontSize: 14, fontFamily: "Inter_400Regular" },
-  linkText: { color: "#C9933A", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  footerText: { color: HV2.inkMutedText, fontSize: 14, fontFamily: "Inter_400Regular" },
+  linkText: { color: PathB.ink, fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });

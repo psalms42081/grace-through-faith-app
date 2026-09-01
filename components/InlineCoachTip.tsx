@@ -9,12 +9,13 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useTutorial, TutorialId } from "@/contexts/TutorialContext";
+import { PathB } from "@/constants/colors";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
-/** Dark card + gold hairline (replaces former blue #1E88E5 fill). */
-const COACH_CARD_BG = "rgba(26,31,60,0.96)";
-const COACH_BORDER = "rgba(201,147,58,0.55)";
-const COACH_TEXT = "#F5EFE0";
-const COACH_GOLD = "#C9933A";
+/** Cream card + muted hairline (Path B). */
+const COACH_CARD_BG = PathB.surfaceCard;
+const COACH_BORDER = SWEEP_LIGHT.border;
+const COACH_TEXT = PathB.ink;
 const ARROW_W = 4;
 const ARROW_H = 6;
 
@@ -120,13 +121,13 @@ const s = StyleSheet.create({
     alignSelf: "flex-start",
     ...Platform.select({
       ios: {
-        shadowColor: COACH_GOLD,
+        shadowColor: PathB.ink,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.18,
+        shadowOpacity: 0.12,
         shadowRadius: 10,
       },
       android: { elevation: 8 },
-      web: { boxShadow: `0 2px 14px rgba(201,147,58,0.12), 0 3px 12px rgba(0,0,0,0.25)` } as any,
+      web: { boxShadow: `0 2px 14px rgba(31,26,18,0.10), 0 3px 12px rgba(0,0,0,0.08)` } as any,
     }),
   },
   arrow: {

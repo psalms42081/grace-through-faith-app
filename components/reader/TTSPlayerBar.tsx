@@ -11,7 +11,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import Colors from "@/constants/colors";
+import Colors, { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
 import { SPEED_OPTIONS } from "@/hooks/useBibleAudio";
 import type { UseBibleAudioReturn } from "@/hooks/useBibleAudio";
 
@@ -33,6 +34,8 @@ interface TTSPlayerBarProps {
   goToPrev: () => void;
   goToNext: () => void;
   bottomPad: number;
+  /** Path B coral — play button only. Never inherit the legacy gold accent token. */
+  accentColor?: string;
 }
 
 // ── Waveform animation ────────────────────────────────────────────────────────
@@ -91,6 +94,7 @@ export default function TTSPlayerBar({
   goToPrev,
   goToNext,
   bottomPad,
+  accentColor = PathB.coral,
 }: TTSPlayerBarProps) {
   const isIOS = Platform.OS === "ios";
   const totalVerses = verses.length;
@@ -110,7 +114,7 @@ export default function TTSPlayerBar({
     return () => anim.stop();
   }, [audio.isLoadingAudio, loadingPulse]);
 
-  const accentGold = theme.accent;
+  const muted = HV2.inkMutedText;
 
   if (!audio.isActive) {
     return (
@@ -118,7 +122,7 @@ export default function TTSPlayerBar({
         <View style={[styles.minimalBar, { paddingBottom: bottomPad + 8 }]}>
           <Pressable
             onPress={audio.handlePlay}
-            style={styles.minimalPlayBtn}
+            style={[styles.minimalPlayBtn, { backgroundColor: accentColor }]}
           >
             <Ionicons name="play" size={20} color="#fff" />
           </Pressable>
@@ -157,8 +161,8 @@ export default function TTSPlayerBar({
                   style={[
                     styles.speedPill,
                     {
-                      backgroundColor: sel ? accentGold : "transparent",
-                      borderColor: sel ? accentGold : theme.border,
+                      backgroundColor: sel ? PathB.ink : "transparent",
+                      borderColor: sel ? PathB.ink : theme.border,
                     },
                   ]}
                 >
@@ -176,12 +180,12 @@ export default function TTSPlayerBar({
       {audio.isActive && totalVerses > 1 && (
         <View style={[styles.progressTrack, { backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }]}>
           <LinearGradient
-            colors={[accentGold + "cc", accentGold]}
+            colors={[muted, PathB.ink]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` as any }]}
           />
-          <View style={[styles.progressThumb, { backgroundColor: accentGold, left: `${Math.round(progress * 100)}%` as any }]} />
+          <View style={[styles.progressThumb, { backgroundColor: PathB.ink, left: `${Math.round(progress * 100)}%` as any }]} />
         </View>
       )}
 
@@ -190,8 +194,8 @@ export default function TTSPlayerBar({
         <View style={styles.verseLabel}>
           {audio.isLoadingAudio ? (
             <View style={styles.statusRow}>
-              <ActivityIndicator size="small" color={accentGold} style={{ transform: [{ scale: 0.7 }] }} />
-              <Text style={[styles.statusText, { color: accentGold }]}>Loading…</Text>
+              <ActivityIndicator size="small" color={muted} style={{ transform: [{ scale: 0.7 }] }} />
+              <Text style={[styles.statusText, { color: muted }]}>Loading…</Text>
             </View>
           ) : audio.usingFallback ? (
             <View style={styles.statusRow}>
@@ -200,8 +204,8 @@ export default function TTSPlayerBar({
             </View>
           ) : (
             <View style={styles.statusRow}>
-              <WaveformBars isPlaying={audio.isSpeaking && !audio.isPaused} color={accentGold} />
-              <Text style={[styles.statusText, { color: accentGold }]}>
+              <WaveformBars isPlaying={audio.isSpeaking && !audio.isPaused} color={muted} />
+              <Text style={[styles.statusText, { color: muted }]}>
                 {audio.isPaused ? "Paused" : `Verse ${currentVerseNumber} / ${totalVerses}`}
               </Text>
             </View>
@@ -243,7 +247,7 @@ export default function TTSPlayerBar({
           >
             <Animated.View style={{ transform: [{ scale: loadingPulse }] }}>
               <LinearGradient
-                colors={[accentGold + "ee", accentGold, isDark ? "#7A5520" : "#B8791A"]}
+                colors={[accentColor, PathB.coral, PathB.coralInk]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.playBtn}
@@ -282,9 +286,9 @@ export default function TTSPlayerBar({
               styles.speedBtn,
               {
                 backgroundColor: audio.showSpeedPicker
-                  ? accentGold + "20"
+                  ? "rgba(31,26,18,0.08)"
                   : isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
-                borderColor: audio.showSpeedPicker ? accentGold : "transparent",
+                borderColor: audio.showSpeedPicker ? PathB.ink : "transparent",
               },
               pressed && { opacity: 0.7 },
             ]}
@@ -292,7 +296,7 @@ export default function TTSPlayerBar({
             <Text style={{
               fontSize: 13,
               fontFamily: "Inter_700Bold",
-              color: audio.showSpeedPicker ? accentGold : theme.textSecondary,
+              color: audio.showSpeedPicker ? PathB.ink : theme.textSecondary,
               letterSpacing: -0.3,
             }}>
               {audio.speechRate}×
@@ -362,15 +366,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: "#050507",
+    backgroundColor: PathB.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "#E7E0D2",
   },
   minimalPlayBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -451,7 +455,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     marginLeft: -5,
-    shadowColor: "#C9933A",
+    shadowColor: PathB.ink,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 4,
@@ -509,7 +513,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#C9933A",
+    shadowColor: PathB.coral,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 14,

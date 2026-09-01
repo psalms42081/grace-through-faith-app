@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Dimensions,
   Platform,
   Image,
 } from "react-native";
@@ -12,6 +11,8 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { track } from "@/lib/analytics";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,14 +21,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
 const ONBOARDING_KEY = "@grace-through-faith/onboarded";
-
-const GOLD = "#C9933A";
-const NAVY = "#1A1F3C";
-const DEEP_NAVY = "#0D1025";
-const PARCHMENT = "#F5EFE0";
 
 const QUOTE =
   "The Word of God is living and powerful.\nYou have come to the right place —\nopen your heart, and let it speak.";
@@ -132,7 +126,7 @@ export default function OnboardingScreen() {
       <View style={s.center}>
         <Animated.View style={[s.brandBlock, flameStyle]}>
           <Image
-            source={require("@/assets/images/informed-ministries-logo.png")}
+            source={require("@/assets/images/informed-ministries-icon.png")}
             style={s.flame}
             resizeMode="contain"
           />
@@ -164,7 +158,7 @@ export default function OnboardingScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: DEEP_NAVY,
+    backgroundColor: PathB.surface,
   },
   center: {
     flex: 1,
@@ -172,8 +166,9 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   flame: {
-    width: 260,
-    height: 90,
+    width: 88,
+    height: 88,
+    borderRadius: 18,
   },
   brandBlock: {
     alignItems: "center",
@@ -182,7 +177,7 @@ const s = StyleSheet.create({
     marginTop: 8,
     fontFamily: "Inter_500Medium",
     fontSize: 16,
-    color: PARCHMENT,
+    color: PathB.ink,
     letterSpacing: 1.2,
   },
   quoteBlock: {
@@ -193,7 +188,7 @@ const s = StyleSheet.create({
   quoteText: {
     fontFamily: "Lora_400Regular_Italic",
     fontSize: 18,
-    color: PARCHMENT,
+    color: PathB.ink,
     textAlign: "center",
     lineHeight: 30,
     letterSpacing: 0.3,
@@ -201,7 +196,7 @@ const s = StyleSheet.create({
   attribution: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    color: GOLD,
+    color: HV2.inkMutedText,
     textAlign: "center",
     marginTop: 16,
     letterSpacing: 1,
@@ -215,14 +210,14 @@ const s = StyleSheet.create({
     width: 160,
     height: 52,
     borderRadius: 26,
-    backgroundColor: GOLD,
+    backgroundColor: PathB.coral,
     alignItems: "center",
     justifyContent: "center",
   },
   enterBtnText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 17,
-    color: NAVY,
+    color: "#fff",
     letterSpacing: 1,
   },
 });

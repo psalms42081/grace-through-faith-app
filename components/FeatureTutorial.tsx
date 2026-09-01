@@ -28,16 +28,14 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTutorial, type TutorialId } from "@/contexts/TutorialContext";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const GOLD = "#C9933A";
-const NAVY = "#1A1F3C";
-const DEEP_NAVY = "#0D1025";
-const PARCHMENT = "#F5EFE0";
-const PARCHMENT_DIM = "rgba(245, 239, 224, 0.08)";
-const GOLD_DIM = "rgba(201, 147, 58, 0.15)";
-const GOLD_SOFT = "rgba(201, 147, 58, 0.08)";
+const CORAL_DIM = "rgba(232, 96, 76, 0.15)";
+const CORAL_SOFT = "rgba(232, 96, 76, 0.08)";
 
 export interface TutorialStep {
   illustration: React.ReactNode;
@@ -72,7 +70,7 @@ function PulsingRing({ delay = 0, size = 120 }: { delay?: number; size?: number 
     height: size,
     borderRadius: size / 2,
     borderWidth: 1.5,
-    borderColor: `rgba(201, 147, 58, ${interpolate(pulse.value, [0, 1], [0.4, 0])})`,
+    borderColor: `rgba(232, 96, 76, ${interpolate(pulse.value, [0, 1], [0.4, 0])})`,
     transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.6]) }],
   }));
 
@@ -101,7 +99,7 @@ function FloatingParticle({ delay = 0, x = 0, y = 0 }: { delay?: number; x?: num
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: `rgba(201, 147, 58, ${interpolate(float.value, [0, 0.5, 1], [0.15, 0.5, 0.15])})`,
+    backgroundColor: `rgba(232, 96, 76, ${interpolate(float.value, [0, 0.5, 1], [0.15, 0.5, 0.15])})`,
     left: x,
     top: interpolate(float.value, [0, 1], [y, y - 12]),
   }));
@@ -120,7 +118,7 @@ function IllustrationContainer({ children }: { children: React.ReactNode }) {
       <FloatingParticle delay={1800} x={60} y={10} />
       <View style={illStyles.innerCircle}>
         <LinearGradient
-          colors={["rgba(201, 147, 58, 0.18)", "rgba(201, 147, 58, 0.04)"]}
+          colors={[CORAL_DIM, CORAL_SOFT]}
           style={illStyles.gradient}
         />
         {children}
@@ -144,7 +142,7 @@ const illStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "rgba(201, 147, 58, 0.25)",
+    borderColor: "rgba(232, 96, 76, 0.25)",
     overflow: "hidden",
   },
   gradient: {
@@ -205,24 +203,24 @@ const stepStyles = StyleSheet.create({
   labelLine: {
     width: 24,
     height: 1,
-    backgroundColor: "rgba(201, 147, 58, 0.35)",
+    backgroundColor: "rgba(31, 26, 18, 0.18)",
   },
   label: {
     fontSize: 11,
-    color: GOLD,
+    color: PathB.coralInk,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   title: {
     fontSize: 28,
-    color: PARCHMENT,
+    color: PathB.ink,
     textAlign: "center",
     lineHeight: 38,
     marginBottom: 16,
   },
   description: {
     fontSize: 15,
-    color: "rgba(237, 229, 213, 0.6)",
+    color: HV2.inkMutedText,
     textAlign: "center",
     lineHeight: 24,
     maxWidth: 320,
@@ -259,13 +257,13 @@ const dotStyles = StyleSheet.create({
   active: {
     width: 24,
     height: 8,
-    backgroundColor: GOLD,
+    backgroundColor: PathB.ink,
     borderRadius: 4,
   },
   inactive: {
     width: 8,
     height: 8,
-    backgroundColor: "rgba(201, 147, 58, 0.2)",
+    backgroundColor: "rgba(31, 26, 18, 0.18)",
     borderRadius: 4,
   },
 });
@@ -327,7 +325,7 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={handleSkip}>
       <View style={[modalStyles.root, { paddingTop: topPad, paddingBottom: bottomPad }]}>
         <LinearGradient
-          colors={[DEEP_NAVY, "rgba(13, 16, 37, 0.94)", DEEP_NAVY]}
+          colors={[PathB.surface, SWEEP_LIGHT.backgroundSecondary, PathB.surface]}
           style={StyleSheet.absoluteFill}
         />
         <Animated.View
@@ -388,7 +386,7 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
                 <Text style={[modalStyles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>
                   Start Exploring
                 </Text>
-                <Ionicons name="arrow-forward" size={20} color={NAVY} />
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
               </Pressable>
             ) : (
               <Pressable
@@ -403,7 +401,7 @@ export default function FeatureTutorial({ tutorialId, steps, onComplete }: Featu
                 <Text style={[modalStyles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>
                   Continue
                 </Text>
-                <Ionicons name="arrow-forward" size={20} color={NAVY} />
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
               </Pressable>
             )}
           </View>
@@ -433,10 +431,10 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(237, 229, 213, 0.25)",
+    borderColor: SWEEP_LIGHT.border,
   },
   skipText: {
-    color: "rgba(237, 229, 213, 0.6)",
+    color: HV2.inkMutedText,
     fontSize: 13,
   },
   list: {
@@ -453,7 +451,7 @@ const modalStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: GOLD,
+    backgroundColor: PathB.coral,
     paddingVertical: 16,
     paddingHorizontal: 40,
     borderRadius: 16,
@@ -462,14 +460,14 @@ const modalStyles = StyleSheet.create({
     maxWidth: 320,
   },
   primaryBtnText: {
-    color: NAVY,
+    color: "#fff",
     fontSize: 16,
   },
   stepCounter: {
     alignItems: "center",
   },
   stepCounterText: {
-    color: "rgba(237, 229, 213, 0.3)",
+    color: HV2.inkMutedText,
     fontSize: 12,
   },
 });

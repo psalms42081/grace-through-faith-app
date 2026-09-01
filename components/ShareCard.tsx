@@ -11,6 +11,9 @@ import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
 interface ShareCardProps {
   verseReference: string;
@@ -132,13 +135,12 @@ export function ShareInsightButton({
   isSharing,
   label,
   compact,
-  theme,
 }: {
   onPress: () => void;
   isSharing: boolean;
   label?: string;
   compact?: boolean;
-  theme: any;
+  theme?: any;
 }) {
   if (compact) {
     return (
@@ -152,9 +154,9 @@ export function ShareInsightButton({
         testID="share-insight-btn"
       >
         {isSharing ? (
-          <ActivityIndicator size="small" color={theme.accent} />
+          <ActivityIndicator size="small" color={PathB.ink} />
         ) : (
-          <Ionicons name="share-social-outline" size={20} color={theme.text} />
+          <Ionicons name="share-social-outline" size={20} color={PathB.ink} />
         )}
       </Pressable>
     );
@@ -166,16 +168,16 @@ export function ShareInsightButton({
       disabled={isSharing}
       style={({ pressed }) => [
         bs.fullBtn,
-        { backgroundColor: theme.backgroundCard, opacity: pressed ? 0.8 : 1 },
+        { backgroundColor: PathB.coral, opacity: pressed ? 0.8 : 1 },
       ]}
       testID="share-insight-btn"
     >
-      {isSharing ? (
-        <ActivityIndicator size="small" color={theme.accent} />
-      ) : (
-        <Ionicons name="share-social-outline" size={16} color={theme.accent} />
-      )}
-      <Text style={[bs.fullBtnText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+        {isSharing ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Ionicons name="share-social-outline" size={16} color="#fff" />
+        )}
+      <Text style={[bs.fullBtnText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
         {label || "Share Insight"}
       </Text>
     </Pressable>
@@ -194,13 +196,13 @@ const cs = StyleSheet.create({
   },
   card: {
     width: 360,
-    backgroundColor: "#0a0a0f",
+    backgroundColor: PathB.surfaceCard,
     borderRadius: 20,
     overflow: "hidden",
   },
   accentBar: {
     height: 4,
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.coral,
   },
   inner: {
     padding: 28,
@@ -210,13 +212,13 @@ const cs = StyleSheet.create({
     fontFamily: "Lora_400Regular",
     fontSize: 20,
     lineHeight: 32,
-    color: "#F0EBE0",
+    color: PathB.ink,
     marginBottom: 12,
   },
   verseRef: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
-    color: "#C9933A",
+    color: PathB.ink,
     marginBottom: 16,
   },
   insightBlock: {
@@ -224,7 +226,7 @@ const cs = StyleSheet.create({
   },
   insightDivider: {
     height: 1,
-    backgroundColor: "rgba(201,147,58,0.2)",
+    backgroundColor: SWEEP_LIGHT.border,
     marginBottom: 16,
   },
   wordRow: {
@@ -236,17 +238,17 @@ const cs = StyleSheet.create({
   originalWord: {
     fontFamily: "Lora_700Bold",
     fontSize: 22,
-    color: "#C9933A",
+    color: PathB.ink,
   },
   transliteration: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: "#9A8E7A",
+    color: HV2.inkMutedText,
   },
   insightLabel: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
-    color: "#5C5549",
+    color: HV2.inkMutedText,
     textTransform: "uppercase",
     letterSpacing: 1.5,
     marginBottom: 6,
@@ -255,7 +257,7 @@ const cs = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     lineHeight: 22,
-    color: "#9A8E7A",
+    color: HV2.inkMutedText,
   },
   watermark: {
     flexDirection: "row",
@@ -267,12 +269,12 @@ const cs = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#C9933A",
+    backgroundColor: PathB.ink,
   },
   watermarkText: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "#5C5549",
+    color: HV2.inkMutedText,
     letterSpacing: 0.5,
   },
 });

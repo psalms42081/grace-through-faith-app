@@ -181,6 +181,18 @@ describe("external tester navigation feedback", () => {
     );
   });
 
+  it("redirects web cold-load / to Home without changing native tabs entry", () => {
+    assert.match(rootLayoutSource, /Platform\.OS === "web"/);
+    assert.match(
+      rootLayoutSource,
+      /needsOnboarding \? "\/onboarding" : "\/home-v2"/,
+    );
+    assert.match(
+      rootLayoutSource,
+      /needsOnboarding\s*\?\s*"\/onboarding"\s*:\s*"\/\(tabs\)"/,
+    );
+  });
+
   it("keeps the guest Devotions hero intact and centers web tab content", () => {
     assert.match(
       devotionsSource,

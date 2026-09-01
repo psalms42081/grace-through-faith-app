@@ -99,7 +99,6 @@ const DARK_SURFACE = "#1A1A1A";
 const DARK_BORDER = "#1F1F1F";
 const DARK_TEXT = "#F5F0E8";
 const DARK_MUTED = "#666";
-const GOLD = "#C9933A";
 const LIGHT_BG = "#FFFFFF";
 const LIGHT_SURFACE = "#F8F7F5";
 const LIGHT_TEXT = "#1A1A1A";
@@ -1698,6 +1697,7 @@ export default function VerseReaderScreen() {
                 goToPrev={goToPrev}
                 goToNext={goToNext}
                 bottomPad={bottomPad}
+                accentColor={RV2_CORAL}
               />
             )}
           </>

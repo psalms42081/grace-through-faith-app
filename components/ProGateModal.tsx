@@ -9,7 +9,9 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/hooks/useTheme";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
+import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
 const SUPPORTER_BENEFITS = [
   { icon: "people-outline" as const, title: "Family Dashboard", desc: "Track your family's spiritual growth" },
@@ -26,9 +28,7 @@ interface ProGateModalProps {
   isLoading?: boolean;
 }
 
-export default function ProGateModal({ visible, onClose, onStartTrial, isLoading }: ProGateModalProps) {
-  const { theme, isDark } = useTheme();
-
+export default function ProGateModal({ visible, onClose }: ProGateModalProps) {
   return (
     <Modal
       visible={visible}
@@ -44,33 +44,33 @@ export default function ProGateModal({ visible, onClose, onStartTrial, isLoading
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.7)" }]} />
         )}
 
-        <View style={[ms.card, { backgroundColor: isDark ? "#111116" : "#FFFDF6" }]}>
+        <View style={[ms.card, { backgroundColor: PathB.surfaceCard }]}>
           <Pressable onPress={onClose} style={ms.closeBtn} testID="pro-modal-close">
-            <Ionicons name="close" size={22} color={theme.textMuted} />
+            <Ionicons name="close" size={22} color={HV2.inkMutedText} />
           </Pressable>
 
           <View style={ms.iconWrap}>
-            <Ionicons name="heart-circle" size={32} color="#C9933A" />
+            <Ionicons name="heart-circle" size={32} color={PathB.ink} />
           </View>
 
-          <Text style={[ms.title, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
+          <Text style={[ms.title, { color: PathB.ink, fontFamily: "Lora_700Bold" }]}>
             Beta Preview
           </Text>
-          <Text style={[ms.subtitle, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+          <Text style={[ms.subtitle, { color: HV2.inkMutedText, fontFamily: "Inter_400Regular" }]}>
             These features are currently in beta and available free to all users. We're working to make deep Bible study accessible to every home.
           </Text>
 
           <View style={ms.benefitsList}>
             {SUPPORTER_BENEFITS.map((b) => (
               <View key={b.title} style={ms.benefitRow}>
-                <View style={[ms.benefitIcon, { backgroundColor: "rgba(201,147,58,0.1)" }]}>
-                  <Ionicons name={b.icon} size={18} color="#C9933A" />
+                <View style={[ms.benefitIcon, { backgroundColor: "rgba(31,26,18,0.08)" }]}>
+                  <Ionicons name={b.icon} size={18} color={PathB.ink} />
                 </View>
                 <View style={ms.benefitText}>
-                  <Text style={[ms.benefitTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                  <Text style={[ms.benefitTitle, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                     {b.title}
                   </Text>
-                  <Text style={[ms.benefitDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                  <Text style={[ms.benefitDesc, { color: HV2.inkMutedText, fontFamily: "Inter_400Regular" }]}>
                     {b.desc}
                   </Text>
                 </View>
@@ -78,19 +78,19 @@ export default function ProGateModal({ visible, onClose, onStartTrial, isLoading
             ))}
           </View>
 
-          <View style={[ms.comingSoonBox, { backgroundColor: isDark ? "#1A1A24" : "#F0EBE0", borderColor: theme.border }]}>
-            <Ionicons name="time-outline" size={18} color={theme.accent} />
-            <Text style={{ fontSize: 13, color: theme.textSecondary, fontFamily: "Inter_500Medium", textAlign: "center", flex: 1 }}>
+          <View style={[ms.comingSoonBox, { backgroundColor: SWEEP_LIGHT.backgroundSecondary, borderColor: SWEEP_LIGHT.border }]}>
+            <Ionicons name="time-outline" size={18} color={HV2.inkMutedText} />
+            <Text style={{ fontSize: 13, color: HV2.inkMutedText, fontFamily: "Inter_500Medium", textAlign: "center", flex: 1 }}>
               Everything is free during beta. Donation support is coming soon.
             </Text>
           </View>
 
           <Pressable
             onPress={onClose}
-            style={({ pressed }) => [ms.dismissBtn, { opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [ms.dismissBtn, { backgroundColor: PathB.coral, opacity: pressed ? 0.85 : 1 }]}
             testID="supporter-continue-btn"
           >
-            <Text style={[ms.dismissText, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+            <Text style={[ms.dismissText, { color: "#fff", fontFamily: "Inter_600SemiBold" }]}>
               Continue Studying
             </Text>
           </Pressable>
@@ -128,7 +128,7 @@ const ms = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(201,147,58,0.12)",
+    backgroundColor: "rgba(31,26,18,0.08)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -186,9 +186,10 @@ const ms = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     alignItems: "center",
+    alignSelf: "stretch",
+    borderRadius: 14,
   },
   dismissText: {
-    fontSize: 14,
-    textDecorationLine: "underline" as const,
+    fontSize: 15,
   },
 });

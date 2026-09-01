@@ -19,7 +19,8 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { queryClient } from "@/lib/query-client";
-import Colors from "@/constants/colors";
+import Colors, { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
 
 interface ChapterContext {
   locations: { name: string; modernName: string; latitude: number; longitude: number; significance: string; type: string }[];
@@ -96,10 +97,10 @@ export default function ContextPanel({
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setExpanded(true);
         }}
-        style={[contextStyles.fab, { backgroundColor: isDark ? "#1A1F3C" : "#EDE5D5" }, fabAnimStyle]}
+        style={[contextStyles.fab, { backgroundColor: PathB.coral }, fabAnimStyle]}
         testID="context-panel-toggle"
       >
-        <Ionicons name="layers" size={22} color={theme.accent} />
+        <Ionicons name="layers" size={22} color="#fff" />
       </AnimatedPressable>
     );
   }
@@ -112,14 +113,14 @@ export default function ContextPanel({
   ];
 
   return (
-    <View style={[contextStyles.panel, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+    <View style={[contextStyles.panel, { backgroundColor: isDark ? theme.backgroundCard : PathB.surfaceCard }]}>
       <View style={contextStyles.panelHeader}>
-        <Ionicons name="layers" size={18} color={theme.accent} />
+        <Ionicons name="layers" size={18} color={PathB.ink} />
         <Text style={[contextStyles.panelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Chapter Insights
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 3, position: "absolute", top: 18, right: 40 }}>
-          <Ionicons name="sparkles" size={9} color={theme.accent} />
+          <Ionicons name="sparkles" size={9} color={HV2.inkMutedText} />
           <Text style={{ fontSize: 9, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted</Text>
         </View>
         <Pressable
@@ -138,19 +139,19 @@ export default function ContextPanel({
             onPress={() => setActiveSection(s.id)}
             style={[
               contextStyles.sectionTab,
-              { backgroundColor: activeSection === s.id ? theme.accent + "20" : "transparent" },
+              { backgroundColor: activeSection === s.id ? "rgba(31,26,18,0.08)" : "transparent" },
             ]}
           >
             <Ionicons
               name={s.icon}
               size={14}
-              color={activeSection === s.id ? theme.accent : theme.textMuted}
+              color={activeSection === s.id ? PathB.ink : theme.textMuted}
             />
             <Text
               style={[
                 contextStyles.sectionTabText,
                 {
-                  color: activeSection === s.id ? theme.accent : theme.textMuted,
+                  color: activeSection === s.id ? PathB.ink : theme.textMuted,
                   fontFamily: activeSection === s.id ? "Inter_600SemiBold" : "Inter_400Regular",
                 },
               ]}
@@ -163,7 +164,7 @@ export default function ContextPanel({
 
       {isLoading ? (
         <View style={contextStyles.loadingArea}>
-          <ActivityIndicator size="small" color={theme.accent} />
+          <ActivityIndicator size="small" color={PathB.ink} />
           <Text style={[contextStyles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
             Generating context...
           </Text>
@@ -256,8 +257,8 @@ export default function ContextPanel({
                     key={i}
                     style={[contextStyles.contextItem, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}
                   >
-                    <View style={[contextStyles.avatarCircle, { backgroundColor: theme.accent + "20" }]}>
-                      <Text style={[contextStyles.avatarText, { color: theme.accent, fontFamily: "Inter_700Bold" }]}>
+                    <View style={[contextStyles.avatarCircle, { backgroundColor: "rgba(31,26,18,0.08)" }]}>
+                      <Text style={[contextStyles.avatarText, { color: PathB.ink, fontFamily: "Inter_700Bold" }]}>
                         {fig.name.charAt(0)}
                       </Text>
                     </View>
@@ -265,7 +266,7 @@ export default function ContextPanel({
                       <Text style={[contextStyles.contextItemTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
                         {fig.name}
                       </Text>
-                      <Text style={[contextStyles.contextItemMeta, { color: theme.accent, fontFamily: "Inter_500Medium" }]}>
+                      <Text style={[contextStyles.contextItemMeta, { color: HV2.inkMutedText, fontFamily: "Inter_500Medium" }]}>
                         {fig.role}
                       </Text>
                       <Text style={[contextStyles.contextItemDesc, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>
@@ -296,8 +297,8 @@ export default function ContextPanel({
               {data.culturalInsights ? (
                 <View style={[contextStyles.insightBlock, { backgroundColor: isDark ? theme.background : "#F8F6F0" }]}>
                   <View style={contextStyles.insightHeader}>
-                    <Ionicons name="bulb" size={14} color={theme.accent} />
-                    <Text style={[contextStyles.insightLabel, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    <Ionicons name="bulb" size={14} color={PathB.ink} />
+                    <Text style={[contextStyles.insightLabel, { color: PathB.ink, fontFamily: "Inter_600SemiBold" }]}>
                       Cultural Context
                     </Text>
                   </View>

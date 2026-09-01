@@ -30,6 +30,19 @@ function setupCacheControl(app: express.Application) {
   });
 }
 
+function requestHost(req: Request): string {
+  const forwarded = req.header("x-forwarded-host")?.split(",")[0]?.trim();
+  return (forwarded || req.get("host") || "").toLowerCase();
+}
+
+function isSameOrigin(req: Request, origin: string): boolean {
+  try {
+    return new URL(origin).host.toLowerCase() === requestHost(req);
+  } catch {
+    return false;
+  }
+}
+
 function setupCors(app: express.Application) {
   app.use((req, res, next) => {
     const origins = new Set<string>();
@@ -49,6 +62,18 @@ function setupCors(app: express.Application) {
       origins.add(`https://${process.env.PUBLIC_DOMAIN}`);
     }
 
+    if (process.env.RENDER_EXTERNAL_HOSTNAME) {
+      origins.add(`https://${process.env.RENDER_EXTERNAL_HOSTNAME}`);
+    }
+
+    if (process.env.RENDER_EXTERNAL_URL) {
+      try {
+        origins.add(new URL(process.env.RENDER_EXTERNAL_URL).origin);
+      } catch {
+        // ignore unparseable Render URL
+      }
+    }
+
     const origin = req.header("origin");
 
     const isDev = process.env.NODE_ENV === "development";
@@ -60,7 +85,10 @@ function setupCors(app: express.Application) {
     // React Native apps don't send Origin headers — allow all non-browser requests
     const isMobileApp = !origin;
 
-    if (isMobileApp || (origin && (origins.has(origin) || isLocalhost))) {
+    if (
+      isMobileApp ||
+      (origin && (origins.has(origin) || isLocalhost || isSameOrigin(req, origin)))
+    ) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",
@@ -231,6 +259,15 @@ function configureExpoAndLanding(app: express.Application) {
     res.status(200).send(robotsTxt);
   });
 
+  const pwaManifestPath = path.resolve(process.cwd(), "public", "manifest.json");
+  if (fs.existsSync(pwaManifestPath)) {
+    app.get("/manifest.json", (_req: Request, res: Response) => {
+      res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.sendFile(pwaManifestPath);
+    });
+  }
+
   const sitemapXml = fs.readFileSync(path.resolve(process.cwd(), "server", "templates", "sitemap.xml"), "utf-8");
   app.get("/sitemap.xml", (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
@@ -268,7 +305,7 @@ function configureExpoAndLanding(app: express.Application) {
     app.use(express.static(webDistPath, { maxAge: "1h", index: false }));
 
     app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api")) {
+      if (req.path.startsWith("/api") || req.path === "/manifest.json") {
         return next();
       }
       if (req.accepts("html")) {

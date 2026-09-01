@@ -3,6 +3,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import type { Persister } from "@tanstack/react-query-persist-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 let _authTokenGetter: (() => string | null) | null = null;
 let _deviceIdGetter: (() => string | null) | null = null;
@@ -38,6 +39,16 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export function getApiUrl(): string {
+  // Web is same-origin with the Express API. Resolve at runtime so a Render
+  // custom domain works without baking EXPO_PUBLIC_DOMAIN into the export.
+  // Always trailing-slash so joinApiPath / `new URL(path, base)` stays `/api` not `//api`.
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined" && window.location?.origin) {
+      return `${window.location.origin.replace(/\/$/, "")}/`;
+    }
+    return "https://gracethroughfaith.app/";
+  }
+
   const host = process.env.EXPO_PUBLIC_DOMAIN;
 
   // If EXPO_PUBLIC_DOMAIN is set to a real (non-local) domain, always use it.

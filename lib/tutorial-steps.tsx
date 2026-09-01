@@ -2,10 +2,9 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { TutorialStep } from "@/components/FeatureTutorial";
+import { PathB } from "@/constants/colors";
 
-const GOLD = "#C9933A";
-
-function IconBadge({ name, size = 40, color = GOLD }: { name: any; size?: number; color?: string }) {
+function IconBadge({ name, size = 40, color = PathB.ink }: { name: any; size?: number; color?: string }) {
   return <Ionicons name={name} size={size} color={color} />;
 }
 
@@ -17,7 +16,7 @@ function ComposedIcons({ icons }: { icons: Array<{ name: any; size?: number; col
           key={i}
           name={ic.name}
           size={ic.size || 22}
-          color={ic.color || GOLD}
+          color={ic.color || PathB.ink}
           style={ic.style}
         />
       ))}

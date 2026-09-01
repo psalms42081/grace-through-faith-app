@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { LinearGradient } from "expo-linear-gradient";
+import { HV2 } from "@/components/home-v2/theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -124,7 +125,7 @@ export default function ConnectScreen() {
         />
 
         <View style={[st.useWithChurch, { backgroundColor: theme.backgroundCard }]}>
-          <Ionicons name="heart" size={16} color="#C9933A" />
+          <Ionicons name="heart" size={16} color={HV2.inkMutedText} />
           <Text style={[st.useWithChurchText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
             This app is designed to support your local church, Sabbath School class, small group, or school — not replace them. Use it to prepare, pray, and stay connected between gatherings.
           </Text>
