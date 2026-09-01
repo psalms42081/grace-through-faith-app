@@ -17,7 +17,6 @@ const lessonSource = read("app/lesson/[id].tsx");
 const proContextSource = read("contexts/ProContext.tsx");
 
 const TOKEN_SWAP_FILES = [
-  "app/odb-devotional.tsx",
   "app/verse-actions.tsx",
   "app/touchpoints.tsx",
   "app/touchpoint-topic.tsx",

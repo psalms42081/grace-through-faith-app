@@ -201,8 +201,10 @@ export default function DiscoverV2Screen() {
     () => (devotionalPlans ?? []).filter(isApprovedHumanDevotionalPlan),
     [devotionalPlans],
   );
-  const { data: odbRecent } = useQuery<OdbDevotional[]>({
-    queryKey: [withDeviceTimeZone("/api/odb/recent?count=7")],
+  const { data: odbToday } = useQuery<OdbDevotional>({
+    queryKey: [withDeviceTimeZone("/api/odb/today")],
+    staleTime: 10 * 60 * 1000,
+    refetchOnMount: "always",
   });
   const { data: weeklyStreak } = useQuery<{ currentStreak: number }>({
     queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`)],
@@ -573,10 +575,15 @@ export default function DiscoverV2Screen() {
             </View>
 
             {/* ---- Daily Devotionals rail (§A.2.5) ---- */}
-            {((catalogSeries.length ?? 0) > 0 || (odbRecent?.length ?? 0) > 0) && (
+            {((catalogSeries.length ?? 0) > 0 || !!odbToday) && (
               <View style={s.section}>
                 <Text style={s.sectionTitle}>Daily Devotionals</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.rail}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={s.devoRail}
+                  contentContainerStyle={s.devoRailContent}
+                >
                   {catalogSeries.map((dp) => {
                     const isEgw = `${dp.title} ${dp.theme ?? ""} ${dp.category ?? ""}`.toLowerCase().includes("egw")
                       || `${dp.title} ${dp.theme ?? ""}`.toLowerCase().includes("ellen");
@@ -594,17 +601,17 @@ export default function DiscoverV2Screen() {
                       </Pressable>
                     );
                   })}
-                  {(odbRecent ?? []).slice(0, 3).map((d) => (
+                  {odbToday ? (
                     <Pressable
-                      key={`odb-${d.id}`}
-                      onPress={() => router.push({ pathname: "/odb-devotional" as any, params: { id: String(d.id) } })}
+                      key={`odb-${odbToday.id}`}
+                      onPress={() => router.push("/odb-devotional-preview" as any)}
                       style={({ pressed }) => [s.devoCard, { backgroundColor: "#DDF0FB", opacity: pressed ? 0.85 : 1 }]}
                     >
                       <Text style={[s.devoEyebrow, { color: "#175F94" }]}>OUR DAILY BREAD</Text>
-                      <Text style={s.devoTitle} numberOfLines={2}>{d.title}</Text>
-                      <Text style={s.devoMeta} numberOfLines={1}>{d.author}</Text>
+                      <Text style={s.devoTitle} numberOfLines={2}>{odbToday.title}</Text>
+                      <Text style={s.devoMeta} numberOfLines={1}>{odbToday.author}</Text>
                     </Pressable>
-                  ))}
+                  ) : null}
                 </ScrollView>
               </View>
             )}
@@ -761,6 +768,8 @@ const s = StyleSheet.create({
   topicCat: { fontFamily: F.interMed, fontSize: 11.5 },
 
   rail: { flexDirection: "row", gap: 12, marginTop: 14, paddingRight: 8 },
+  devoRail: { marginHorizontal: -20, marginTop: 14 },
+  devoRailContent: { flexDirection: "row", gap: 12, paddingHorizontal: 20 },
   videoCard: { width: 180 },
   videoThumb: {
     height: 100, borderRadius: 16, overflow: "hidden",

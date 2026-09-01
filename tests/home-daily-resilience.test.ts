@@ -28,7 +28,7 @@ const registerSource = readFileSync(
   "utf8",
 );
 const odbDevotionalSource = readFileSync(
-  new URL("../app/odb-devotional.tsx", import.meta.url),
+  new URL("../components/devotions-v2/OdbDevotionalPreview.tsx", import.meta.url),
   "utf8",
 );
 
@@ -70,7 +70,7 @@ describe("daily Home and theme resilience", () => {
     assert.doesNotMatch(authLayoutSource, /#050507/);
     assert.doesNotMatch(loginSource, /backgroundColor:\s*"#050507"/);
     assert.doesNotMatch(registerSource, /backgroundColor:\s*"#050507"/);
-    assert.match(odbDevotionalSource, /backgroundColor:\s*PathB\.surface/);
+    assert.match(odbDevotionalSource, /backgroundColor:\s*D2\.surface/);
     assert.doesNotMatch(odbDevotionalSource, /const BG = "#050507"/);
   });
 });

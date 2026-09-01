@@ -1,4 +1,5 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { defaultShouldDehydrateQuery } from "@tanstack/react-query";
 import { Stack, router, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
@@ -144,6 +145,7 @@ function RootLayoutNav() {
       <Stack.Screen name="devotional-day" options={{ headerShown: false }} />
       <Stack.Screen name="devotions-preview" options={{ headerShown: false }} />
       <Stack.Screen name="devotional-day-preview" options={{ headerShown: false }} />
+      <Stack.Screen name="odb-devotional" options={{ headerShown: false }} />
       <Stack.Screen name="odb-devotional-preview" options={{ headerShown: false }} />
       <Stack.Screen name="egw-devotional-preview" options={{ headerShown: false }} />
       <Stack.Screen name="prayer-journal" options={{ headerShown: true, title: "Prayer Journal" }} />
@@ -250,6 +252,7 @@ useEffect(() => {
         "/devotional-day",
         "/devotions-preview",
         "/devotional-day-preview",
+        "/odb-devotional",
         "/odb-devotional-preview",
         "/egw-devotional-preview",
         "/touchpoint-topic-preview",
@@ -301,6 +304,13 @@ useEffect(() => {
           persister: asyncStoragePersister,
           maxAge: 1000 * 60 * 60 * 24 * 30,
           buster: QUERY_PERSIST_BUSTER,
+          dehydrateOptions: {
+            shouldDehydrateQuery: (query) => {
+              const key = String(query.queryKey[0] ?? "");
+              if (key.includes("/api/odb/")) return false;
+              return defaultShouldDehydrateQuery(query);
+            },
+          },
         }}
       >
         <AuthProvider>

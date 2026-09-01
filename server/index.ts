@@ -280,20 +280,25 @@ function configureExpoAndLanding(app: express.Application) {
     return;
   }
 
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith("/api")) {
-      return next();
-    }
-
-    if (req.path === "/manifest" || req.path === "/") {
-      const platform = req.header("expo-platform");
-      if (platform && (platform === "ios" || platform === "android")) {
-        return serveExpoManifest(platform, res);
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith("/api")) {
+        return next();
       }
-    }
 
-    next();
-  });
+      if (req.path === "/sw.js" || req.path === "/service-worker.js") {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        return res.status(404).end();
+      }
+
+      if (req.path === "/manifest" || req.path === "/") {
+        const platform = req.header("expo-platform");
+        if (platform && (platform === "ios" || platform === "android")) {
+          return serveExpoManifest(platform, res);
+        }
+      }
+
+      next();
+    });
 
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
@@ -302,11 +307,29 @@ function configureExpoAndLanding(app: express.Application) {
   const hasWebBuild = fs.existsSync(webIndexPath);
 
   if (hasWebBuild) {
-    app.use(express.static(webDistPath, { maxAge: "1h", index: false }));
+    app.use(express.static(webDistPath, {
+      maxAge: "1h",
+      index: false,
+      setHeaders(res, filePath) {
+        if (filePath.endsWith(".html")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+          res.setHeader("Pragma", "no-cache");
+          res.setHeader("Expires", "0");
+          return;
+        }
+        if (/\.[a-f0-9]{8,}\.(js|css)$/i.test(filePath)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    }));
 
     app.use((req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith("/api") || req.path === "/manifest.json") {
         return next();
+      }
+      if (req.path === "/sw.js" || req.path === "/service-worker.js") {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        return res.status(404).end();
       }
       if (req.accepts("html")) {
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");

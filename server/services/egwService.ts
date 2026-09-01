@@ -146,6 +146,7 @@ export type EgwDailySource = "local" | "live";
 export type EgwDailyDevotion = {
   title: string;
   content: string;
+  paragraphs: string[];
   bookTitle: string;
   bookId: number;
   chapterNumber: number;
@@ -153,6 +154,15 @@ export type EgwDailyDevotion = {
   sourceUrl: string;
   source: EgwDailySource;
 };
+
+export function buildEgwDailyDevotion(
+  base: Omit<EgwDailyDevotion, "content" | "paragraphs">,
+  paragraphs: string[],
+): EgwDailyDevotion | null {
+  const content = excerptEgwParagraphs(paragraphs);
+  if (!content) return null;
+  return { ...base, content, paragraphs };
+}
 
 function bookSourceUrl(bookId: number): string {
   return `https://egwwritings.org/book/b${bookId}`;
@@ -238,19 +248,19 @@ async function getEgwLocalDailyDevotion(
   if (!chapter) return null;
 
   const paragraphs = Array.isArray(chapter.paragraphs) ? chapter.paragraphs : [];
-  const content = excerptEgwParagraphs(paragraphs);
-  if (!content) return null;
 
-  return {
-    title: chapter.chapterTitle,
-    content,
-    bookTitle: chapter.book || book.title,
-    bookId: book.id,
-    chapterNumber: chapter.chapterNumber,
-    date: local.dateKey,
-    sourceUrl: bookSourceUrl(book.id),
-    source: "local",
-  };
+  return buildEgwDailyDevotion(
+    {
+      title: chapter.chapterTitle,
+      bookTitle: chapter.book || book.title,
+      bookId: book.id,
+      chapterNumber: chapter.chapterNumber,
+      date: local.dateKey,
+      sourceUrl: bookSourceUrl(book.id),
+      source: "local",
+    },
+    paragraphs,
+  );
 }
 
 async function getEgwLiveDailyDevotion(
@@ -282,19 +292,18 @@ async function getEgwLiveDailyDevotion(
         .map((p: any) => String(p.content || "").replace(/<[^>]+>/g, " "))
     : [String(content.content || "").replace(/<[^>]+>/g, " ")];
 
-  const text = excerptEgwParagraphs(rawParagraphs);
-  if (!text) return null;
-
-  return {
-    title: chapter.title || `Day ${local.dayOfMonthIndex + 1}`,
-    content: text,
-    bookTitle: book.title,
-    bookId: book.id,
-    chapterNumber: (local.dayOfMonthIndex % chapters.length) + 1,
-    date: local.dateKey,
-    sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
-    source: "live",
-  };
+  return buildEgwDailyDevotion(
+    {
+      title: chapter.title || `Day ${local.dayOfMonthIndex + 1}`,
+      bookTitle: book.title,
+      bookId: book.id,
+      chapterNumber: (local.dayOfMonthIndex % chapters.length) + 1,
+      date: local.dateKey,
+      sourceUrl: `https://text.egwwritings.org/read/${sourceRef}`,
+      source: "live",
+    },
+    rawParagraphs,
+  );
 }
 
 export async function getEgwDailyDevotion(

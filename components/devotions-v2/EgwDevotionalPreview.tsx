@@ -11,6 +11,7 @@ import { withDeviceTimeZone } from "@/lib/device-time-zone";
 type Egw = {
   title: string;
   content: string;
+  paragraphs?: string[];
   bookTitle: string;
   bookId: number;
   chapterNumber?: number;
@@ -19,14 +20,20 @@ type Egw = {
   source?: "local" | "live";
 };
 
-function formatExcerpt(content: string) {
-  const excerpt = content.trim();
-  return /[.!?"']$/.test(excerpt) ? excerpt : `${excerpt}…`;
+function chapterParagraphs(d: Egw): string[] {
+  if (Array.isArray(d.paragraphs) && d.paragraphs.length > 0) {
+    return d.paragraphs.map((p) => p.trim()).filter(Boolean);
+  }
+  return d.content.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 }
 
 export default function EgwDevotionalPreview() {
   const insets = useSafeAreaInsets();
-  const q = useQuery<Egw>({ queryKey: [withDeviceTimeZone("/api/egw/devotional/today")], staleTime: 86400000 });
+  const q = useQuery<Egw>({
+    queryKey: [withDeviceTimeZone("/api/egw/devotional/today")],
+    staleTime: 86400000,
+    refetchOnMount: "always",
+  });
   const d = q.data;
 
   if (q.isLoading) {
@@ -77,7 +84,13 @@ export default function EgwDevotionalPreview() {
           </Text>
         </View>
 
-        <Text style={s.body}>{formatExcerpt(d.content)}</Text>
+        <View style={s.bodyWrap}>
+          {chapterParagraphs(d).map((paragraph, index) => (
+            <Text key={index} style={s.body}>
+              {paragraph}
+            </Text>
+          ))}
+        </View>
 
         <Pressable
           accessibilityRole="link"
@@ -149,13 +162,16 @@ const s = StyleSheet.create({
     color: D2.amber,
     fontSize: 12,
   },
+  bodyWrap: {
+    marginHorizontal: 20,
+    marginTop: 22,
+    gap: 16,
+  },
   body: {
     fontFamily: F.inter,
     color: D2.ink,
     fontSize: 16,
     lineHeight: 28,
-    margin: 20,
-    marginTop: 22,
   },
   external: {
     margin: 20,

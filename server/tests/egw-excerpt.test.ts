@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   EGW_EXCERPT_MAX_CHARS,
+  buildEgwDailyDevotion,
   excerptEgwParagraphs,
 } from "../services/egwService";
 
@@ -34,5 +35,26 @@ describe("EGW Today excerpt stays on paragraph and sentence boundaries", () => {
     assert.equal(text.includes(sentence.trim().slice(0, 10)), true);
     const nextChar = paragraph[text.length];
     assert.ok(nextChar === undefined || nextChar === " " || /[.!?]/.test(text.slice(-1)));
+  });
+
+  it("keeps the card excerpt short while passing the full chapter body", () => {
+    const note = "This chapter is based on Matthew 13:1-9.";
+    const body = `${"B".repeat(700)}.`;
+    const payload = buildEgwDailyDevotion(
+      {
+        title: "The Sower Went Forth to Sow",
+        bookTitle: "Christ's Object Lessons",
+        bookId: 15,
+        chapterNumber: 2,
+        date: "2026-09-02",
+        sourceUrl: "https://egwwritings.org/book/b15",
+        source: "local",
+      },
+      [note, body],
+    );
+    assert.ok(payload);
+    assert.equal(payload.content, note);
+    assert.equal(payload.paragraphs.length, 2);
+    assert.equal(payload.paragraphs[1], body);
   });
 });

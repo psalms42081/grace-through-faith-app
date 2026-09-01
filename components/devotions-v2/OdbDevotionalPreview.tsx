@@ -1,6 +1,6 @@
 import React from "react";
 import { Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
+import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,10 +56,9 @@ function decodeHtmlEntities(value: string) {
 }
 
 export default function OdbDevotionalPreview() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const endpoint = id ? `/api/odb/post/${id}` : withDeviceTimeZone("/api/odb/today");
+  const endpoint = withDeviceTimeZone("/api/odb/today");
 
   const query = useQuery<Odb>({
     queryKey: [endpoint],
