@@ -71,25 +71,77 @@ function goToProfile() {
   router.replace("/(tabs)/profile" as any);
 }
 
+function stopLocalTracks(tracks: any[], reason: string) {
+  if (!tracks.length) return;
+  console.log("[bible-group-live] preview stream stopped", reason, tracks.map((t) => t.kind));
+  tracks.forEach((t) => {
+    try {
+      t.stop();
+    } catch {}
+  });
+}
+
+function detachLocalTracks(tracks: any[]) {
+  tracks.forEach((t) => {
+    try {
+      t.detach().forEach((el: HTMLElement) => el.remove());
+    } catch {}
+  });
+}
+
+/** Mobile Chrome will not paint local video unless autoplay + playsinline + muted are all set. */
+function prepareAttachedVideo(el: HTMLVideoElement, isLocal: boolean, facingUser: boolean) {
+  el.autoplay = true;
+  el.muted = true;
+  el.playsInline = true;
+  el.setAttribute("autoplay", "");
+  el.setAttribute("muted", "");
+  el.setAttribute("playsinline", "");
+  el.setAttribute("webkit-playsinline", "");
+  el.style.width = "100%";
+  el.style.height = "100%";
+  el.style.objectFit = "cover";
+  el.style.position = "absolute";
+  el.style.inset = "0";
+  if (isLocal && facingUser) el.style.transform = "scaleX(-1)";
+  else el.style.transform = "";
+  void el.play().catch(() => {});
+}
+
 function attachTrackToHost(track: any, hostId: string, isLocal: boolean, facingUser: boolean) {
   if (typeof document === "undefined") return;
+  if (isLocal && track.kind === "audio") return;
   const host = document.getElementById(hostId);
-  if (!host) return;
+  if (!host) {
+    console.log("[bible-group-live] track attach skipped, host missing", hostId, track.kind);
+    return;
+  }
   const existing = host.querySelector(`[data-track-kind="${track.kind}"]`);
   if (existing) existing.remove();
-  const el = track.attach();
-  el.setAttribute("data-track-kind", track.kind);
+  let el: HTMLMediaElement;
   if (track.kind === "video") {
-    el.style.width = "100%";
-    el.style.height = "100%";
-    el.style.objectFit = "cover";
-    el.style.position = "absolute";
-    el.style.inset = "0";
-    if (isLocal && facingUser) el.style.transform = "scaleX(-1)";
+    const video = document.createElement("video");
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("autoplay", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    el = track.attach(video);
+    prepareAttachedVideo(el as HTMLVideoElement, isLocal, facingUser);
   } else {
+    el = track.attach();
     el.style.display = "none";
   }
+  el.setAttribute("data-track-kind", track.kind);
   host.appendChild(el);
+  console.log("[bible-group-live] track attached", {
+    kind: track.kind,
+    sid: track.sid,
+    isLocal,
+    hostId,
+  });
 }
 
 function WebLiveRoom({
@@ -110,6 +162,7 @@ function WebLiveRoom({
   const roomRef = useRef<any>(null);
   const lkRef = useRef<any>(null);
   const previewTracksRef = useRef<any[]>([]);
+  const joiningRef = useRef(false);
   const attachedRef = useRef<Map<string, { track: any; isLocal: boolean }[]>>(new Map());
   const previewVideoRef = useRef<any>(null);
   const [phase, setPhase] = useState<"preview" | "connecting" | "in-room">("preview");
@@ -175,22 +228,20 @@ function WebLiveRoom({
     return () => {
       const room = roomRef.current;
       if (room) room.disconnect().catch(() => {});
-      previewTracksRef.current.forEach((t) => {
-        try {
-          t.stop();
-        } catch {}
-      });
+      stopLocalTracks(previewTracksRef.current, "unmount");
+      previewTracksRef.current = [];
     };
   }, []);
 
   useEffect(() => {
+    if (phase !== "in-room") return;
     tiles.forEach((tile) => {
       const rows = attachedRef.current.get(tile.identity) ?? [];
       rows.forEach(({ track, isLocal }) => {
         attachTrackToHost(track, `media-${tile.identity}`, isLocal, facingUser);
       });
     });
-  }, [tiles, facingUser]);
+  }, [tiles, facingUser, phase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,20 +257,21 @@ function WebLiveRoom({
             resolution: lk.VideoPresets.h360.resolution,
           },
         });
-        if (cancelled) {
-          tracks.forEach((t: any) => t.stop());
+        if (cancelled || joiningRef.current) {
+          stopLocalTracks(tracks, cancelled ? "preview cancelled" : "join already started");
           return;
         }
         previewTracksRef.current = tracks;
+        console.log(
+          "[bible-group-live] preview stream created",
+          tracks.map((t: any) => ({ kind: t.kind, sid: t.sid })),
+        );
         const video = tracks.find((t: any) => t.kind === "video");
         if (video && previewVideoRef.current) {
-          const el = video.attach();
-          el.muted = true;
-          (el as HTMLVideoElement).playsInline = true;
-          el.style.width = "100%";
-          el.style.height = "100%";
-          el.style.objectFit = "cover";
-          el.style.transform = facingUser ? "scaleX(-1)" : "";
+          const el = video.attach() as HTMLVideoElement;
+          prepareAttachedVideo(el, true, facingUser);
+          el.style.position = "relative";
+          el.style.inset = "";
           previewVideoRef.current.innerHTML = "";
           previewVideoRef.current.appendChild(el);
         }
@@ -227,11 +279,15 @@ function WebLiveRoom({
         try {
           const lk = lkRef.current || (await import("livekit-client"));
           const audioOnly = await lk.createLocalTracks({ audio: true, video: false });
-          if (cancelled) {
-            audioOnly.forEach((t: any) => t.stop());
+          if (cancelled || joiningRef.current) {
+            stopLocalTracks(audioOnly, cancelled ? "preview cancelled" : "join already started");
             return;
           }
           previewTracksRef.current = audioOnly;
+          console.log(
+            "[bible-group-live] preview stream created",
+            audioOnly.map((t: any) => ({ kind: t.kind, sid: t.sid })),
+          );
           setCamEnabled(false);
           setNotice("Camera is off. You can still join.");
         } catch {
@@ -245,12 +301,8 @@ function WebLiveRoom({
     if (phase === "preview") startPreview();
     return () => {
       cancelled = true;
-      if (phase === "preview") {
-        previewTracksRef.current.forEach((t) => {
-          try {
-            t.stop();
-          } catch {}
-        });
+      if (phase === "preview" && !joiningRef.current) {
+        stopLocalTracks(previewTracksRef.current, "preview effect cleanup");
         previewTracksRef.current = [];
       }
     };
@@ -259,13 +311,11 @@ function WebLiveRoom({
   }, [phase, facingUser]);
 
   const joinRoom = useCallback(async () => {
-    setPhase("connecting");
-    previewTracksRef.current.forEach((t) => {
-      try {
-        t.stop();
-      } catch {}
-    });
+    joiningRef.current = true;
+    const tracksToPublish = previewTracksRef.current.slice();
+    detachLocalTracks(tracksToPublish);
     previewTracksRef.current = [];
+    setPhase("connecting");
 
     try {
       const tokenRes = await apiRequest("POST", `/api/bible-groups/${groupId}/live/token`);
@@ -292,9 +342,17 @@ function WebLiveRoom({
         refresh();
       });
       room.on(lk.RoomEvent.LocalTrackPublished, (pub: any) => {
-        if (pub.track) {
-          rememberTrack(room.localParticipant.identity, pub.track, true);
-          attachTrackToHost(pub.track, `media-${room.localParticipant.identity}`, true, facingUser);
+        const track = pub.track;
+        console.log("[bible-group-live] local track published", {
+          kind: track?.kind ?? pub.kind,
+          sid: track?.sid ?? pub.trackSid,
+        });
+        if (track) {
+          rememberTrack(room.localParticipant.identity, track, true);
+          attachTrackToHost(track, `media-${room.localParticipant.identity}`, true, facingUser);
+          setTimeout(() => {
+            attachTrackToHost(track, `media-${room.localParticipant.identity}`, true, facingUser);
+          }, 50);
         }
         refresh();
       });
@@ -319,25 +377,48 @@ function WebLiveRoom({
       });
 
       await room.connect(body.wsUrl, body.token);
+      console.log("[bible-group-live] room connected", {
+        roomName: body.roomName,
+        identity: room.localParticipant?.identity,
+        localSid: room.localParticipant?.sid,
+      });
 
-      try {
-        await room.localParticipant.setMicrophoneEnabled(micEnabled);
-      } catch {
-        setMicEnabled(false);
-        setNotice("Microphone is off. You can still stay in the room.");
-      }
-      try {
-        await room.localParticipant.setCameraEnabled(camEnabled, {
-          facingMode: facingUser ? "user" : "environment",
-        });
-      } catch {
-        setCamEnabled(false);
-        setNotice((prev) => prev || "Camera is off. You can still stay in the room.");
+      if (tracksToPublish.length > 0) {
+        for (const track of tracksToPublish) {
+          const publishVideo = track.kind === "video" && camEnabled;
+          const publishAudio = track.kind === "audio" && micEnabled;
+          if (publishVideo || publishAudio) {
+            await room.localParticipant.publishTrack(track);
+          } else {
+            stopLocalTracks([track], `${track.kind} disabled at join`);
+          }
+        }
+      } else {
+        try {
+          await room.localParticipant.setMicrophoneEnabled(micEnabled);
+        } catch {
+          setMicEnabled(false);
+          setNotice("Microphone is off. You can still stay in the room.");
+        }
+        try {
+          await room.localParticipant.setCameraEnabled(camEnabled, {
+            facingMode: facingUser ? "user" : "environment",
+          });
+        } catch {
+          setCamEnabled(false);
+          setNotice((prev) => prev || "Camera is off. You can still stay in the room.");
+        }
       }
 
       refresh();
       setPhase("in-room");
     } catch (err: any) {
+      joiningRef.current = false;
+      try {
+        await roomRef.current?.disconnect();
+      } catch {}
+      roomRef.current = null;
+      stopLocalTracks(tracksToPublish, "join failed");
       setNotice(err?.message || "Could not join the room.");
       setPhase("preview");
     }

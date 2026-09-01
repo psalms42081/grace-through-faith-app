@@ -102,11 +102,18 @@
       }
     }
 
+    console.log("[bible-group-live] preview stream created", previewTracks.map(function (t) {
+      return { kind: t.kind, sid: t.sid };
+    }));
+
     var videoTrack = previewTracks.find(function (t) { return t.kind === "video"; });
     if (videoTrack) {
       var el = videoTrack.attach();
+      el.autoplay = true;
       el.muted = true;
       el.playsInline = true;
+      el.setAttribute("playsinline", "");
+      el.setAttribute("webkit-playsinline", "");
       previewVideo.replaceWith(el);
       el.id = "preview-video";
       el.style.width = "100%";
@@ -125,6 +132,11 @@
   }
 
   function stopPreview() {
+    if (previewTracks.length) {
+      console.log("[bible-group-live] preview stream stopped", "preview reset", previewTracks.map(function (t) {
+        return t.kind;
+      }));
+    }
     previewTracks.forEach(function (t) {
       try { t.stop(); } catch (e) {}
     });
@@ -228,13 +240,23 @@
     var host = mediaHost(tile);
     if (track.kind === "video") {
       host.querySelectorAll("video").forEach(function (v) { v.remove(); });
-      var el = track.attach();
+      var video = document.createElement("video");
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("autoplay", "");
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      var el = track.attach(video);
       el.style.width = "100%";
       el.style.height = "100%";
       el.style.objectFit = "cover";
       if (isLocal) el.style.transform = facing === "user" ? "scaleX(-1)" : "";
       host.appendChild(el);
+      try { el.play(); } catch (e) {}
       if (avatar) avatar.style.display = "none";
+      console.log("[bible-group-live] track attached", { kind: track.kind, sid: track.sid, isLocal: isLocal });
     } else if (track.kind === "audio") {
       host.querySelectorAll("audio").forEach(function (a) { a.remove(); });
       var audio = track.attach();
@@ -300,7 +322,12 @@
       track.detach().forEach(function (el) { el.remove(); });
     });
     room.on(RoomEvent.LocalTrackPublished, function (pub) {
-      if (pub.track) attachTrack(pub.track, room.localParticipant.identity, room.localParticipant.name);
+      var track = pub.track;
+      console.log("[bible-group-live] local track published", {
+        kind: track && track.kind ? track.kind : pub.kind,
+        sid: track && track.sid ? track.sid : pub.trackSid,
+      });
+      if (track) attachTrack(track, room.localParticipant.identity, room.localParticipant.name);
     });
     room.on(RoomEvent.ParticipantConnected, layoutTiles);
     room.on(RoomEvent.ParticipantDisconnected, function (p) {
@@ -320,20 +347,44 @@
     });
 
     await room.connect(config.wsUrl, config.token);
+    console.log("[bible-group-live] room connected", {
+      identity: room.localParticipant && room.localParticipant.identity,
+    });
     getOrCreateTile(room.localParticipant.identity, room.localParticipant.name, grid);
 
-    try {
-      await room.localParticipant.setMicrophoneEnabled(micEnabled);
-    } catch (e) {
-      micEnabled = false;
-      showNotice("Microphone is off. You can still stay in the room.");
-    }
-    try {
-      await room.localParticipant.setCameraEnabled(camEnabled, { facingMode: facing });
-    } catch (e) {
-      camEnabled = false;
-      if (!notice.classList.contains("show")) {
-        showNotice("Camera is off. You can still stay in the room.");
+    var tracksToPublish = previewTracks.slice();
+    previewTracks = [];
+    tracksToPublish.forEach(function (t) {
+      try {
+        t.detach().forEach(function (el) { el.remove(); });
+      } catch (e) {}
+    });
+
+    if (tracksToPublish.length > 0) {
+      for (var i = 0; i < tracksToPublish.length; i++) {
+        var track = tracksToPublish[i];
+        var publishVideo = track.kind === "video" && camEnabled;
+        var publishAudio = track.kind === "audio" && micEnabled;
+        if (publishVideo || publishAudio) {
+          await room.localParticipant.publishTrack(track);
+        } else {
+          try { track.stop(); } catch (e) {}
+        }
+      }
+    } else {
+      try {
+        await room.localParticipant.setMicrophoneEnabled(micEnabled);
+      } catch (e) {
+        micEnabled = false;
+        showNotice("Microphone is off. You can still stay in the room.");
+      }
+      try {
+        await room.localParticipant.setCameraEnabled(camEnabled, { facingMode: facing });
+      } catch (e) {
+        camEnabled = false;
+        if (!notice.classList.contains("show")) {
+          showNotice("Camera is off. You can still stay in the room.");
+        }
       }
     }
 
@@ -351,10 +402,6 @@
   btnJoin.addEventListener("click", async function () {
     btnJoin.disabled = true;
     try {
-      previewTracks.forEach(function (t) {
-        try { t.stop(); } catch (e) {}
-      });
-      previewTracks = [];
       await connect();
     } catch (err) {
       setStatus("Could not join. " + (err && err.message ? err.message : ""));
