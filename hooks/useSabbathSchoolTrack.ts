@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import {
@@ -29,13 +29,10 @@ function isSabbathSchoolCurrentQuery(queryKey: readonly unknown[]): boolean {
   );
 }
 
-export function invalidateSabbathSchoolTrackQueries(
-  queryClient: { invalidateQueries: (opts: unknown) => Promise<unknown> },
-): void {
+export function invalidateSabbathSchoolTrackQueries(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: ["/api/user/preferences"] });
   void queryClient.invalidateQueries({
-    predicate: (query: { queryKey: readonly unknown[] }) =>
-      isSabbathSchoolCurrentQuery(query.queryKey),
+    predicate: (query) => isSabbathSchoolCurrentQuery(query.queryKey),
   });
 }
 

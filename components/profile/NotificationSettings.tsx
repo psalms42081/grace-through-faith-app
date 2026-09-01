@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { View, Text, Pressable, StyleSheet, Platform, Alert } from "react-native";
 import { PathBSwitch } from "@/components/settings/PathBSwitch";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";

@@ -34,6 +34,9 @@ function getCurrentQuarterCode(): string {
 
 function getQuarterCodesForAllCurriculums(): Array<{ code: string; type: CurriculumType }> {
   const base = getCurrentQuarterCode();
+  // Adult (`YYYY-QQ`) and InVerse (`YYYY-QQ-cq`) have markdown days.
+  // Cornerstone Connections (`YYYY-QQ-cc`) is PDF-only this quarter — omit it
+  // so the picker never offers an empty lesson chain.
   return SYNCED_SABBATH_SCHOOL_TRACKS.map((type) => ({
     code: `${base}${SABBATH_SCHOOL_TRACKS[type].adventechSuffix}`,
     type,
