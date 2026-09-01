@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import {
   gapAfterVerseInRun,
   groupVersesByParagraphStarts,
+  splitLeadingWord,
   splitParagraphGroupAtHeadings,
 } from "@/lib/group-verses-by-paragraph";
 
@@ -80,6 +81,8 @@ export function TypographyPreviewProse({
                       : highlightBg !== "transparent"
                         ? highlightBg
                         : "transparent";
+                  const lines = v.text.split("\n");
+                  const { firstWord, remainder } = splitLeadingWord(lines[0] ?? "");
                   return (
                     <Text
                       key={v.id}
@@ -90,15 +93,18 @@ export function TypographyPreviewProse({
                       accessibilityRole="button"
                       accessibilityLabel={`Verse ${v.verse}`}
                     >
-                      <Text style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine * 0.72 }]}>
-                        {v.verse}{" "}
+                      <Text style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine }]}>
+                        {v.verse}
                       </Text>
-                      {v.text.split("\n").map((line, lineIndex) => (
+                      {"\u00a0"}
+                      {firstWord}
+                      {remainder}
+                      {lines.slice(1).map((line, lineIndex) => (
                         <Text
-                          key={`${v.id}-ln${lineIndex}`}
-                          style={lineIndex > 0 ? s.poetryContinue : undefined}
+                          key={`${v.id}-ln${lineIndex + 1}`}
+                          style={s.poetryContinue}
                         >
-                          {lineIndex > 0 ? "\n\u2003" : ""}
+                          {"\n\u2003"}
                           {line}
                         </Text>
                       ))}

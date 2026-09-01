@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "kjv-poetry-lines-v1",
+  "source": "data/kjv.json",
+  "books": [
+    "Job",
+    "Psalms",
+    "Proverbs",
+    "Ecclesiastes",
+    "Song of Solomon",
+    "Lamentations",
+    "Isaiah",
+    "Jeremiah",
+    "Ezekiel",
+    "Daniel",
+    "Hosea",
+    "Joel",
+    "Amos",
+    "Obadiah",
+    "Jonah",
+    "Micah",
+    "Nahum",
+    "Habakkuk",
+    "Zephaniah",
+    "Haggai",
+    "Zechariah",
+    "Malachi"
+  ],
+  "chapters": 493,
+  "verses": 10275,
+  "versesWithMultipleLines": 6417,
+  "generatedAt": "2026-08-31T00:36:15.767Z"
+}

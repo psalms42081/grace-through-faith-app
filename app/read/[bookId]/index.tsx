@@ -8,13 +8,16 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { router, useLocalSearchParams, Stack } from "expo-router";
+import { router, useLocalSearchParams, Stack, useSegments } from "expo-router";
+import { useNavigationState } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
+import { bibleTabBookPath, goBibleReaderBack, isBibleTabSegments, stackCanGoBackFromState } from "@/lib/bible-tab-navigation";
+import { useHardwareBackToHomeWhenAtStackRoot } from "@/lib/use-hardware-back-to-home";
 
 // Read-state recolor (Batch 1 review packet) — gold is reserved for
 // streak/analytics and teal for Sabbath School, so read indicators remap.
@@ -52,6 +55,12 @@ export default function ChapterPickerScreen() {
   const theme = SWEEP_LIGHT; // Path B — pinned light (Batch 1 Bible-tab sweep)
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const segments = useSegments();
+  const isTabContained = isBibleTabSegments(segments);
+  const canPopStack = useNavigationState((state) => stackCanGoBackFromState(state));
+  useHardwareBackToHomeWhenAtStackRoot(isTabContained, canPopStack);
+  const chapterRoute = (chapter: number) =>
+    `${isTabContained ? bibleTabBookPath(bookId ?? "") : `/read/${bookId}`}/${chapter}`;
 
   const { data: books, isLoading, error } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -81,6 +90,16 @@ export default function ChapterPickerScreen() {
           title: book?.name ?? "Chapters",
           headerStyle: { backgroundColor: SWEEP_LIGHT.background },
           headerTintColor: SWEEP_LIGHT.text,
+          headerLeft: () => (
+            <Pressable
+              onPress={() => goBibleReaderBack(router, canPopStack, isTabContained)}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={22} color={SWEEP_LIGHT.text} />
+            </Pressable>
+          ),
         }}
       />
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -133,7 +152,7 @@ export default function ChapterPickerScreen() {
                 const isRead = readSet.has(item);
                 return (
                   <Pressable
-                    onPress={() => router.push(`/read/${bookId}/${item}`)}
+                    onPress={() => router.push(chapterRoute(item) as any)}
                     style={({ pressed }) => [
                       styles.chapterCell,
                       {

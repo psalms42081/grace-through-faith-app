@@ -5,6 +5,7 @@
  *
  * Usage: npm run generate:kjv-headings
  * Resume: rerun the same command; valid chapter checkpoints are never requested again.
+ * Force a subset: npm run generate:kjv-headings -- --chapters=Matthew:5,Revelation:14
  */
 import * as fs from "fs";
 import * as path from "path";
@@ -39,7 +40,19 @@ function atomicJson(file: string, value: unknown) {
   fs.renameSync(temporary, file);
 }
 
-function chapterKey(book: string, chapter: number) { return `${book}\u0000${chapter}`; }
+export function chapterKey(book: string, chapter: number) { return `${book}\u0000${chapter}`; }
+
+export function parseForceChapters(argv: string[]): Set<string> {
+  const arg = argv.find((item) => item.startsWith("--chapters="));
+  if (!arg) return new Set();
+  const keys = new Set<string>();
+  for (const token of arg.slice("--chapters=".length).split(",").map((item) => item.trim()).filter(Boolean)) {
+    const separator = token.lastIndexOf(":");
+    if (separator <= 0) throw new Error(`invalid --chapters token: ${token}`);
+    keys.add(chapterKey(token.slice(0, separator), Number(token.slice(separator + 1))));
+  }
+  return keys;
+}
 
 /** Returns human-readable errors rather than accepting almost-valid AI output. */
 export function validateChapter(source: SourceChapter, actual: ChapterHeadings): string[] {
@@ -168,10 +181,12 @@ async function main() {
   const source: SourceBook[] = JSON.parse(fs.readFileSync(SOURCE_PATH, "utf8"));
   const prior: HeadingCorpus = fs.existsSync(PROGRESS_PATH) ? JSON.parse(fs.readFileSync(PROGRESS_PATH, "utf8")) : { schemaVersion: HEADING_SCHEMA_VERSION, lensVersion: SDA_LENS_VERSION, chapters: [] };
   const expected = source.flatMap((book) => book.chapters.map((chapter) => ({ book: book.book, chapter })));
+  const force = parseForceChapters(process.argv);
   const completed = new Map(prior.chapters.filter((entry) => {
     const sourceChapter = expected.find((item) => item.book === entry.book && Number(item.chapter.chapter) === entry.chapter)?.chapter;
     return !!sourceChapter && validateChapter(sourceChapter, entry).length === 0;
   }).map((entry) => [chapterKey(entry.book, entry.chapter), entry]));
+  for (const key of force) completed.delete(key);
   const pending = expected.filter((item) => !completed.has(chapterKey(item.book, Number(item.chapter.chapter))));
   const batches: typeof pending[] = [];
   for (let i = 0; i < pending.length; i += BATCH_SIZE) batches.push(pending.slice(i, i + BATCH_SIZE));

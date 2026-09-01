@@ -3,7 +3,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const tabEntrySource = readFileSync(
-  new URL("../components/bible/BibleEntryScreen.tsx", import.meta.url),
+  new URL("../components/bible/useResumeBibleTabChapter.ts", import.meta.url),
+  "utf8",
+);
+const bookPickerSource = readFileSync(
+  new URL("../app/book-picker.tsx", import.meta.url),
+  "utf8",
+);
+const bibleTabNavSource = readFileSync(
+  new URL("../lib/bible-tab-navigation.ts", import.meta.url),
   "utf8",
 );
 const tabLayoutSource = readFileSync(
@@ -76,14 +84,22 @@ const legacyHomeSource = readFileSync(
 
 describe("external tester navigation feedback", () => {
   it("keeps Bible entry and chapter navigation inside the tab navigator", () => {
-    assert.match(
-      tabEntrySource,
-      /pathname:\s*"\/\(tabs\)\/read\/\[bookId\]\/\[chapter\]"/,
-    );
+    assert.match(tabEntrySource, /router\.push\(bibleTabReaderPath/);
+    assert.doesNotMatch(tabEntrySource, /router\.replace/);
+    assert.match(bookPickerSource, /useResumeBibleTabChapter\(isBibleTabHome\)/);
+    assert.match(bookPickerSource, /testID="bible-books-back"/);
+    assert.match(bibleTabNavSource, /goBibleReaderBack/);
+    assert.match(tabLayoutSource, /backBehavior="firstRoute"/);
     assert.match(tabLayoutSource, /name="read"/);
     assert.doesNotMatch(tabLayoutSource, /name="bible-reader"/);
+    assert.match(bibleTabStackSource, /initialRouteName:\s*"index"/);
+    assert.match(bibleTabStackSource, /name="\[bookId\]\/index"/);
     assert.match(bibleTabStackSource, /name="\[bookId\]\/\[chapter\]"/);
     assert.match(tabReaderRouteSource, /read\/\[bookId\]\/\[chapter\]/);
+    assert.match(readerSource, /goBibleReaderBack\(router, canPopStack, isTabReader\)/);
+    assert.match(readerSource, /testID="bible-reader-back"/);
+    assert.match(readerSource, /useHardwareBackToHomeWhenAtStackRoot\(isTabReader, canPopStack\)/);
+    assert.match(readerSource, /openBibleTabBooks\(router, canPopStack\)/);
     assert.match(readerSource, /useSegments/);
     assert.match(readerSource, /isTabReader/);
     assert.match(readerSource, /readerBasePath\s*=\s*isTabReader\s*\?\s*"\/\(tabs\)\/read"/);
@@ -92,6 +108,7 @@ describe("external tester navigation feedback", () => {
       readerSource,
       /router\.replace\(`\/read\/\$\{bookId\}/,
     );
+    assert.doesNotMatch(readerSource, /onPress=\{\(\) => router\.back\(\)\}/);
   });
 
   it("keeps the Sabbath School chain inside the tab navigator", () => {

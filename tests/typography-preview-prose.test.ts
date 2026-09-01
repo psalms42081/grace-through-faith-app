@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   gapAfterVerseInRun,
   groupVersesByParagraphStarts,
+  splitLeadingWord,
   splitParagraphGroupAtHeadings,
 } from "../lib/group-verses-by-paragraph";
 
@@ -69,6 +70,17 @@ describe("splitParagraphGroupAtHeadings", () => {
   });
 });
 
+describe("splitLeadingWord", () => {
+  it("keeps the first word for a non-breaking join with the verse number", () => {
+    assert.deepEqual(splitLeadingWord("And they sung as it were a new song"), {
+      firstWord: "And",
+      remainder: " they sung as it were a new song",
+    });
+    assert.deepEqual(splitLeadingWord("Harps"), { firstWord: "Harps", remainder: "" });
+    assert.deepEqual(splitLeadingWord(""), { firstWord: "", remainder: "" });
+  });
+});
+
 describe("typography preview source contracts", () => {
   it("versions persisted React Query cache to structure-v3 so stale passages refetch", () => {
     const qc = readFileSync(new URL("../lib/query-client.ts", import.meta.url), "utf8");
@@ -121,6 +133,10 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /delayLongPress=\{400\}/);
     assert.match(prose, /getHighlightBg\(v\.id, v\.verse, index\)/);
     assert.match(prose, /v\.text\.split\("\\n"\)/);
+    assert.match(prose, /splitLeadingWord\(lines\[0\]/);
+    assert.ok(prose.includes("\\u00a0") || prose.includes("\u00a0"));
+    assert.match(prose, /lineHeight: bodyLine \}/);
+    assert.doesNotMatch(prose, /bodyLine \* 0\.72/);
     assert.match(prose, /testID="reader-typography-prose"/);
     assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
   });

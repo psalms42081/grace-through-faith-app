@@ -9,7 +9,16 @@ import {
   Platform,
   Modal,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
+import { useNavigationState } from "@react-navigation/native";
+import { useResumeBibleTabChapter } from "@/components/bible/useResumeBibleTabChapter";
+import {
+  bibleTabBookPath,
+  goBibleBooksBack,
+  isBibleTabSegments,
+  stackCanGoBackFromState,
+} from "@/lib/bible-tab-navigation";
+import { useHardwareBackToHomeWhenAtStackRoot } from "@/lib/use-hardware-back-to-home";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +48,15 @@ export default function BookPickerScreen() {
   const insets = useSafeAreaInsets();
   const { translation, setTranslation } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
+  const segments = useSegments();
+  const isBibleTabHome = isBibleTabSegments(segments);
+  const canPopStack = useNavigationState((state) => stackCanGoBackFromState(state));
+  useResumeBibleTabChapter(isBibleTabHome);
+  useHardwareBackToHomeWhenAtStackRoot(true, canPopStack);
+
+  const openBook = (bookId: number) => {
+    router.push((isBibleTabHome ? bibleTabBookPath(bookId) : `/read/${bookId}`) as any);
+  };
 
   const { data: apiTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string; available?: boolean }[]>({
     queryKey: ["/api/translations"],
@@ -49,7 +67,7 @@ export default function BookPickerScreen() {
     ? apiTranslations.filter((t) => t.available !== false).map((t) => ({ id: t.abbreviation, name: t.name }))
     : DEFAULT_TRANSLATIONS;
 
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const bottomPad = (Platform.OS === "web" ? 34 : 0) + (isBibleTabHome ? 80 : 0);
 
   const { data: books, isLoading, error } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -61,9 +79,18 @@ export default function BookPickerScreen() {
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <View style={[styles.stickyHeader, { backgroundColor: theme.background }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={theme.text} />
-        </Pressable>
+        {canPopStack ? (
+          <Pressable
+            onPress={() => goBibleBooksBack(router, canPopStack)}
+            hitSlop={12}
+            style={styles.backBtn}
+            testID="bible-books-back"
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="chevron-back" size={24} color={theme.text} />
+          </Pressable>
+        ) : null}
         <Text style={[styles.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Bible
         </Text>
@@ -145,7 +172,7 @@ export default function BookPickerScreen() {
             {otBooks.map((book) => (
               <Pressable
                 key={book.id}
-                onPress={() => router.push(`/read/${book.id}`)}
+                onPress={() => openBook(book.id)}
                 style={({ pressed }) => [
                   styles.bookPill,
                   {
@@ -178,7 +205,7 @@ export default function BookPickerScreen() {
             {ntBooks.map((book) => (
               <Pressable
                 key={book.id}
-                onPress={() => router.push(`/read/${book.id}`)}
+                onPress={() => openBook(book.id)}
                 style={({ pressed }) => [
                   styles.bookPill,
                   {

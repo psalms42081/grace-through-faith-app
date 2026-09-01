@@ -60,3 +60,10 @@ export function gapAfterVerseInRun<T extends { text: string }>(
   if (index < 0 || index >= verses.length - 1) return "";
   return isPoetryRun(verses) ? "\n" : " ";
 }
+
+/** Keep the verse number glued to the first word so it cannot wrap alone. */
+export function splitLeadingWord(text: string): { firstWord: string; remainder: string } {
+  const match = text.match(/^(\S+)([\s\S]*)$/);
+  if (!match) return { firstWord: "", remainder: "" };
+  return { firstWord: match[1] ?? "", remainder: match[2] ?? "" };
+}

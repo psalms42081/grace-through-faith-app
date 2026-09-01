@@ -14,6 +14,7 @@ import {
   PanResponder,
 } from "react-native";
 import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments } from "expo-router";
+import { useNavigationState } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +30,13 @@ import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import {
+  goBibleReaderBack,
+  isBibleTabSegments,
+  openBibleTabBooks,
+  stackCanGoBackFromState,
+} from "@/lib/bible-tab-navigation";
+import { useHardwareBackToHomeWhenAtStackRoot } from "@/lib/use-hardware-back-to-home";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
@@ -614,8 +622,12 @@ export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
-  const isTabReader =
-    segments[0] === "(tabs)" && (segments as string[]).includes("read");
+  const isTabReader = isBibleTabSegments(segments);
+  const canPopStack = useNavigationState((state) => stackCanGoBackFromState(state));
+  useHardwareBackToHomeWhenAtStackRoot(isTabReader, canPopStack);
+  const handleReaderBack = useCallback(() => {
+    goBibleReaderBack(router, canPopStack, isTabReader);
+  }, [canPopStack, isTabReader]);
   const { theme } = useTheme();
   const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
   const { userId, isAuthenticated } = useAuth();
@@ -1135,7 +1147,14 @@ export default function VerseReaderScreen() {
           headerShadowVisible: false,
           headerTintColor: textColor,
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} hitSlop={12} style={styles.headerIconBtn}>
+            <Pressable
+              onPress={handleReaderBack}
+              hitSlop={12}
+              style={styles.headerIconBtn}
+              testID="bible-reader-back"
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
               <Ionicons name="chevron-back" size={22} color={textColor} />
             </Pressable>
           ),
@@ -1391,7 +1410,7 @@ export default function VerseReaderScreen() {
                     >
                       <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
                         <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
-                          {v.verse}{" "}
+                          {v.verse}{"\u00a0"}
                         </Text>
                         {v.text}
                         {isBookmarked && (
@@ -1523,7 +1542,7 @@ export default function VerseReaderScreen() {
                         <View key={v.id} style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
                           <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
                             <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
-                              {v.verse}{" "}
+                              {v.verse}{"\u00a0"}
                             </Text>
                             {v.text}
                           </Text>
@@ -1687,7 +1706,8 @@ export default function VerseReaderScreen() {
                 onPress={() => {
                   setShowChapterPicker(false);
                   audio.handleStop();
-                  router.push("/book-picker");
+                  if (isTabReader) openBibleTabBooks(router, canPopStack);
+                  else router.push("/book-picker");
                 }}
                 style={styles.browseBooksRow}
                 testID="browse-bible-books-reader"

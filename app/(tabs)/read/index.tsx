@@ -1,1 +1,1 @@
-export { default } from "@/components/bible/BibleEntryScreen";
+export { default } from "@/app/book-picker";

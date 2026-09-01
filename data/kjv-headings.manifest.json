@@ -7,5 +7,17 @@
   "books": 66,
   "chapters": 1189,
   "verses": 31102,
-  "sections": 4297
+  "sections": 4283,
+  "headingSequencePatch": {
+    "at": "2026-08-31T00:36:11.316Z",
+    "chapters": [
+      "Matthew 5",
+      "Matthew 6",
+      "Matthew 7",
+      "Luke 6",
+      "John 14",
+      "Revelation 14"
+    ],
+    "note": "Independent re-outline of sequence-flagged chapters only; remainder of Task #76 corpus unchanged."
+  }
 }

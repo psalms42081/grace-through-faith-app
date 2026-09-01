@@ -34,6 +34,7 @@ function ClassicTabLayout() {
   }, [isKidsMode, pathname]);
   return (
     <Tabs
+      backBehavior="firstRoute"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: isKidsMode ? theme.accent : PathB.coral,
