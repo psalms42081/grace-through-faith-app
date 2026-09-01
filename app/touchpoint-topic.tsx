@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
-  Alert,
   Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -117,6 +116,7 @@ export default function TouchPointTopicScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
+  const [showStudyPrompt, setShowStudyPrompt] = useState(false);
   const queryClient = useQueryClient();
   const { translation } = useTranslation();
 
@@ -144,27 +144,22 @@ export default function TouchPointTopicScreen() {
     },
   });
 
-  const handleCreateStudy = useCallback(() => {
-    Alert.alert(
-      "Bible Study",
-      `Create a Bible study on the topic of ${topic?.title}?`,
-      [
-        { text: "Not Now", style: "cancel" },
-        {
-          text: "OK",
-          onPress: () => {
-            studyMutation.mutate(undefined, {
-              onSuccess: (data) => {
-                router.push(
-                  `/touchpoint-study?topicId=${topicId}&title=${encodeURIComponent(data.title || topic?.title || "")}&translation=${encodeURIComponent(translation)}` as any
-                );
-              },
-            });
-          },
-        },
-      ]
-    );
-  }, [topic, topicId, studyMutation, translation]);
+  const prepareStudy = () => {
+    studyMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        setShowStudyPrompt(false);
+        router.push(
+          `/touchpoint-study?topicId=${topicId}&title=${encodeURIComponent(data.title || topic?.title || "")}&translation=${encodeURIComponent(translation)}` as any
+        );
+      },
+    });
+  };
+
+  const dismissStudyPrompt = () => {
+    if (studyMutation.isPending) return;
+    setShowStudyPrompt(false);
+    studyMutation.reset();
+  };
 
   const cardBg = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
   const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
@@ -223,7 +218,17 @@ export default function TouchPointTopicScreen() {
           {topic.title}
         </Text>
         <Pressable
-          onPress={handleCreateStudy}
+          testID="touchpoint-study-action"
+          accessibilityLabel="Prepare a guided Bible study"
+          accessibilityRole="button"
+          onPress={() => {
+            if (studyMutation.isPending) return;
+            if (showStudyPrompt) {
+              dismissStudyPrompt();
+              return;
+            }
+            setShowStudyPrompt(true);
+          }}
           hitSlop={8}
           disabled={studyMutation.isPending}
         >
@@ -234,6 +239,61 @@ export default function TouchPointTopicScreen() {
           )}
         </Pressable>
       </View>
+
+      {showStudyPrompt ? (
+        <View
+          testID="touchpoint-study-prompt"
+          style={[styles.studyPrompt, { backgroundColor: cardBg, borderColor }]}
+        >
+          <Text style={[styles.studyPromptQuestion, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
+            Prepare a guided study on {topic.title}?
+          </Text>
+          {studyMutation.isPending ? (
+            <Text style={[styles.studyPromptResult, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+              Preparing your study…
+            </Text>
+          ) : null}
+          {studyMutation.isError ? (
+            <Text
+              accessibilityRole="alert"
+              style={[styles.studyPromptResult, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
+            >
+              The study could not be prepared. Please try again.
+            </Text>
+          ) : null}
+          <View style={styles.studyPromptActions}>
+            <Pressable
+              accessibilityLabel="Not now"
+              accessibilityRole="button"
+              onPress={dismissStudyPrompt}
+              disabled={studyMutation.isPending}
+              style={({ pressed }) => [
+                styles.studyPromptSecondary,
+                { borderColor, opacity: studyMutation.isPending || pressed ? 0.76 : 1 },
+              ]}
+            >
+              <Text style={[styles.studyPromptSecondaryText, { color: theme.textSecondary }]}>Not now</Text>
+            </Pressable>
+            <Pressable
+              testID="touchpoint-study-confirm"
+              accessibilityLabel="Confirm preparation of guided Bible study"
+              accessibilityRole="button"
+              disabled={studyMutation.isPending}
+              onPress={prepareStudy}
+              style={({ pressed }) => [
+                styles.studyPromptPrimary,
+                { backgroundColor: PathB.coral, opacity: studyMutation.isPending || pressed ? 0.76 : 1 },
+              ]}
+            >
+              {studyMutation.isPending ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.studyPromptPrimaryText}>Prepare study</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPad + 40 }}
@@ -375,7 +435,7 @@ const vStyles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(201,147,58,0.9)",
+    backgroundColor: PathB.coral,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -450,6 +510,52 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerTitle: { fontSize: 20, flex: 1, letterSpacing: -0.3 },
+  studyPrompt: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  studyPromptQuestion: {
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  studyPromptResult: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  studyPromptActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  studyPromptSecondary: {
+    minHeight: 46,
+    flex: 1,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  studyPromptSecondaryText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+  },
+  studyPromptPrimary: {
+    minHeight: 46,
+    flex: 1.4,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  studyPromptPrimaryText: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+    fontSize: 14,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: "center",

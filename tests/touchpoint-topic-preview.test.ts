@@ -67,6 +67,26 @@ describe("pastoral touchpoint light previews", () => {
     assert.doesNotMatch(productionStudySource, /TouchpointStudyPreview/);
   });
 
+  it("uses inline guided-study confirmation on production topic pages, not Alert.alert", () => {
+    assert.match(productionTopicSource, /name="sparkles"/);
+    assert.match(productionTopicSource, /setShowStudyPrompt\(true\)/);
+    assert.match(productionTopicSource, /Prepare a guided study on \{topic\.title\}\?/);
+    assert.match(productionTopicSource, /testID="touchpoint-study-confirm"/);
+    assert.match(productionTopicSource, /The study could not be prepared/);
+    assert.match(productionTopicSource, /POST", `\/api\/touchpoints\/\$\{topicId\}\/bible-study`/);
+    assert.match(
+      productionTopicSource,
+      /queryClient\.setQueryData\(\s*\[["']\/api\/touchpoints["'], topicId, ["']bible-study["']/
+    );
+    assert.doesNotMatch(productionTopicSource, /Alert\.alert/);
+    assert.doesNotMatch(productionTopicSource, /window\.confirm|\bconfirm\(/);
+  });
+
+  it("styles the Watch play button with Path B coral", () => {
+    assert.match(productionTopicSource, /playBtn:[\s\S]*?backgroundColor:\s*PathB\.coral/);
+    assert.doesNotMatch(productionTopicSource, /rgba\(201,147,58/);
+  });
+
   it("awaits YouTube opening with a calm fallback and no unreachable embedded player", () => {
     assert.match(productionTopicSource, /await openYouTubeVideo\(video\.youtubeId\)/);
     assert.match(previewSource, /await openYouTubeVideo\(video\.youtubeId\)/);
