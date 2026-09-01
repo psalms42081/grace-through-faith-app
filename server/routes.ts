@@ -50,6 +50,7 @@ import egwRoutes from "./routes/egw";
 import demoRoutes from "./routes/demo";
 import youtubeRoutes from "./routes/youtube";
 import odbRoutes from "./routes/odb";
+import bibleGroupRoutes from "./routes/bible-groups";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -170,6 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/demo", demoRoutes);
   app.use(youtubeRoutes);
   app.use(odbRoutes);
+  app.use(bibleGroupRoutes);
 
   recoverStuckHeyGenJobs().catch((err) => {
     console.error("[startup] HeyGen recovery job failed:", err);

@@ -46,3 +46,13 @@ export const churchSubmissionLimiter = rateLimit({
   keyGenerator: safeKeyGenerator,
   validate: { keyGeneratorIpFallback: false },
 });
+
+export const bibleGroupWriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: "Too many group requests. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: safeKeyGenerator,
+  validate: { keyGeneratorIpFallback: false },
+});

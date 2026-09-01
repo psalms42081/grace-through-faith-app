@@ -24,9 +24,11 @@ import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useProStatus } from "@/contexts/ProContext";
+import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { displayInitials } from "@/lib/user-initials";
+import ProfileGroupsSection from "@/components/bible-groups/ProfileGroupsSection";
 
 const C = {
   surface: PathB.surface,
@@ -99,6 +101,7 @@ function ProfileScreenInner() {
 
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated } = useAuth();
+  const { isKidsMode } = useKidsMode();
   const { showToast } = useToast();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -419,20 +422,7 @@ function ProfileScreenInner() {
               </Pressable>
             </View>
           )}
-          <View
-            style={[st.orgCard, { marginTop: 12 }]}
-            testID="profile-groups-placeholder"
-          >
-            <View style={st.orgHeader}>
-              <Ionicons name="people-outline" size={24} color={C.inkMuted} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[st.orgName, { color: C.ink }]}>Groups</Text>
-                <Text style={[st.orgMeta, { color: C.inkMuted }]}>
-                  Small groups coming soon
-                </Text>
-              </View>
-            </View>
-          </View>
+          {!isKidsMode && <ProfileGroupsSection />}
         </View>
       )}
 

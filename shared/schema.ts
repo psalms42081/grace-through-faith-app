@@ -46,6 +46,8 @@ export const users = pgTable("users", {
   ageGroup: varchar("age_group", { length: 16 }),
   /** Claimed Adventist directory church (`sda_church.id`). Profile "My Church". */
   sdaChurchId: varchar("sda_church_id"),
+  /** One-time 18+ confirmation for private Bible small groups. No ID check. */
+  adultConfirmedAt: timestamp("adult_confirmed_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -1640,6 +1642,98 @@ export const churchSubmissions = pgTable("church_submissions", {
 });
 
 export type ChurchSubmission = typeof churchSubmissions.$inferSelect;
+
+// ─── BIBLE SMALL GROUPS (CONNECT Phase 1b — private, not prayer_groups) ──────
+
+export const bibleSmallGroups = pgTable(
+  "bible_small_group",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    name: text("name").notNull(),
+    hostUserId: varchar("host_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    inviteCode: varchar("invite_code", { length: 8 }).notNull(),
+    churchId: varchar("church_id").references(() => sdaChurches.id, {
+      onDelete: "set null",
+    }),
+    curriculum: varchar("curriculum", { length: 16 }).default("adult").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+  },
+  (table) => ({
+    inviteUniq: uniqueIndex("bible_small_group_invite_code_uniq").on(
+      table.inviteCode,
+    ),
+    hostIdx: index("bible_small_group_host_idx").on(table.hostUserId),
+    churchIdx: index("bible_small_group_church_idx").on(table.churchId),
+    curriculumCheck: check(
+      "bible_small_group_curriculum_check",
+      sql`${table.curriculum} IN ('adult', 'inverse')`,
+    ),
+  }),
+);
+
+export type BibleSmallGroup = typeof bibleSmallGroups.$inferSelect;
+
+export const bibleSmallGroupMembers = pgTable(
+  "bible_small_group_member",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    groupId: varchar("group_id")
+      .notNull()
+      .references(() => bibleSmallGroups.id, { onDelete: "cascade" }),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 12 }).default("member").notNull(),
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupUserUniq: uniqueIndex("bible_small_group_member_group_user_uniq").on(
+      table.groupId,
+      table.userId,
+    ),
+    userIdx: index("bible_small_group_member_user_idx").on(table.userId),
+    roleCheck: check(
+      "bible_small_group_member_role_check",
+      sql`${table.role} IN ('host', 'member')`,
+    ),
+  }),
+);
+
+export type BibleSmallGroupMember = typeof bibleSmallGroupMembers.$inferSelect;
+
+export const bibleSmallGroupPosts = pgTable(
+  "bible_small_group_post",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    groupId: varchar("group_id")
+      .notNull()
+      .references(() => bibleSmallGroups.id, { onDelete: "cascade" }),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ssWeekKey: varchar("ss_week_key", { length: 64 }).notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupWeekIdx: index("bible_small_group_post_group_week_idx").on(
+      table.groupId,
+      table.ssWeekKey,
+    ),
+    createdIdx: index("bible_small_group_post_created_idx").on(table.createdAt),
+  }),
+);
+
+export type BibleSmallGroupPost = typeof bibleSmallGroupPosts.$inferSelect;
 
 // ─── LIVE STREAMING ──────────────────────────────────────────────────────────
 

@@ -28,6 +28,7 @@ import HeroCard, { HeroTab } from "@/components/home-v2/HeroCard";
 import SSGradientCard from "@/components/home-v2/SSGradientCard";
 import DailyRhythm, { RhythmRowData } from "@/components/home-v2/DailyRhythm";
 import TopicChips from "@/components/home-v2/TopicChips";
+import HomeBibleGroupCard from "@/components/home-v2/HomeBibleGroupCard";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -54,9 +55,9 @@ interface TodayResponse {
 export default function HomeV2Screen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { userId, user } = useAuth();
+  const { userId, user, isAuthenticated } = useAuth();
   const { selectedTrack } = useSabbathSchoolTrack();
-  const { enterKidsMode, lastActiveChildId } = useKidsMode();
+  const { enterKidsMode, lastActiveChildId, isKidsMode } = useKidsMode();
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
   const [clock, setClock] = useState(() => new Date());
@@ -257,6 +258,26 @@ export default function HomeV2Screen() {
     },
   });
 
+  const { data: myGroupsData } = useQuery<{
+    groups: {
+      id: string;
+      name: string;
+      currentWeek: {
+        ssWeekKey: string;
+        lessonNumber: number;
+        lessonTitle: string;
+      } | null;
+    }[];
+  }>({
+    queryKey: ["/api/bible-groups"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", withDeviceTimeZone("/api/bible-groups"));
+      return res.json();
+    },
+    enabled: isAuthenticated && !isKidsMode,
+  });
+  const myGroups = myGroupsData?.groups ?? [];
+
   const streak = weeklyData?.currentStreak ?? 0;
   const readToday = recentReads?.[0]?.readAt
     ? getHomeLocalDay(new Date(recentReads[0].readAt)).dateKey === localDay.dateKey
@@ -380,6 +401,13 @@ export default function HomeV2Screen() {
         onOpenOverview={goToOverview}
         onWatch={goToWatch}
       />
+
+      {!isKidsMode && myGroups.length > 0 && (
+        <HomeBibleGroupCard
+          groups={myGroups}
+          onOpen={(groupId) => router.push(`/bible-group/${groupId}` as any)}
+        />
+      )}
 
       <DailyRhythm rows={rhythmRows} />
       <TopicChips />

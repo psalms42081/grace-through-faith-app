@@ -316,6 +316,7 @@ router.get("/api/auth/me", async (req, res) => {
         isPatron: user.isPatron,
         role: user.role,
         organizationId: user.organizationId,
+        adultConfirmedAt: user.adultConfirmedAt ?? null,
       },
       isGuest: false,
     });

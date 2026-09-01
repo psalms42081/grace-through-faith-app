@@ -17,10 +17,9 @@ import {
   generateSabbathSchoolTutorResponse,
 } from "../services/ai-engine";
 import {
-  getCurrentLessonNumber,
   getMostRecentQuarterly,
-  syncCurrentQuarter,
 } from "../services/sabbath-school-sync";
+import { loadCurrentSabbathSchoolLesson } from "../services/sabbath-school-current";
 import { normalizeSabbathSchoolAudioUrl } from "../services/sabbath-school-audio-metadata";
 import {
   findTodayDayNumber,
@@ -220,102 +219,12 @@ router.get("/api/sabbath-school/current", async (req, res) => {
     const timeZone = normalizeSabbathSchoolTimeZone(req.query.timeZone);
     const now = new Date();
 
-    let q = (
-      await db
-        .select()
-        .from(sabbathSchoolQuarterlies)
-        .where(
-          and(
-            eq(sabbathSchoolQuarterlies.language, "en"),
-            eq(sabbathSchoolQuarterlies.curriculumType, curriculum)
-          )
-        )
-        .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
-        .limit(1)
-    )[0] || null;
-
-    if (!q) {
-      try {
-        await syncCurrentQuarter("en");
-        q = (
-          await db
-            .select()
-            .from(sabbathSchoolQuarterlies)
-            .where(
-              and(
-                eq(sabbathSchoolQuarterlies.language, "en"),
-                eq(sabbathSchoolQuarterlies.curriculumType, curriculum)
-              )
-            )
-            .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
-            .limit(1)
-        )[0] || null;
-      } catch (err) {
-        console.error("[SabbathSchool] On-demand quarterly sync failed:", err instanceof Error ? err.message : err);
-      }
-    }
-
-    if (!q) {
+    const resolved = await loadCurrentSabbathSchoolLesson(curriculum, timeZone, now);
+    if (!resolved) {
       return res.json({ quarterly: null, currentLesson: null, message: "No quarterly available" });
     }
 
-    let lessons = await db
-      .select()
-      .from(sabbathSchoolLessons)
-      .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
-      .orderBy(sabbathSchoolLessons.lessonNumber);
-
-    if (lessons.length === 0) {
-      try {
-        await syncCurrentQuarter("en");
-        lessons = await db
-          .select()
-          .from(sabbathSchoolLessons)
-          .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
-          .orderBy(sabbathSchoolLessons.lessonNumber);
-      } catch (err) {
-        console.error("[SabbathSchool] On-demand lesson repair sync failed:", err instanceof Error ? err.message : err);
-      }
-    }
-
-    if (lessons.length === 0) {
-      const allQuarters = await db
-        .select()
-        .from(sabbathSchoolQuarterlies)
-        .where(
-          and(
-            eq(sabbathSchoolQuarterlies.language, "en"),
-            eq(sabbathSchoolQuarterlies.curriculumType, curriculum)
-          )
-        )
-        .orderBy(desc(sabbathSchoolQuarterlies.quarterCode));
-
-      for (const candidate of allQuarters) {
-        if (candidate.id === q.id) continue;
-        const candidateLessons = await db
-          .select()
-          .from(sabbathSchoolLessons)
-          .where(eq(sabbathSchoolLessons.quarterlyId, candidate.id))
-          .limit(1);
-        if (candidateLessons.length > 0) {
-          q = candidate;
-          lessons = await db
-            .select()
-            .from(sabbathSchoolLessons)
-            .where(eq(sabbathSchoolLessons.quarterlyId, q.id))
-            .orderBy(sabbathSchoolLessons.lessonNumber);
-          break;
-        }
-      }
-    }
-
-    const currentLessonNum = await getCurrentLessonNumber(q.id, timeZone, now);
-
-    const currentLesson = lessons.find((l) => l.lessonNumber === currentLessonNum) || lessons[0];
-
-    if (!currentLesson) {
-      return res.json({ quarterly: q, currentLesson: null, lessons });
-    }
+    const { quarterly: q, lessons, currentLesson, currentLessonNumber: currentLessonNum } = resolved;
 
     const days = await db
       .select()

@@ -20,6 +20,7 @@ interface AuthUser {
   isPatron: boolean;
   role: string;
   organizationId: string | null;
+  adultConfirmedAt?: string | null;
 }
 
 interface AuthContextType {
