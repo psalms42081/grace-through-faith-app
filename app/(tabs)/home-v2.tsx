@@ -31,6 +31,16 @@ import TopicChips from "@/components/home-v2/TopicChips";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
+import {
+  resolveSabbathSchoolContinueDay,
+  sabbathSchoolContinueProgressCount,
+  useSabbathSchoolLastRead,
+} from "@/lib/sabbath-school-continue";
+import { weekdayNameForSabbathSchoolDay } from "@/lib/sabbath-school-day-navigation";
+import {
+  buildSabbathSchoolTabRoute,
+  SABBATH_SCHOOL_TAB_ROOT,
+} from "@/lib/sabbath-school-route-containment";
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
@@ -210,12 +220,18 @@ export default function HomeV2Screen() {
     },
   });
 
+  const { lastRead: ssLastRead } = useSabbathSchoolLastRead(userId);
   const { data: ssData } = useQuery<{
-    quarterly: { title: string; colorPrimary: string | null } | null;
+    quarterly: { title: string; colorPrimary: string | null; quarterCode?: string } | null;
     currentLesson: {
       title: string;
       lessonNumber: number;
-      days: { dayNumber: number; title: string | null }[];
+      days: {
+        dayNumber: number;
+        title: string | null;
+        date: string | null;
+        completed?: boolean;
+      }[];
     } | null;
     completedDays: number;
     currentLessonNumber: number;
@@ -245,10 +261,39 @@ export default function HomeV2Screen() {
   // value is only a loading fallback and uses the same Home clock.
   const ssDayIndex =
     ssData?.todayDayNumber ?? localDay.sabbathSchoolDayNumber;
-  const ssTodayTitle =
-    ssData?.currentLesson?.days.find((day) => day.dayNumber === ssDayIndex)?.title ??
-    ssData?.currentLesson?.title;
-  const ssDoneToday = (ssData?.completedDays ?? 0) >= ssDayIndex;
+  const ssLessonNumber =
+    ssData?.currentLesson?.lessonNumber ?? ssData?.currentLessonNumber ?? null;
+  const continueDay = resolveSabbathSchoolContinueDay({
+    days: ssData?.currentLesson?.days ?? [],
+    todayDayNumber: ssData?.todayDayNumber ?? localDay.sabbathSchoolDayNumber,
+    lastRead: ssLastRead,
+    currentLessonNumber: ssLessonNumber,
+    currentQuarterCode: ssData?.quarterly?.quarterCode,
+  });
+  const continueDayLabel = continueDay
+    ? weekdayNameForSabbathSchoolDay(continueDay)
+    : dayLabel;
+  const continueDayTitle = continueDay?.title ?? ssData?.currentLesson?.title;
+  const ssProgressDays = sabbathSchoolContinueProgressCount(continueDay);
+  const ssDoneToday =
+    ssData?.currentLesson?.days.find((day) => day.dayNumber === ssDayIndex)
+      ?.completed === true;
+  const goToOverview = () => router.push(SABBATH_SCHOOL_TAB_ROOT as any);
+  const goToWatch = () =>
+    router.push(buildSabbathSchoolTabRoute("sabbath-school-video") as any);
+  const goToContinueDay = () => {
+    if (!continueDay || ssLessonNumber == null) {
+      goToOverview();
+      return;
+    }
+    router.push(
+      buildSabbathSchoolTabRoute("sabbath-school-day", {
+        lessonNumber: ssLessonNumber,
+        dayNumber: continueDay.dayNumber,
+        quarterCode: ssData?.quarterly?.quarterCode,
+      }) as any,
+    );
+  };
 
   const planTitle = todayData?.enrollment?.plan?.title;
   const rhythmRows: RhythmRowData[] = [
@@ -268,9 +313,11 @@ export default function HomeV2Screen() {
       icon: require("@/assets/illustrations/rhythm-sabbath-school.png"),
       iconBg: "#DFF6F2",
       title: "Sabbath School",
-      meta: ssTodayTitle ? `${dayLabel} — ${ssTodayTitle}` : dayLabel,
+      meta: continueDayTitle
+        ? `${continueDayLabel} — ${continueDayTitle}`
+        : continueDayLabel,
       done: ssDoneToday,
-      onPress: () => router.push("/(tabs)/ss/sabbath-school" as any),
+      onPress: goToContinueDay,
     },
     {
       key: "reflection",
@@ -320,10 +367,13 @@ export default function HomeV2Screen() {
       <SSGradientCard
         quarterTitle={ssData?.quarterly?.title}
         quarterColor={ssData?.quarterly?.colorPrimary}
-        lessonTitle={ssTodayTitle}
-        lessonNumber={ssData?.currentLesson?.lessonNumber ?? ssData?.currentLessonNumber}
-        completedDays={ssData?.completedDays ?? 0}
-        dayLabel={dayLabel}
+        lessonTitle={ssData?.currentLesson?.title}
+        lessonNumber={ssLessonNumber}
+        progressDays={ssProgressDays}
+        dayLabel={continueDayLabel}
+        onContinue={goToContinueDay}
+        onOpenOverview={goToOverview}
+        onWatch={goToWatch}
       />
 
       <DailyRhythm rows={rhythmRows} />

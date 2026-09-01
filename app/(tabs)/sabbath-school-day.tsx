@@ -42,6 +42,7 @@ import {
   SABBATH_SCHOOL_TAB_ROOT,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { useSabbathSchoolLastRead } from "@/lib/sabbath-school-continue";
 
 interface DayData {
   id: string;
@@ -273,6 +274,7 @@ export default function SabbathSchoolDayScreen() {
   const lessonNumber = parseInt(params.lessonNumber || "1");
   const dayNumber = parseInt(params.dayNumber || "1");
   const quarterCode = params.quarterCode || "";
+  const { recordLastRead } = useSabbathSchoolLastRead(userId);
   const isTabContained = useSabbathSchoolTabContainment(
     "sabbath-school-day",
     {
@@ -282,6 +284,22 @@ export default function SabbathSchoolDayScreen() {
     },
     !!params.lessonNumber && !!params.dayNumber,
   );
+
+  React.useEffect(() => {
+    if (!params.lessonNumber || !params.dayNumber) return;
+    recordLastRead({
+      lessonNumber,
+      dayNumber,
+      quarterCode: quarterCode || undefined,
+    });
+  }, [
+    params.lessonNumber,
+    params.dayNumber,
+    lessonNumber,
+    dayNumber,
+    quarterCode,
+    recordLastRead,
+  ]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad =

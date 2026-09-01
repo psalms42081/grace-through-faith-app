@@ -11,12 +11,14 @@ export type SabbathSchoolTabScreen =
   | "sabbath-school-quarter"
   | "sabbath-school-day"
   | "sabbath-school-day-tutor"
-  | "sabbath-school-discussion";
+  | "sabbath-school-discussion"
+  | "sabbath-school-video";
 
 function sabbathSchoolPublicPath(screen: SabbathSchoolTabScreen): string {
   if (
     screen === "sabbath-school-day" ||
-    screen === "sabbath-school-quarter"
+    screen === "sabbath-school-quarter" ||
+    screen === "sabbath-school-video"
   ) {
     return `/${screen}`;
   }
@@ -27,7 +29,8 @@ export function isSabbathSchoolTabPath(pathname: string): boolean {
   return (
     pathname.startsWith("/ss/sabbath-school") ||
     pathname === "/sabbath-school-day" ||
-    pathname === "/sabbath-school-quarter"
+    pathname === "/sabbath-school-quarter" ||
+    pathname === "/sabbath-school-video"
   );
 }
 

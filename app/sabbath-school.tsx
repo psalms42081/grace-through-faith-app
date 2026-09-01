@@ -1,6 +1,6 @@
 // Sabbath School — Path B light (Brief 03, swapped in as canonical in Phase B).
 // Rollback: previous dark screen is in git history (pre-swap checkpoint).
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,25 +9,29 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
-  Image,
-  Linking,
 } from "react-native";
-import { useVideoPlayer, VideoView } from "expo-video";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { HV2, F } from "@/components/home-v2/theme";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
+import LessonVideoPlayer from "@/components/sabbath-school/LessonVideoPlayer";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
+import { flattenSabbathSchoolLessonClips } from "@/lib/sabbath-school-video-clips";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import {
+  resolveSabbathSchoolContinueDay,
+  sabbathSchoolContinueProgressCount,
+  useSabbathSchoolLastRead,
+} from "@/lib/sabbath-school-continue";
 import {
   buildSabbathSchoolTabRoute,
   sabbathSchoolTabBarClearance,
@@ -102,38 +106,16 @@ export default function SabbathSchoolV2Screen() {
   const { userId } = useAuth();
   const { t } = useTranslation();
   const [showArchive, setShowArchive] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<{ src: string; title: string; artist: string } | null>(null);
-  const [videoError, setVideoError] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   const [clock, setClock] = useState(() => new Date());
-  const canInlinePlay = useCallback((src: string) => /\.(mp4|m3u8)(\?|$)/i.test(src), []);
-  const isValidVideoSource = useCallback((src: string) => {
-    try {
-      return new URL(src).protocol === "https:";
-    } catch {
-      return false;
-    }
-  }, []);
   const isTabContained =
     useSabbathSchoolTabContainment("sabbath-school");
+  const { lastRead } = useSabbathSchoolLastRead(userId);
   const localDateKey = useMemo(() => getHomeLocalDay(clock).dateKey, [clock]);
 
   React.useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
-
-  React.useEffect(() => {
-    if (!activeVideo || videoError || videoReady) return;
-    const timer = setTimeout(() => setVideoError(true), 20000);
-    return () => clearTimeout(timer);
-  }, [activeVideo, videoError, videoReady]);
-
-  const closeVideoModal = async () => {
-    setActiveVideo(null);
-    setVideoError(false);
-    setVideoReady(false);
-  };
 
   const { data: userPrefs } = useQuery<{ preferredCurriculum?: string | null }>({
     queryKey: ["/api/user/preferences"],
@@ -175,7 +157,6 @@ export default function SabbathSchoolV2Screen() {
   const quarterTheme = getSabbathSchoolQuarterTheme(quarterly?.colorPrimary);
   const lesson = data?.currentLesson;
   const days = getLessonDays(lesson);
-  const completedCount = data?.completedDays || 0;
   const todayDayNumber = data?.todayDayNumber ?? null;
   const companion = data?.companion || null;
   const totalLessons = data?.totalLessons || 13;
@@ -185,24 +166,30 @@ export default function SabbathSchoolV2Screen() {
     [days]
   );
 
-  const currentDay = useMemo(() => {
-    if (!days.length) return null;
-    if (todayDayNumber != null) {
-      const today = days.find((d) => d.dayNumber === todayDayNumber);
-      if (today) return today;
-    }
-    return days.find((d) => !d.completed) ?? days[days.length - 1];
-  }, [days, todayDayNumber]);
+  const currentDay = useMemo(
+    () =>
+      resolveSabbathSchoolContinueDay({
+        days,
+        todayDayNumber,
+        lastRead,
+        currentLessonNumber: lesson?.lessonNumber ?? data?.currentLessonNumber,
+        currentQuarterCode: quarterly?.quarterCode,
+      }),
+    [
+      days,
+      todayDayNumber,
+      lastRead,
+      lesson?.lessonNumber,
+      data?.currentLessonNumber,
+      quarterly?.quarterCode,
+    ],
+  );
+  const progressDays = sabbathSchoolContinueProgressCount(
+    currentDay,
+    days.length || 7,
+  );
 
-  const lessonVideoClips = (lesson?.videoByArtist ?? [])
-    .flatMap((group) => (group?.clips ?? []).map((clip) => ({ ...clip, artist: group.artist })))
-    .filter((clip) => !!clip.src && isValidVideoSource(clip.src))
-    .slice(0, 5);
-  const activePlaybackUrl = activeVideo
-    ? Platform.OS === "web"
-      ? `${getApiUrl()}api/sabbath-school/video?url=${encodeURIComponent(activeVideo.src)}`
-      : activeVideo.src
-    : "";
+  const lessonVideoClips = flattenSabbathSchoolLessonClips(lesson?.videoByArtist);
 
   const pastQuarters = (archiveData?.quarters || []).filter((q) => quarterly && q.id !== quarterly.id);
 
@@ -275,9 +262,9 @@ export default function SabbathSchoolV2Screen() {
                 {memoryText?.reference ? `  ·  Memory verse: ${memoryText.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
               </Text>
               <View style={s.heroTrack}>
-                <View style={[s.heroFill, { width: `${Math.round((completedCount / Math.max(days.length, 1)) * 100)}%` }]} />
+                <View style={[s.heroFill, { width: `${Math.round((progressDays / Math.max(days.length, 1)) * 100)}%` }]} />
               </View>
-              <Text style={s.heroProgressText}>{completedCount} of {days.length || 7} days</Text>
+              <Text style={s.heroProgressText}>{progressDays} of {days.length || 7} days</Text>
               {currentDay && (
                 <Pressable
                   onPress={() => openDay(currentDay)}
@@ -298,94 +285,7 @@ export default function SabbathSchoolV2Screen() {
           {lessonVideoClips.length > 0 && (
             <View style={s.section}>
               <Text style={s.sectionTitle}>Watch This Lesson</Text>
-              <View style={s.videoLayerStack}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.videoRow}>
-                  {lessonVideoClips.map((clip, index) => {
-                    const isActive = activeVideo?.src === clip.src;
-                    return (
-                      <Pressable
-                        key={`${clip.src}-${index}`}
-                        onPress={() => {
-                          if (!canInlinePlay(clip.src)) {
-                            Linking.openURL(clip.src).catch(() => {});
-                            return;
-                          }
-                          if (isActive) { closeVideoModal(); return; }
-                          setVideoError(false);
-                          setVideoReady(false);
-                          setActiveVideo({ src: clip.src, title: clip.title || "Lesson Clip", artist: clip.artist });
-                        }}
-                        style={({ pressed }) => [s.videoCard, { opacity: pressed ? 0.85 : 1 }]}
-                      >
-                        {clip.thumbnail ? (
-                          <Image source={{ uri: clip.thumbnail }} style={s.videoThumb} resizeMode="cover" />
-                        ) : (
-                          <View style={[s.videoThumb, { backgroundColor: quarterTheme.tint }]} />
-                        )}
-                        <View style={s.videoCardMeta}>
-                          <Text style={s.videoTitle} numberOfLines={2}>{clip.title || "Lesson Clip"}</Text>
-                          <Text style={s.videoArtist} numberOfLines={1}>{clip.artist}</Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-                {activeVideo && (
-                  <View style={s.inlinePlayerCard}>
-                    {videoError ? (
-                      <View style={s.inlineVideoError}>
-                        <Ionicons name="videocam-off-outline" size={28} color="#FFFFFF" />
-                        <Text style={s.inlineVideoErrorText}>This lesson video could not start in the app.</Text>
-                        <Pressable
-                          onPress={() => Linking.openURL(activePlaybackUrl).catch(() => {})}
-                          style={s.inlineVideoErrorButton}
-                        >
-                          <Text style={s.inlineVideoErrorButtonText}>Open in browser</Text>
-                        </Pressable>
-                      </View>
-                    ) : Platform.OS === "web" ? (
-                      React.createElement("video", {
-                        key: activeVideo.src,
-                        src: activePlaybackUrl,
-                        controls: true,
-                        autoPlay: true,
-                        playsInline: true,
-                        style: {
-                          width: "100%",
-                          aspectRatio: "16 / 9",
-                          backgroundColor: "#000000",
-                          display: "block",
-                        },
-                        onError: () => setVideoError(true),
-                        onLoadedMetadata: () => setVideoReady(true),
-                        onCanPlay: () => setVideoReady(true),
-                      })
-                    ) : (
-                      <SabbathSchoolInlineVideo
-                        key={activeVideo.src}
-                        uri={activePlaybackUrl}
-                        style={s.inlineVideo}
-                        onReady={() => setVideoReady(true)}
-                        onError={() => setVideoError(true)}
-                      />
-                    )}
-                    {!videoReady && !videoError && (
-                      <View pointerEvents="none" style={s.inlineVideoLoading}>
-                        <ActivityIndicator size="large" color="#FFFFFF" />
-                      </View>
-                    )}
-                    <View style={s.inlinePlayerMeta}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.videoModalTitle} numberOfLines={2}>{activeVideo.title}</Text>
-                        <Text style={s.videoModalArtist} numberOfLines={1}>{activeVideo.artist}</Text>
-                      </View>
-                      <Pressable onPress={closeVideoModal} style={({ pressed }) => ({ padding: 2, opacity: pressed ? 0.7 : 1 })}>
-                        <Ionicons name="close-circle" size={24} color={SS2.inkMuted} />
-                      </Pressable>
-                    </View>
-                  </View>
-                )}
-              </View>
+              <LessonVideoPlayer clips={lessonVideoClips} />
             </View>
           )}
 
@@ -528,43 +428,6 @@ export default function SabbathSchoolV2Screen() {
   );
 }
 
-function SabbathSchoolInlineVideo({
-  uri,
-  style,
-  onReady,
-  onError,
-}: {
-  uri: string;
-  style: object;
-  onReady: () => void;
-  onError: () => void;
-}) {
-  const player = useVideoPlayer(uri, (p) => {
-    p.play();
-  });
-  const onReadyRef = React.useRef(onReady);
-  const onErrorRef = React.useRef(onError);
-  onReadyRef.current = onReady;
-  onErrorRef.current = onError;
-
-  useEffect(() => {
-    const sub = player.addListener("statusChange", ({ status, error }) => {
-      if (status === "readyToPlay") onReadyRef.current();
-      if (status === "error" || error) onErrorRef.current();
-    });
-    return () => sub.remove();
-  }, [player]);
-
-  return (
-    <VideoView
-      player={player}
-      style={style}
-      contentFit="contain"
-      nativeControls
-    />
-  );
-}
-
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: SS2.surface },
   topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingBottom: 8 },
@@ -589,24 +452,6 @@ const s = StyleSheet.create({
 
   section: { gap: 10 },
   sectionTitle: { fontFamily: F.loraSemi, fontSize: 17, color: SS2.ink },
-
-  videoLayerStack: { position: "relative" },
-  videoRow: { gap: 10, paddingRight: 8 },
-  videoCard: { width: 200, backgroundColor: SS2.card, borderRadius: 12, overflow: "hidden", ...HV2.rowShadow },
-  videoThumb: { width: 200, aspectRatio: 16 / 9 },
-  videoCardMeta: { paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
-  videoTitle: { fontFamily: F.interMed, fontSize: 12, color: SS2.ink, lineHeight: 17 },
-  videoArtist: { fontFamily: F.inter, fontSize: 11, color: SS2.inkMuted },
-  inlinePlayerCard: { marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: SS2.border, overflow: "hidden", backgroundColor: SS2.card },
-  inlineVideo: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#000" },
-  inlineVideoError: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#171717", alignItems: "center", justifyContent: "center", gap: 9, paddingHorizontal: 24 },
-  inlineVideoLoading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.32)" },
-  inlineVideoErrorText: { color: "#FFFFFF", fontFamily: F.interMed, fontSize: 13, lineHeight: 19, textAlign: "center" },
-  inlineVideoErrorButton: { backgroundColor: SS2.coral, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
-  inlineVideoErrorButtonText: { color: "#FFFFFF", fontFamily: F.interSemi, fontSize: 13 },
-  inlinePlayerMeta: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
-  videoModalTitle: { fontFamily: F.loraSemi, fontSize: 15, color: SS2.ink, lineHeight: 21 },
-  videoModalArtist: { fontFamily: F.interMed, fontSize: 12, color: SS2.inkMuted },
 
   weekCard: { backgroundColor: SS2.card, borderRadius: 16, overflow: "hidden", ...HV2.rowShadow },
   dayRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 13 },

@@ -152,6 +152,12 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="sabbath-school-video"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="connect"
         options={{
           title: t("tabs.connect"),

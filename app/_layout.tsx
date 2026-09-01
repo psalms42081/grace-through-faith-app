@@ -255,6 +255,7 @@ useEffect(() => {
         "/sabbath-school-day",
         "/sabbath-school-day-tutor",
         "/sabbath-school-discussion",
+        "/sabbath-school-video",
         "/ss/sabbath-school",
       ];
       if (

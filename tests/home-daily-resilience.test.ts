@@ -56,12 +56,10 @@ describe("daily Home and theme resilience", () => {
       sabbathSchoolSource,
       /sabbath-school\/current[^`]*dateKey=/,
     );
-    assert.match(
-      homeSource,
-      /currentLesson\?\.days\.find\(\(day\) => day\.dayNumber === ssDayIndex\)\?\.title/,
-    );
-    assert.match(homeSource, /lessonTitle=\{ssTodayTitle\}/);
-    assert.match(homeSource, /`\$\{dayLabel\} — \$\{ssTodayTitle\}`/);
+    assert.match(homeSource, /resolveSabbathSchoolContinueDay/);
+    assert.match(homeSource, /lessonTitle=\{ssData\?\.currentLesson\?\.title\}/);
+    assert.match(homeSource, /continueDayTitle/);
+    assert.match(homeSource, /goToWatch/);
   });
 
   it("keeps shared member screens light-first", () => {

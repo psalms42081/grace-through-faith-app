@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
 import { HV2, F } from "./theme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 
@@ -10,17 +9,20 @@ interface Props {
   quarterColor?: string | null;
   lessonTitle?: string | null;
   lessonNumber?: number | null;
-  completedDays: number;
-  dayLabel: string; // e.g. "Wednesday"
+  progressDays: number;
+  dayLabel: string; // e.g. "Tuesday" — the Continue target weekday
+  onContinue: () => void;
+  onOpenOverview: () => void;
+  onWatch: () => void;
 }
 
 // The ONE gradient on this screen (§1.3). All other cards are flat white.
 export default function SSGradientCard({
-  quarterTitle, quarterColor, lessonTitle, lessonNumber, completedDays, dayLabel,
+  quarterTitle, quarterColor, lessonTitle, lessonNumber, progressDays, dayLabel,
+  onContinue, onOpenOverview, onWatch,
 }: Props) {
-  const progress = Math.min(Math.max(completedDays / 7, 0), 1);
+  const progress = Math.min(Math.max(progressDays / 7, 0), 1);
   const quarterTheme = getSabbathSchoolQuarterTheme(quarterColor);
-  const goToSS = () => router.push("/(tabs)/ss/sabbath-school" as any);
 
   return (
     <View style={s.wrap}>
@@ -40,17 +42,33 @@ export default function SSGradientCard({
             </View>
           )}
         </View>
-        <Text style={s.title} numberOfLines={2}>
-          {lessonTitle ?? "This week's lesson"}
-        </Text>
+        <Pressable
+          onPress={onOpenOverview}
+          accessibilityRole="button"
+          accessibilityLabel="Open lesson overview"
+        >
+          <Text style={s.title} numberOfLines={2}>
+            {lessonTitle ?? "This week's lesson"}
+          </Text>
+        </Pressable>
         <View style={s.track}>
           <View style={[s.fill, { width: `${Math.round(progress * 100)}%` }]} />
         </View>
         <View style={s.btnRow}>
-          <Pressable style={s.continueBtn} onPress={goToSS} accessibilityRole="button">
+          <Pressable
+            style={s.continueBtn}
+            onPress={onContinue}
+            accessibilityRole="button"
+            accessibilityLabel={`Continue ${dayLabel}`}
+          >
             <Text style={[s.continueLabel, { color: quarterTheme.primary }]}>Continue — {dayLabel}</Text>
           </Pressable>
-          <Pressable style={s.watchBtn} onPress={goToSS} accessibilityRole="button">
+          <Pressable
+            style={s.watchBtn}
+            onPress={onWatch}
+            accessibilityRole="button"
+            accessibilityLabel="Watch this lesson"
+          >
             <Text style={s.watchLabel}>▶ Watch</Text>
           </Pressable>
         </View>

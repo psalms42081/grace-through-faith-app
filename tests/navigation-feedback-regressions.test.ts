@@ -127,6 +127,10 @@ describe("external tester navigation feedback", () => {
       existsSync(new URL("../app/sabbath-school-quarter.tsx", import.meta.url)),
       false,
     );
+    assert.equal(
+      existsSync(new URL("../app/sabbath-school-video.tsx", import.meta.url)),
+      false,
+    );
     assert.match(tabLayoutSource, /name="ss"[\s\S]*?href:\s*null/);
     assert.match(
       tabLayoutSource,
@@ -136,14 +140,23 @@ describe("external tester navigation feedback", () => {
       tabLayoutSource,
       /name="sabbath-school-quarter"[\s\S]*?href:\s*null/,
     );
+    assert.match(
+      tabLayoutSource,
+      /name="sabbath-school-video"[\s\S]*?href:\s*null/,
+    );
     assert.match(tabLayoutSource, /isSabbathSchoolTabPath\(pathname\)/);
     assert.match(
       sabbathSchoolContainmentSource,
-      /pathname\.startsWith\("\/ss\/sabbath-school"\)[\s\S]*?pathname === "\/sabbath-school-day"[\s\S]*?pathname === "\/sabbath-school-quarter"/,
+      /pathname\.startsWith\("\/ss\/sabbath-school"\)[\s\S]*?pathname === "\/sabbath-school-day"[\s\S]*?pathname === "\/sabbath-school-quarter"[\s\S]*?pathname === "\/sabbath-school-video"/,
     );
     assert.match(sabbathSchoolTabStackSource, /headerShown:\s*false/);
     assert.match(sabbathSchoolTabDaySource, /sabbath-school-day/);
     assert.match(sabbathSchoolTabQuarterSource, /sabbath-school-quarter/);
+    assert.equal(
+      existsSync(new URL("../app/(tabs)/ss/sabbath-school-video.tsx", import.meta.url)),
+      true,
+    );
+    assert.match(sabbathSchoolContainmentSource, /sabbath-school-video/);
     assert.match(
       sabbathSchoolContainmentSource,
       /router\.replace\(\{[\s\S]*?pathname:\s*sabbathSchoolPublicPath\(screen\)[\s\S]*?params:/,
