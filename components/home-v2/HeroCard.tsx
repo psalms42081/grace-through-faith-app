@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator, Platform } from "react-native";
 import { Bookmark, Share2 } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -10,8 +10,9 @@ import {
   assertReflectionReadingAlignment,
   type HomeDaypart,
 } from "./home-data";
+import { buildHeroShareMessage, type HeroTab } from "./hero-share";
 
-export type HeroTab = "verse" | "signpost" | "reflection";
+export type { HeroTab };
 
 interface Props {
   activeTab: HeroTab;
@@ -83,10 +84,17 @@ export default function HeroCard({
   };
 
   const handleShare = async () => {
-    const msg =
-      activeTab === "reflection"
-        ? `${reflection.thought}\n\u2014 Reflection on ${reflection.reference}`
-        : `\u201C${verse.text}\u201D\n\u2014 ${verse.reference}`;
+    const origin =
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? window.location.origin
+        : undefined;
+    const msg = buildHeroShareMessage({
+      tab: activeTab,
+      verse,
+      signpost,
+      reflection,
+      origin,
+    });
     try {
       await Share.share({ message: msg });
     } catch {}

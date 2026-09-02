@@ -64,6 +64,11 @@ export function gapAfterVerseInRun<T extends { text: string }>(
   return isPoetryRun(verses) ? "\n" : " ";
 }
 
+/** Flatten a paragraph run the way TypographyPreviewProse joins verses. */
+export function joinInlineVerseRun<T extends { text: string }>(verses: T[]): string {
+  return verses.map((verse, index) => `${verse.text}${gapAfterVerseInRun(verses, index)}`).join("");
+}
+
 /** Keep the verse number glued to the first word so it cannot wrap alone. */
 export function splitLeadingWord(text: string): { firstWord: string; remainder: string } {
   const match = text.match(/^(\S+)([\s\S]*)$/);

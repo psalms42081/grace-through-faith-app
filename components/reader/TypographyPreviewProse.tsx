@@ -24,14 +24,21 @@ export { groupVersesByParagraphStarts, splitParagraphGroupAtHeadings };
 
 const IS_WEB = Platform.OS === "web";
 
-/** Web verse span: keep inline, block the native hold callout, no 300ms tap delay. */
+/**
+ * Web verse span must stay `display: inline` inside the parent Text.
+ * RN-web promotes a button accessibility role to a real HTML button, which
+ * Android Chrome boxes as inline-block and wraps at every verse boundary.
+ */
 const webVerseStyle: TextStyle | undefined = IS_WEB
   ? ({
+      display: "inline",
       cursor: "pointer",
       userSelect: "none",
       WebkitUserSelect: "none",
       WebkitTouchCallout: "none",
       touchAction: "manipulation",
+      padding: 0,
+      margin: 0,
     } as unknown as TextStyle)
   : undefined;
 
@@ -154,7 +161,7 @@ export function TypographyPreviewProse({
                       suppressHighlighting={false}
                       selectable={false}
                       style={[{ backgroundColor: bg }, webVerseStyle]}
-                      accessibilityRole="button"
+                      {...(IS_WEB ? undefined : { accessibilityRole: "button" as const })}
                       accessibilityLabel={`Verse ${v.verse}`}
                     >
                       <Text

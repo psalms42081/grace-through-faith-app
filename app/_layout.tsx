@@ -25,7 +25,12 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { WebSafeConfirmHost } from "@/components/WebSafeConfirm";
 import MiniPlayer from "@/components/MiniPlayer";
 import { initAnalytics, reportError } from "@/lib/analytics";
+import { registerWebServiceWorker } from "@/lib/register-web-service-worker";
 import Constants from "expo-constants";
+
+if (Platform.OS === "web") {
+  registerWebServiceWorker();
+}
 
 // Expo Go (SDK 53+) throws on a static import of expo-notifications (Android).
 // Check first, then lazy-require only for real builds.

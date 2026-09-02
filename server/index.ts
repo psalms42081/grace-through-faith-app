@@ -268,6 +268,23 @@ function configureExpoAndLanding(app: express.Application) {
     });
   }
 
+  const publicSwPath = path.resolve(process.cwd(), "public", "sw.js");
+  const distSwPath = path.resolve(process.cwd(), "dist", "sw.js");
+  if (fs.existsSync(publicSwPath) && fs.existsSync(path.resolve(process.cwd(), "dist", "index.html"))) {
+    fs.copyFileSync(publicSwPath, distSwPath);
+  }
+  app.get("/sw.js", (_req: Request, res: Response) => {
+    const swPath = fs.existsSync(distSwPath) ? distSwPath : publicSwPath;
+    if (!fs.existsSync(swPath)) {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      return res.status(404).end();
+    }
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Service-Worker-Allowed", "/");
+    return res.sendFile(swPath);
+  });
+
   const sitemapXml = fs.readFileSync(path.resolve(process.cwd(), "server", "templates", "sitemap.xml"), "utf-8");
   app.get("/sitemap.xml", (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
@@ -285,7 +302,7 @@ function configureExpoAndLanding(app: express.Application) {
         return next();
       }
 
-      if (req.path === "/sw.js" || req.path === "/service-worker.js") {
+      if (req.path === "/service-worker.js") {
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         return res.status(404).end();
       }
@@ -324,10 +341,10 @@ function configureExpoAndLanding(app: express.Application) {
     }));
 
     app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api") || req.path === "/manifest.json") {
+      if (req.path.startsWith("/api") || req.path === "/manifest.json" || req.path === "/sw.js") {
         return next();
       }
-      if (req.path === "/sw.js" || req.path === "/service-worker.js") {
+      if (req.path === "/service-worker.js") {
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         return res.status(404).end();
       }

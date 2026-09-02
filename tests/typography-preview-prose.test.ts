@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   gapAfterVerseInRun,
   groupVersesByParagraphStarts,
+  joinInlineVerseRun,
   splitLeadingWord,
   splitParagraphGroupAtHeadings,
 } from "../lib/group-verses-by-paragraph";
@@ -25,6 +26,50 @@ describe("groupVersesByParagraphStarts", () => {
   it("splits on provider starts without reordering verse identity", () => {
     const groups = groupVersesByParagraphStarts(verses, new Set([1, 3]));
     assert.deepEqual(groups.map((g) => g.map((v) => v.id)), [["a-1", "a-2"], ["a-3", "a-4"]]);
+  });
+});
+
+/** Production 1 Chronicles 14 NIV verses + providerContent (api_bible, structure-v5). */
+const CHRON1_14_NIV = {
+  verses: [
+    { id: "niv-13-14-1", verse: 1, text: "Now Hiram king of Tyre sent messengers to David, along with cedar logs, stonemasons and carpenters to build a palace for him." },
+    { id: "niv-13-14-2", verse: 2, text: "And David knew that the LORD had established him as king over Israel and that his kingdom had been highly exalted for the sake of his people Israel." },
+    { id: "niv-13-14-3", verse: 3, text: "In Jerusalem David took more wives and became the father of more sons and daughters." },
+    { id: "niv-13-14-4", verse: 4, text: "These are the names of the children born to him there: Shammua, Shobab, Nathan, Solomon," },
+    { id: "niv-13-14-5", verse: 5, text: "Ibhar, Elishua, Elpelet," },
+    { id: "niv-13-14-6", verse: 6, text: "Nogah, Nepheg, Japhia," },
+    { id: "niv-13-14-7", verse: 7, text: "Elishama, Beeliada and Eliphelet." },
+    { id: "niv-13-14-8", verse: 8, text: "When the Philistines heard that David had been anointed king over all Israel, they went up in full force to search for him, but David heard about it and went out to meet them." },
+    { id: "niv-13-14-9", verse: 9, text: "Now the Philistines had come and raided the Valley of Rephaim;" },
+    { id: "niv-13-14-10", verse: 10, text: "so David inquired of God: “Shall I go and attack the Philistines? Will you deliver them into my hands?”\nThe LORD answered him, “Go, I will deliver them into your hands.”" },
+    { id: "niv-13-14-11", verse: 11, text: "So David and his men went up to Baal Perazim, and there he defeated them. He said, “As waters break out, God has broken out against my enemies by my hand.” So that place was called Baal Perazim." },
+    { id: "niv-13-14-12", verse: 12, text: "The Philistines had abandoned their gods there, and David gave orders to burn them in the fire." },
+    { id: "niv-13-14-13", verse: 13, text: "Once more the Philistines raided the valley;" },
+    { id: "niv-13-14-14", verse: 14, text: "so David inquired of God again, and God answered him, “Do not go directly after them, but circle around them and attack them in front of the poplar trees." },
+    { id: "niv-13-14-15", verse: 15, text: "As soon as you hear the sound of marching in the tops of the poplar trees, move out to battle, because that will mean God has gone out in front of you to strike the Philistine army.”" },
+    { id: "niv-13-14-16", verse: 16, text: "So David did as God commanded him, and they struck down the Philistine army, all the way from Gibeon to Gezer." },
+    { id: "niv-13-14-17", verse: 17, text: "So David’s fame spread throughout every land, and the LORD made all the nations fear him." },
+  ],
+  paragraphStarts: new Set([1, 3, 8, 11, 13, 17]),
+};
+
+describe("1 Chronicles 14 NIV paragraph 1–2", () => {
+  it("renders verses 1 and 2 on the same inline run with no newline between them", () => {
+    const groups = groupVersesByParagraphStarts(CHRON1_14_NIV.verses, CHRON1_14_NIV.paragraphStarts);
+    assert.deepEqual(groups[0].map((v) => v.verse), [1, 2]);
+    assert.equal(gapAfterVerseInRun(groups[0], 0), " ");
+    assert.notEqual(gapAfterVerseInRun(groups[0], 0), "\n");
+
+    const inline = joinInlineVerseRun(groups[0]);
+    const v1 = CHRON1_14_NIV.verses[0].text;
+    const v2 = CHRON1_14_NIV.verses[1].text;
+    const boundary = inline.indexOf(v1) + v1.length;
+    assert.notEqual(boundary, v1.length - 1);
+    assert.equal(inline.slice(boundary, boundary + 1), " ");
+    assert.equal(inline.includes("\n"), false);
+    assert.equal(inline.slice(boundary + 1, boundary + 1 + v2.length), v2);
+    assert.ok(inline.startsWith(v1));
+    assert.ok(inline.endsWith(v2));
   });
 });
 
@@ -172,6 +217,13 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /pointerEvents="box-none"/);
     assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
     assert.match(prose, /return \(\s*<Text\s+key=\{v\.id\}/);
+    assert.match(prose, /display:\s*"inline"/);
+    assert.doesNotMatch(prose, /display:\s*"block"/);
+    assert.doesNotMatch(prose, /width:\s*"100%"/);
+    assert.doesNotMatch(prose, /flexDirection|display:\s*"flex"/);
+    assert.match(prose, /backgroundColor:\s*bg/);
+    assert.match(prose, /IS_WEB \? undefined : \{ accessibilityRole: "button"/);
+    assert.doesNotMatch(prose, /accessibilityRole="button"/);
   });
 
   it("wires per-verse tap and Platform-branched long-press on nested verse Text", () => {

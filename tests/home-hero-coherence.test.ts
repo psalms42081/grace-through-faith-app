@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
 import {
   assertReflectionReadingAlignment,
@@ -7,6 +8,11 @@ import {
   getTodaysReflection,
   parseBibleReference,
 } from "../components/home-v2/home-data";
+import {
+  SIGNPOST_SHARE_ORIGIN,
+  buildHeroShareMessage,
+  buildSignpostTopicUrl,
+} from "../components/home-v2/hero-share";
 
 const originalTimeZone = process.env.TZ;
 
@@ -59,5 +65,61 @@ describe("Home hero coherence", () => {
         }),
       /Home reflection\/reading mismatch/,
     );
+  });
+});
+
+describe("Home hero share payload", () => {
+  const verse = {
+    text: "For God so loved the world",
+    reference: "John 3:16",
+  };
+  const signpost = {
+    id: "hope",
+    title: "Hope",
+    description: "Hold fast to the promise that God is already at work.",
+  };
+  const reflection = {
+    thought: "Grace is not a doctrine to be memorised.",
+    reference: "Ephesians 2:8-9",
+  };
+
+  it("shares verse of the day from the verse tab", () => {
+    assert.equal(
+      buildHeroShareMessage({ tab: "verse", verse, signpost, reflection }),
+      `\u201C${verse.text}\u201D\n\u2014 ${verse.reference}`,
+    );
+  });
+
+  it("shares reflection text from the reflection tab", () => {
+    assert.equal(
+      buildHeroShareMessage({ tab: "reflection", verse, signpost, reflection }),
+      `${reflection.thought}\n\u2014 Reflection on ${reflection.reference}`,
+    );
+  });
+
+  it("shares signpost title, body, and topic link from the signpost tab", () => {
+    const message = buildHeroShareMessage({
+      tab: "signpost",
+      verse,
+      signpost,
+      reflection,
+    });
+    const topicUrl = buildSignpostTopicUrl("hope", SIGNPOST_SHARE_ORIGIN);
+
+    assert.equal(
+      message,
+      `${signpost.title}\n\n${signpost.description}\n\n${topicUrl}`,
+    );
+    assert.doesNotMatch(message, /John 3:16/);
+    assert.doesNotMatch(message, /For God so loved the world/);
+  });
+
+  it("uses the selected-tab helper from the Home hero share button", () => {
+    const heroSource = readFileSync(
+      new URL("../components/home-v2/HeroCard.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(heroSource, /buildHeroShareMessage/);
+    assert.match(heroSource, /tab:\s*activeTab/);
   });
 });
