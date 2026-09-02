@@ -90,6 +90,10 @@ const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
 const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
 /** Internal one-release rollback. Default off = new typography + floating chrome. */
 const READER_LEGACY_VERSE_BLOCKS = false;
+/** `reader-floating-chrome`: paddingTop 8 + listenBtn 36 + extra paddingBottom 8. */
+const READER_FLOATING_CHROME_HEIGHT = 8 + 36 + 8;
+/** Space below last verse so text does not sit under the play button. */
+const READER_SCROLL_END_AIR = 80;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SPLIT_MODE_KEY = "@grace-through-faith/split-mode";
 const SPLIT_TRANSLATION_KEY = "@grace-through-faith/split-translation";
@@ -1330,7 +1334,7 @@ export default function VerseReaderScreen() {
               scrollEventThrottle={16}
               contentContainerStyle={[
                 styles.scrollContent,
-                { paddingBottom: 120 + bottomPad },
+                { paddingBottom: READER_FLOATING_CHROME_HEIGHT + READER_SCROLL_END_AIR + bottomPad },
                 splitMode && isSideBySide && { paddingHorizontal: 16 },
               ]}
               showsVerticalScrollIndicator={false}
@@ -1529,7 +1533,7 @@ export default function VerseReaderScreen() {
                   scrollEventThrottle={16}
                   contentContainerStyle={[
                     styles.scrollContent,
-                    { paddingBottom: 120 + bottomPad, paddingHorizontal: 16 },
+                    { paddingBottom: READER_FLOATING_CHROME_HEIGHT + READER_SCROLL_END_AIR + bottomPad, paddingHorizontal: 16 },
                   ]}
                   showsVerticalScrollIndicator={false}
                 >

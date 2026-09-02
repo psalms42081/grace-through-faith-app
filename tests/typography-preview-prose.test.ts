@@ -136,8 +136,8 @@ describe("typography preview source contracts", () => {
   it("nested preview runs stay keyed by verse.id", () => {
     const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
     assert.match(prose, /key=\{v\.id\}/);
-    assert.match(prose, /onLongPress=\{\(\) => onVerseLongPress\(v\)\}/);
-    assert.match(prose, /delayLongPress=\{400\}/);
+    assert.match(prose, /onLongPress: \(\) => onVerseLongPress\(v\)/);
+    assert.match(prose, /delayLongPress: 400/);
     assert.match(prose, /getHighlightBg\(v\.id, v\.verse, index\)/);
     assert.match(prose, /v\.text\.split\("\\n"\)/);
     assert.match(prose, /splitLeadingWord\(lines\[0\]/);
@@ -148,21 +148,48 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
   });
 
-  it("wires per-verse onLongPress delayLongPress={400} on verse Text, not a paragraph Pressable", () => {
+  it("keeps three verses inline in one parent Text s.body, not VersePressRun blocks", () => {
+    const verses = [
+      { id: "p-1", verse: 1, text: "First prose verse." },
+      { id: "p-2", verse: 2, text: "Second prose verse." },
+      { id: "p-3", verse: 3, text: "Third prose verse." },
+    ];
+    const groups = groupVersesByParagraphStarts(verses, new Set());
+    assert.equal(groups.length, 1);
+    assert.deepEqual(groups[0].map((v) => v.id), ["p-1", "p-2", "p-3"]);
+    assert.equal(gapAfterVerseInRun(groups[0], 0), " ");
+    assert.equal(gapAfterVerseInRun(groups[0], 1), " ");
+    assert.equal(gapAfterVerseInRun(groups[0], 2), "");
+
     const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
-    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
-    const pressRun = prose.slice(prose.indexOf("function VersePressRun"));
-    const pressRunBody = pressRun.slice(0, pressRun.indexOf("export function TypographyPreviewProse"));
-    assert.match(pressRunBody, /<Text[\s\S]*?onPress=\{onPress\}[\s\S]*?onLongPress=\{onLongPress\}[\s\S]*?delayLongPress=\{400\}/);
-    assert.doesNotMatch(pressRunBody, /<Pressable/);
     assert.match(
       prose,
-      /<VersePressRun[\s\S]*?onPress=\{\(\) => onVerseTap\(v\)\}[\s\S]*?onLongPress=\{\(\) => onVerseLongPress\(v\)\}/,
+      /<Text[\s\S]*?style=\{\[s\.body[\s\S]*?run\.verses\.map[\s\S]*?key=\{v\.id\}[\s\S]*?onVerseTap\(v\)/,
     );
+    assert.doesNotMatch(prose, /VersePressRun/);
+    assert.doesNotMatch(prose, /webParagraphStyle/);
     assert.doesNotMatch(prose, /<Pressable/);
     assert.match(prose, /pointerEvents="box-none"/);
+    assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
+    assert.match(prose, /return \(\s*<Text\s+key=\{v\.id\}/);
+  });
+
+  it("wires per-verse tap and Platform-branched long-press on nested verse Text", () => {
+    const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(prose, /Platform\.OS === "web"/);
+    assert.match(prose, /webLongPress\.start\(v\.id, x, y\)/);
+    assert.match(prose, /onPointerDown/);
+    assert.match(prose, /onLongPress: \(\) => onVerseLongPress\(v\)/);
+    assert.match(prose, /delayLongPress: 400/);
+    assert.match(prose, /consumeSuppressedClick/);
+    assert.match(prose, /onVerseTap\(v\)/);
+    assert.doesNotMatch(prose, /<Pressable/);
+    assert.doesNotMatch(prose, /VersePressRun/);
     assert.match(reader, /onVerseLongPress=\{handleVerseLongPress\}/);
     assert.match(reader, /delayLongPress=\{400\}/);
+    assert.match(reader, /READER_FLOATING_CHROME_HEIGHT \+ READER_SCROLL_END_AIR \+ bottomPad/);
+    assert.match(reader, /testID="reader-floating-chrome"/);
   });
 
   it("renders qa acrostic headings smaller than s1 and LORD in small caps", () => {
