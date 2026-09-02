@@ -7,11 +7,13 @@ export function VerseTextRuns({ text }: { text: string }) {
     <>
       {splitDivineNameRuns(text).map((run, index) =>
         run.isDivineName ? (
-          <Text key={`nd-${index}`} style={s.divineName}>
+          <Text key={`nd-${index}`} pointerEvents="none" style={s.divineName}>
             {run.text}
           </Text>
         ) : (
-          <Text key={`t-${index}`}>{run.text}</Text>
+          <Text key={`t-${index}`} pointerEvents="none">
+            {run.text}
+          </Text>
         )
       )}
     </>

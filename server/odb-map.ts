@@ -95,6 +95,36 @@ export function mapWpPost(p: {
   };
 }
 
+export type OdbRssItem = {
+  date: string;
+  title: string;
+  author: string;
+  descriptionHtml: string;
+  sourceUrl: string;
+  imageUrl: string | null;
+};
+
+export function mapRssItem(item: OdbRssItem): OdbMappedRow | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) return null;
+  return {
+    date: item.date,
+    title: stripHtml(item.title),
+    author: stripHtml(item.author),
+    scriptureRef: "",
+    readingRef: "",
+    bodyText: stripHtml(item.descriptionHtml),
+    verse: "",
+    thought: "",
+    response: "",
+    insights: "",
+    insightsAuthor: "",
+    bibleInAYear: "",
+    sourceUrl: item.sourceUrl,
+    imageUrl: item.imageUrl,
+    sourceId: null,
+  };
+}
+
 export function rowToOdbJson(row: OdbMappedRow): OdbPostJson {
   return {
     id: row.sourceId ?? 0,

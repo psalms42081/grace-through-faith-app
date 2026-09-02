@@ -148,6 +148,23 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /gapAfterVerseInRun\(run\.verses, verseIndex\)/);
   });
 
+  it("wires per-verse onLongPress delayLongPress={400} on verse Text, not a paragraph Pressable", () => {
+    const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    const pressRun = prose.slice(prose.indexOf("function VersePressRun"));
+    const pressRunBody = pressRun.slice(0, pressRun.indexOf("export function TypographyPreviewProse"));
+    assert.match(pressRunBody, /<Text[\s\S]*?onPress=\{onPress\}[\s\S]*?onLongPress=\{onLongPress\}[\s\S]*?delayLongPress=\{400\}/);
+    assert.doesNotMatch(pressRunBody, /<Pressable/);
+    assert.match(
+      prose,
+      /<VersePressRun[\s\S]*?onPress=\{\(\) => onVerseTap\(v\)\}[\s\S]*?onLongPress=\{\(\) => onVerseLongPress\(v\)\}/,
+    );
+    assert.doesNotMatch(prose, /<Pressable/);
+    assert.match(prose, /pointerEvents="box-none"/);
+    assert.match(reader, /onVerseLongPress=\{handleVerseLongPress\}/);
+    assert.match(reader, /delayLongPress=\{400\}/);
+  });
+
   it("renders qa acrostic headings smaller than s1 and LORD in small caps", () => {
     const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");

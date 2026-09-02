@@ -2722,7 +2722,7 @@ export const egwChapters = pgTable(
 export type EgwChapter = typeof egwChapters.$inferSelect;
 export type InsertEgwChapter = typeof egwChapters.$inferInsert;
 
-// ─── OUR DAILY BREAD (persisted WP listing; request path never hits odb.org) ─
+// ─── OUR DAILY BREAD (persisted RSS + per-day rows; request path never hits odb.org) ─
 
 export const odbPosts = pgTable("odb_posts", {
   date: date("date", { mode: "string" }).primaryKey(),
