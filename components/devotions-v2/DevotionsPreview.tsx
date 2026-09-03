@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -18,6 +19,8 @@ import { useToast } from "@/contexts/ToastContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import * as Haptics from "expo-haptics";
+import { getPioneerPortrait } from "@/constants/pioneers";
+import type { PioneerWeekResponse } from "@/shared/pioneer-api";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState, PrimaryButton, SectionHeading } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
@@ -110,6 +113,10 @@ export default function DevotionsPreview() {
     refetchOnMount: "always",
   });
   const egw = useQuery<Egw>({ queryKey: [withDeviceTimeZone("/api/egw/devotional/today")], staleTime: 86400000 });
+  const pioneerWeek = useQuery<PioneerWeekResponse>({
+    queryKey: ["/api/pioneers/week"],
+    staleTime: 600000,
+  });
   const today = useQuery<{
     today: any;
     enrollment?: { id: string; planId: string };
@@ -371,43 +378,58 @@ export default function DevotionsPreview() {
 
         <SectionHeading
           title="Daily Readings"
-          subtitle="Two voices to meet you where you are"
+          subtitle="A short pause for the day"
           testID="devotions-preview-daily-section"
         />
-        <View style={s.dailyRow}>
-          <Pressable
-            style={[s.dailyCard, { backgroundColor: D2.amberSoft }]}
-            onPress={() => router.push("/odb-devotional-preview" as any)}
-            testID="devotions-preview-odb-card"
-          >
-            <Ionicons name="sunny-outline" size={21} color={D2.amber} />
-            <Text style={s.metaAmber}>OUR DAILY BREAD</Text>
-            <Text style={s.cardTitle} numberOfLines={2}>
-              {odb.data?.title || "Today's bread"}
-            </Text>
-            <Text style={s.cardSub}>
-              {odb.data?.date
-                ? new Date(`${odb.data.date}T00:00:00`).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "A short pause for the day"}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[s.dailyCard, { backgroundColor: "#F7EBDD" }]}
-            onPress={() => router.push("/egw-devotional-preview" as any)}
-            testID="devotions-preview-egw-card"
-          >
-            <Ionicons name="leaf-outline" size={21} color={D2.amber} />
+        <Pressable
+          style={[s.dailyCard, s.dailyCardFull, { backgroundColor: D2.amberSoft }]}
+          onPress={() => router.push("/odb-devotional-preview" as any)}
+          testID="devotions-preview-odb-card"
+        >
+          <Ionicons name="sunny-outline" size={21} color={D2.amber} />
+          <Text style={s.metaAmber}>OUR DAILY BREAD</Text>
+          <Text style={s.cardTitle} numberOfLines={2}>
+            {odb.data?.title || "Today's bread"}
+          </Text>
+          <Text style={s.cardSub}>
+            {odb.data?.date
+              ? new Date(`${odb.data.date}T00:00:00`).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "A short pause for the day"}
+          </Text>
+        </Pressable>
+
+        <SectionHeading
+          title="Inspiration"
+          subtitle="Pioneer writings and Ellen White"
+          testID="devotions-preview-inspiration-section"
+        />
+        <VoiceOfTheWeekCard week={pioneerWeek.data} />
+        {pioneerWeek.data?.reading ? (
+          <Text style={s.votwDomain} testID="devotions-preview-votw-public-domain">
+            {pioneerWeek.data.reading.publicDomain}
+          </Text>
+        ) : null}
+        <Pressable
+          style={[s.rowCard, { backgroundColor: "#F7EBDD" }]}
+          onPress={() => router.push("/egw-devotional-preview" as any)}
+          testID="devotions-preview-egw-card"
+        >
+          <View style={[s.rowIcon, { backgroundColor: D2.amberSoft }]}>
+            <Ionicons name="leaf-outline" size={19} color={D2.amber} />
+          </View>
+          <View style={{ flex: 1 }}>
             <Text style={s.metaAmber}>ELLEN G. WHITE</Text>
             <Text style={s.cardTitle} numberOfLines={2}>
               {egw.data?.title || "A daily reflection"}
             </Text>
             <Text style={s.cardSub}>{egw.data?.bookTitle || "Selected devotional reading"}</Text>
-          </Pressable>
-        </View>
+          </View>
+          <Ionicons name="chevron-forward" size={17} color={D2.muted} />
+        </Pressable>
 
         <SectionHeading
           title="Devotional Series"
@@ -564,6 +586,55 @@ export default function DevotionsPreview() {
         }}
       />
     </View>
+  );
+}
+
+function VoiceOfTheWeekCard({ week }: { week?: PioneerWeekResponse }) {
+  const reading = week?.reading ?? null;
+  const portrait = reading ? getPioneerPortrait(reading.chapter.authorSlug) : undefined;
+  const excerpt = reading?.paragraphs[0]?.replace(/\s+/g, " ").trim();
+
+  return (
+    <Pressable
+      style={s.votwCard}
+      onPress={() =>
+        router.push(
+          reading
+            ? (`/pioneer-reading-preview?id=${encodeURIComponent(reading.id)}` as any)
+            : ("/pioneer-shelf" as any),
+        )
+      }
+      testID="devotions-preview-votw-card"
+    >
+      {portrait ? (
+        <Image
+          source={portrait.photoAsset}
+          style={s.votwPortrait}
+          accessibilityLabel={reading?.chapter.author}
+        />
+      ) : (
+        <View style={s.votwPortraitFallback}>
+          <Ionicons name="library-outline" size={20} color={D2.amber} />
+        </View>
+      )}
+      <View style={{ flex: 1 }}>
+        <Text style={s.metaAmber}>VOICE OF THE WEEK</Text>
+        <Text style={s.cardTitle} numberOfLines={2}>
+          {reading ? reading.chapter.author : "A pioneer voice each Sabbath"}
+        </Text>
+        <Text style={s.cardSub} numberOfLines={2}>
+          {reading
+            ? `${reading.chapter.book} (${reading.chapter.year})`
+            : "Published readings will appear here."}
+        </Text>
+        {excerpt ? (
+          <Text style={s.votwExcerpt} numberOfLines={2}>
+            {excerpt}
+          </Text>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-forward" size={17} color={D2.muted} />
+    </Pressable>
   );
 }
 
@@ -822,6 +893,50 @@ const s = StyleSheet.create({
     padding: 14,
     minHeight: 150,
     gap: 7,
+  },
+  dailyCardFull: {
+    minHeight: 0,
+    marginBottom: 4,
+  },
+  votwCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: D2.card,
+    borderWidth: 1,
+    borderColor: D2.border,
+    marginBottom: 9,
+  },
+  votwPortrait: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#E8D4B8",
+  },
+  votwPortraitFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: D2.amberSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  votwExcerpt: {
+    fontFamily: F.inter,
+    color: D2.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+  },
+  votwDomain: {
+    fontFamily: F.inter,
+    color: D2.muted,
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 10,
+    marginTop: -2,
   },
   metaAmber: {
     fontFamily: F.interBold,

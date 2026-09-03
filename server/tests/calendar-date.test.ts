@@ -4,6 +4,7 @@ import {
   addCalendarDays,
   getCalendarDate,
   getCalendarDayIndex,
+  getSabbathDateKey,
   getSundayWeekStartDateKey,
   normalizeTimeZone,
 } from "../../shared/calendar-date";
@@ -97,5 +98,14 @@ describe("shared local calendar dates", () => {
       getSundayWeekStartDateKey(melbourneSundayUtcSaturday, "UTC"),
       "2026-08-16"
     );
+  });
+
+  it("returns the Saturday that closes the local Sunday–Saturday week", () => {
+    const melbourneFriday = new Date("2026-09-03T22:00:00.000Z");
+    assert.equal(
+      getSabbathDateKey(melbourneFriday, "Australia/Melbourne"),
+      "2026-09-05"
+    );
+    assert.equal(getSabbathDateKey(melbourneFriday, "UTC"), "2026-09-05");
   });
 });

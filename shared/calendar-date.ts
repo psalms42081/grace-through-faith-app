@@ -89,3 +89,13 @@ export function getSundayWeekStartDateKey(
   const calendarDate = getCalendarDate(instant, timeZone);
   return addCalendarDays(calendarDate.dateKey, -calendarDate.weekday);
 }
+
+/** Saturday (Sabbath) that ends the Sunday–Saturday week containing `instant`. */
+export function getSabbathDateKey(
+  instant: Date,
+  timeZone: unknown
+): string {
+  const calendarDate = getCalendarDate(instant, timeZone);
+  const daysUntilSaturday = (6 - calendarDate.weekday + 7) % 7;
+  return addCalendarDays(calendarDate.dateKey, daysUntilSaturday);
+}

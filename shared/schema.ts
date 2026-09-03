@@ -2752,6 +2752,34 @@ export const pioneerChapters = pgTable(
 export type PioneerChapter = typeof pioneerChapters.$inferSelect;
 export type InsertPioneerChapter = typeof pioneerChapters.$inferInsert;
 
+// ─── PIONEER CURATED READINGS (Voice of the Week; app surfaces published rows) ─
+
+export const pioneerReadings = pgTable(
+  "pioneer_readings",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    chapterId: varchar("chapter_id")
+      .notNull()
+      .references(() => pioneerChapters.id, { onDelete: "restrict" }),
+    paragraphStart: integer("paragraph_start").notNull(),
+    paragraphEnd: integer("paragraph_end").notNull(),
+    editorNote: text("editor_note").notNull().default(""),
+    weekStart: date("week_start", { mode: "string" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    published: boolean("published").notNull().default(false),
+  },
+  (table) => ({
+    publishedWeekIdx: index("pioneer_readings_published_week_idx").on(
+      table.published,
+      table.weekStart,
+    ),
+    chapterIdIdx: index("pioneer_readings_chapter_id_idx").on(table.chapterId),
+  }),
+);
+
+export type PioneerReading = typeof pioneerReadings.$inferSelect;
+export type InsertPioneerReading = typeof pioneerReadings.$inferInsert;
+
 // ─── OUR DAILY BREAD (persisted RSS + per-day rows; request path never hits odb.org) ─
 
 export const odbPosts = pgTable("odb_posts", {

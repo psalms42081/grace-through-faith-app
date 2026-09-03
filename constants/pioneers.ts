@@ -130,3 +130,18 @@ export function getPioneerById(id: string): Pioneer | undefined {
 export function getDefaultPioneer(): Pioneer {
   return PIONEERS[0];
 }
+
+export function getPioneerPortrait(slug: string): {
+  photoAsset: any;
+  sourceUrl?: string;
+} | undefined {
+  const author = PIONEER_AUTHOR_PORTRAITS.find((item) => item.id === slug);
+  if (author) {
+    return { photoAsset: author.photoAsset, sourceUrl: author.sourceUrl };
+  }
+  const pioneer = PIONEERS.find((item) => item.id === slug);
+  if (pioneer) {
+    return { photoAsset: pioneer.photoAsset, sourceUrl: pioneer.sourceUrl };
+  }
+  return undefined;
+}
