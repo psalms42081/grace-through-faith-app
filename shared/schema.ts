@@ -2722,6 +2722,36 @@ export const egwChapters = pgTable(
 export type EgwChapter = typeof egwChapters.$inferSelect;
 export type InsertEgwChapter = typeof egwChapters.$inferInsert;
 
+// ─── PIONEER LOCAL CHAPTERS (ingested from public-domain EPUBs) ────────────────
+
+export const pioneerChapters = pgTable(
+  "pioneer_chapters",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    author: text("author").notNull(),
+    authorSlug: varchar("author_slug", { length: 64 }).notNull(),
+    book: text("book").notNull(),
+    bookSlug: varchar("book_slug", { length: 64 }).notNull(),
+    year: integer("year").notNull(),
+    chapterNumber: integer("chapter_number").notNull(),
+    chapterTitle: text("chapter_title").notNull(),
+    paragraphs: jsonb("paragraphs").$type<string[]>().notNull(),
+    sourceUrl: text("source_url").notNull(),
+    ingestedAt: timestamp("ingested_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    slugChapterUniq: uniqueIndex("pioneer_chapters_slug_chapter_uniq").on(
+      table.bookSlug,
+      table.chapterNumber,
+    ),
+    slugIdx: index("pioneer_chapters_slug_idx").on(table.bookSlug),
+    authorSlugIdx: index("pioneer_chapters_author_slug_idx").on(table.authorSlug),
+  }),
+);
+
+export type PioneerChapter = typeof pioneerChapters.$inferSelect;
+export type InsertPioneerChapter = typeof pioneerChapters.$inferInsert;
+
 // ─── OUR DAILY BREAD (persisted RSS + per-day rows; request path never hits odb.org) ─
 
 export const odbPosts = pgTable("odb_posts", {

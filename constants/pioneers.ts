@@ -6,12 +6,53 @@ export interface Pioneer {
   voiceKey: string;
   photoAsset: any;
   photoPath: string;
+  sourceUrl?: string;
   portraitScale?: number;
   portraitOffsetX?: number;
   portraitOffsetY?: number;
   era: string;
   role: string;
 }
+
+/** Author portraits without TTS personas. Do not add these to PIONEERS. */
+export interface PioneerAuthorPortrait {
+  id: string;
+  name: string;
+  photoAsset: any;
+  photoPath: string;
+  sourceUrl: string;
+}
+
+export const PIONEER_AUTHOR_PORTRAITS: PioneerAuthorPortrait[] = [
+  {
+    id: "john-loughborough",
+    name: "John Norton Loughborough",
+    photoAsset: require("@/assets/images/john-loughborough.jpg"),
+    photoPath: "assets/images/john-loughborough.jpg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:John_Norton_Loughborough.jpg",
+  },
+  {
+    id: "ej-waggoner",
+    name: "Ellet Joseph Waggoner",
+    photoAsset: require("@/assets/images/ellet-waggoner.jpg"),
+    photoPath: "assets/images/ellet-waggoner.jpg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Ellet_Joseph_Waggoner.jpg",
+  },
+  {
+    id: "stephen-haskell",
+    name: "Stephen Nelson Haskell",
+    photoAsset: require("@/assets/images/stephen-haskell.jpg"),
+    photoPath: "assets/images/stephen-haskell.jpg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Stephen_N_Haskell.jpg",
+  },
+  {
+    id: "at-jones",
+    name: "Alonzo Trevier Jones",
+    photoAsset: require("@/assets/images/alonzo-t-jones.jpg"),
+    photoPath: "assets/images/alonzo-t-jones.jpg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Alonzo_T._Jones.jpg",
+  },
+];
 
 export const PIONEERS: Pioneer[] = [
   {

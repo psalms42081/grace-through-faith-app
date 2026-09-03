@@ -74,12 +74,12 @@ day_count_before="$(scalar "SELECT count(*) FROM devotional_day")"
 echo "=== Repeat deployment: all migrations skip and data remains intact ==="
 npx tsx scripts/prepare-devotional-catalog.ts
 
-if [ "$(scalar "SELECT count(*) FROM app_sql_migration")" -ne 12 ]; then
-  echo "Expected exactly twelve numbered migrations in the ledger" >&2
+if [ "$(scalar "SELECT count(*) FROM app_sql_migration")" -ne 13 ]; then
+  echo "Expected exactly thirteen numbered migrations in the ledger" >&2
   exit 1
 fi
 
-if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 'applied'")" -ne 12 ]; then
+if [ "$(scalar "SELECT count(*) FROM app_sql_migration WHERE execution_method = 'applied'")" -ne 13 ]; then
   echo "Fresh database should apply every numbered migration rather than baseline one" >&2
   exit 1
 fi

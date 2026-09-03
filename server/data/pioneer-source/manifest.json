@@ -1,0 +1,104 @@
+{
+  "userAgent": "GraceThroughFaith/1.0 (joseph@gracethroughfaith.app; +https://gracethroughfaith.app)",
+  "notes": "Pioneer books have no media2 EPUB on egwwritings.org (API files.epub empty; PDF/ePub buttons disabled). Official Download control returns media4 json-v4 zips. This ingest converts those zips into EPUBs so the same ZIP/OPF/NCX parser can run. Hashes are public content checksums from a.egwwritings.org book metadata.",
+  "books": [
+    {
+      "author": "Joseph Bates",
+      "author_slug": "joseph-bates",
+      "book": "The Seventh Day Sabbath, a Perpetual Sign",
+      "book_slug": "seventh-day-sabbath-perpetual-sign",
+      "year": 1846,
+      "book_id": 1036,
+      "code": "SC1",
+      "epub": "en_SC1.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1036.19",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1036-b8b5a528e71b577c344b0760b2499771.zip",
+      "exclude_titles": []
+    },
+    {
+      "author": "John Norton Loughborough",
+      "author_slug": "john-loughborough",
+      "book": "The Great Second Advent Movement",
+      "book_slug": "great-second-advent-movement",
+      "year": 1905,
+      "book_id": 1140,
+      "code": "GSAM",
+      "epub": "en_GSAM.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1140/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1140-9f8de52cf089e05b87ebf730969214ff.zip",
+      "exclude_titles": [
+        "Preface to the 1992 Edition",
+        "Foreword",
+        "Appendix A",
+        "Appendix B",
+        "Appendix C",
+        "Index Of Appendix A"
+      ]
+    },
+    {
+      "author": "Ellet Joseph Waggoner",
+      "author_slug": "ej-waggoner",
+      "book": "Christ and His Righteousness",
+      "book_slug": "christ-and-his-righteousness",
+      "year": 1890,
+      "book_id": 1290,
+      "code": "CHR",
+      "epub": "en_CHR.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1290/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1290-3ebad61dd7d1b2f8a5ba365727319565.zip",
+      "exclude_titles": []
+    },
+    {
+      "author": "Stephen Nelson Haskell",
+      "author_slug": "stephen-haskell",
+      "book": "The Cross and Its Shadow",
+      "book_slug": "cross-and-its-shadow",
+      "year": 1914,
+      "book_id": 1127,
+      "code": "CIS",
+      "epub": "en_CIS.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1127/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1127-a546fc86f75561f6bc42f1d5ef7fe978.zip",
+      "exclude_titles": []
+    },
+    {
+      "author": "Uriah Smith",
+      "author_slug": "uriah-smith",
+      "book": "Thoughts on Daniel and the Revelation",
+      "book_slug": "thoughts-on-daniel-and-the-revelation",
+      "year": 1909,
+      "book_id": 1297,
+      "code": "DAR1909",
+      "epub": "en_DAR1909.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1297/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1297-246eef5ed51cb8403b9c0d8adbef2ff4.zip",
+      "exclude_titles": []
+    },
+    {
+      "author": "James Springer White",
+      "author_slug": "james-white",
+      "book": "Life Incidents",
+      "book_slug": "life-incidents",
+      "year": 1868,
+      "book_id": 1462,
+      "code": "LIFIN",
+      "epub": "en_LIFIN.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1462/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1462-8eb93839df711e74c5ddc13f6825e489.zip",
+      "exclude_titles": []
+    },
+    {
+      "author": "Alonzo Trevier Jones",
+      "author_slug": "at-jones",
+      "book": "The Consecrated Way to Christian Perfection",
+      "book_slug": "consecrated-way-to-christian-perfection",
+      "year": 1905,
+      "book_id": 1124,
+      "code": "CWCP",
+      "epub": "en_CWCP.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1124/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1124-2222f58e873d4e6edccd8c4054d67645.zip",
+      "exclude_titles": []
+    }
+  ]
+}
