@@ -11,6 +11,9 @@ function read(rel: string) {
 const flagsSource = read("lib/feature-flags.ts");
 const settingsSource = read("app/settings.tsx");
 const historicVoicesSource = read("app/historic-voices.tsx");
+const commentaryRouteSource = read("server/routes/commentary.ts");
+const studySource = read("app/(tabs)/study.tsx");
+const studyCategorySource = read("app/study-category.tsx");
 const resourceDetailSource = read("app/resource-detail.tsx");
 const gcSource = read("app/great-controversy.tsx");
 const lessonSource = read("app/lesson/[id].tsx");
@@ -74,17 +77,35 @@ describe("Path B sweep Batch 3", () => {
     assert.doesNotMatch(settingsSource, /#F59E0B/);
   });
 
-  it("labels every pioneer summary as AI-generated", () => {
-    assert.match(historicVoicesSource, /AI-generated summary/);
-    assert.match(historicVoicesSource, /adventistEntries\.map/);
-    assert.match(historicVoicesSource, /Not a quotation from their published works/);
-    const classicIdx = historicVoicesSource.indexOf("classicEntries.map");
-    const classicBlock = historicVoicesSource.slice(classicIdx);
-    assert.equal(classicBlock.includes("AI-generated summary"), false);
+  it("presents Classic Commentators without AI pioneer summaries", () => {
+    assert.match(historicVoicesSource, /Classic Commentators/);
+    assert.doesNotMatch(historicVoicesSource, /Adventist Pioneers/);
+    assert.doesNotMatch(historicVoicesSource, /AI-generated summary/);
+    assert.doesNotMatch(historicVoicesSource, /adventistEntries/);
+    assert.match(historicVoicesSource, /RETIRED_AI_VOICE_NAMES/);
+    assert.match(historicVoicesSource, /Matthew Henry/);
+    assert.match(historicVoicesSource, /Adam Clarke/);
+    assert.match(historicVoicesSource, /John Gill/);
+
+    assert.match(studyCategorySource, /title="Classic Commentators"/);
+    assert.match(studySource, /Classic Commentators/);
+    assert.match(studySource, /AI-generated summary/);
+    assert.match(studySource, /Not a quotation from their published works/);
+    assert.doesNotMatch(studySource, /tradition: "Adventist Pioneer"/);
+    assert.doesNotMatch(studySource, /name: "Uriah Smith"/);
+    assert.doesNotMatch(studySource, /name: "Ellen G\. White"/);
+
+    assert.doesNotMatch(commentaryRouteSource, /generateEgwInsight/);
+    assert.doesNotMatch(commentaryRouteSource, /generatePioneerInsight/);
+    assert.doesNotMatch(commentaryRouteSource, /ADVENTIST_PIONEERS/);
+    assert.doesNotMatch(commentaryRouteSource, /EGW_COMMENTATOR/);
+    assert.match(commentaryRouteSource, /matthew-henry/);
+    assert.match(commentaryRouteSource, /jamieson-fausset-brown/);
+    assert.match(commentaryRouteSource, /adam-clarke/);
+    assert.match(commentaryRouteSource, /john-gill/);
   });
 
   it("collapses layout surfaces to Path B tokens with one coral primary", () => {
-    assert.match(historicVoicesSource, /borderLeftColor:\s*PathB\.coral/);
     assert.match(historicVoicesSource, /backgroundColor:\s*PathB\.coral/);
     assert.match(historicVoicesSource, /SWEEP_LIGHT/);
     assert.doesNotMatch(historicVoicesSource, /theme\.accent/);

@@ -1086,7 +1086,7 @@ function DeepStudyIntro({
           {[
             { icon: "book-outline" as const, title: "Observe", desc: "Read the passage carefully and notice what stands out" },
             { icon: "time-outline" as const, title: "Context", desc: "Discover the historical and cultural setting" },
-            { icon: "chatbubble-ellipses-outline" as const, title: "Insight", desc: "Hear from theologians and historic voices" },
+            { icon: "chatbubble-ellipses-outline" as const, title: "Insight", desc: "Hear from classic commentators" },
             { icon: "heart-outline" as const, title: "Respond", desc: "Apply the passage through reflection and prayer" },
           ].map((layer, i) => (
             <View key={i} style={[introStyles.layerRow, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -1903,17 +1903,20 @@ interface Commentator {
 }
 
 const COMMENTATORS: Commentator[] = [
-  { name: "Ellen G. White", dates: "1827\u20131915", tradition: "Adventist", isPublicDomain: false, externalUrl: "https://egwwritings.org" },
-  { name: "Uriah Smith", dates: "1832\u20131903", tradition: "Adventist Pioneer", isPublicDomain: true },
-  { name: "J.N. Andrews", dates: "1829\u20131883", tradition: "Adventist Pioneer", isPublicDomain: true },
-  { name: "John Loughborough", dates: "1832\u20131924", tradition: "Adventist Pioneer", isPublicDomain: true },
-  { name: "Joseph Bates", dates: "1792\u20131872", tradition: "Adventist Pioneer", isPublicDomain: true },
-  { name: "James White", dates: "1821\u20131881", tradition: "Adventist Pioneer", isPublicDomain: true },
   { name: "Matthew Henry", dates: "1662\u20131714", tradition: "Reformed", isPublicDomain: true },
   { name: "Jamieson, Fausset & Brown", dates: "1871", tradition: "Presbyterian", isPublicDomain: true },
   { name: "Adam Clarke", dates: "1762\u20131832", tradition: "Wesleyan", isPublicDomain: true },
   { name: "John Gill", dates: "1697\u20131771", tradition: "Baptist", isPublicDomain: true },
 ];
+
+const RETIRED_AI_VOICE_NAMES = new Set([
+  "Ellen G. White",
+  "Uriah Smith",
+  "J.N. Andrews",
+  "John Loughborough",
+  "Joseph Bates",
+  "James White",
+]);
 
 interface StrongEntry {
   id: string;
@@ -3794,7 +3797,6 @@ const COMMENTATOR_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; c
   "Jamieson, Fausset & Brown": { icon: "library", color: "#0891B2" },
   "Adam Clarke": { icon: "school", color: "#059669" },
   "John Gill": { icon: "document-text", color: "#D97706" },
-  "Ellen G. White": { icon: "sparkles", color: "#B8860B" },
 };
 
 function extractLeadInsight(content: string): { lead: string; rest: string } {
@@ -3826,6 +3828,7 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
   const meta = COMMENTATOR_META[cr.commentator?.name] || { icon: "person" as const, color: theme.accent };
   const commentatorDates = cr.commentator?.dates || COMMENTATORS.find(c => c.name === cr.commentator?.name)?.dates;
   const commentatorTradition = cr.commentator?.tradition || COMMENTATORS.find(c => c.name === cr.commentator?.name)?.tradition;
+  const isAiGenerated = RETIRED_AI_VOICE_NAMES.has(cr.commentator?.name ?? "");
 
   return (
     <View style={{
@@ -3867,6 +3870,17 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginVertical: 12 }} />
           <ContextParagraphs text={rest} theme={theme} />
+        </View>
+      )}
+
+      {isAiGenerated && (
+        <View style={{ paddingHorizontal: 16, paddingBottom: hasMore ? 8 : 16, gap: 6 }}>
+          <Text style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase" as const, color: theme.textMuted, fontFamily: "Inter_600SemiBold" }}>
+            AI-generated summary
+          </Text>
+          <Text style={{ fontSize: 11, fontStyle: "italic" as const, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
+            Thematic summary based on {cr.commentator?.name}'s known theological emphases. Not a quotation from their published works.
+          </Text>
         </View>
       )}
 
@@ -3930,7 +3944,8 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
     },
   });
 
-  const hasCommentary = commentaryData && commentaryData.length > 0;
+  const classicCommentary = commentaryData?.filter((cr) => !RETIRED_AI_VOICE_NAMES.has(cr.commentator?.name ?? "")) ?? [];
+  const hasCommentary = classicCommentary.length > 0;
   const [showAllCommentary, setShowAllCommentary] = useState(false);
   const [comGenAttempted, setComGenAttempted] = useState<string | null>(null);
   const comKey = selectedBook && selectedChapter ? `${selectedBook.id}_${selectedChapter}` : null;
@@ -4019,7 +4034,13 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                     {c.dates} {"\u00B7"} {c.tradition}
                   </Text>
                 </View>
-                {c.isPublicDomain ? (
+                {RETIRED_AI_VOICE_NAMES.has(c.name) ? (
+                  <View style={[styles.pdBadge, { backgroundColor: theme.backgroundSecondary }]}>
+                    <Text style={[styles.pdText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
+                      AI-generated summary
+                    </Text>
+                  </View>
+                ) : c.isPublicDomain ? (
                   <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
                     <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
                       Public Domain
@@ -4092,7 +4113,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
           {isLoading && (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color={theme.accent} />
-              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Gathering historic voices...</Text>
+              <Text style={[styles.loadingText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>Gathering classic commentators...</Text>
             </View>
           )}
 
@@ -4110,7 +4131,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                   All
                 </Text>
               </Pressable>
-              {Array.from(new Set(commentaryData!.map(cr => cr.commentator?.name))).filter(Boolean).map((name) => (
+              {Array.from(new Set(classicCommentary.map(cr => cr.commentator?.name))).filter(Boolean).map((name) => (
                 <Pressable
                   key={name}
                   onPress={() => setActiveCommentator(activeCommentator === name ? null : name!)}
@@ -4143,14 +4164,14 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
             <View style={jpStyles.sectionDivider}>
               <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
               <Text style={[jpStyles.sectionDividerText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-                Historic Voices
+                Classic Commentators
               </Text>
               <View style={[jpStyles.sectionDividerLine, { backgroundColor: theme.border }]} />
             </View>
           )}
 
           {hasCommentary && (() => {
-            const filtered = commentaryData!.filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator);
+            const filtered = classicCommentary.filter((cr) => !activeCommentator || cr.commentator?.name === activeCommentator);
             const featured = filtered.slice(0, 2);
             const remaining = filtered.slice(2);
             return (

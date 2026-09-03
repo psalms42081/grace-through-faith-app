@@ -50,7 +50,7 @@ export function TypographyPreviewProse({
   getHighlightBg,
   onVerseTap,
   onVerseLongPress,
-  activeVerse,
+  selectedVerses,
   bookmarkedVerseIds,
   bookId,
   chapterNum,
@@ -62,7 +62,7 @@ export function TypographyPreviewProse({
   getHighlightBg: (verseId: string, verseNum: number, index: number) => string;
   onVerseTap: (verse: PreviewVerse) => void;
   onVerseLongPress: (verse: PreviewVerse) => void;
-  activeVerse: number | null;
+  selectedVerses: ReadonlySet<number>;
   bookmarkedVerseIds: Set<string>;
   bookId: string;
   chapterNum: number;
@@ -119,7 +119,7 @@ export function TypographyPreviewProse({
                 {run.verses.map((v, verseIndex) => {
                   const index = indexById.get(v.id) ?? -1;
                   const highlightBg = getHighlightBg(v.id, v.verse, index);
-                  const isActive = activeVerse === v.verse;
+                  const isActive = selectedVerses.has(v.verse);
                   const isBookmarked =
                     bookmarkedVerseIds.has(v.id) ||
                     bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);

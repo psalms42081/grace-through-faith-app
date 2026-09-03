@@ -141,7 +141,7 @@ export default function RelatedStudiesSection({
       id: "historic-voices",
       icon: "mic-outline",
       iconColor: "#EC4899",
-      title: "Open Historic Voices",
+      title: "Open Classic Commentators",
       subtitle: `Commentary on ${keyPassages[0]}`,
       onPress: () => {
         router.push({
@@ -159,7 +159,7 @@ export default function RelatedStudiesSection({
       id: "historic-voices-disabled",
       icon: "mic-outline",
       iconColor: "#6B7280",
-      title: "Historic Voices (coming soon)",
+      title: "Classic Commentators (coming soon)",
       subtitle: "No passage reference available",
       disabled: true,
       onPress: () => {},

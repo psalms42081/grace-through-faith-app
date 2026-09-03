@@ -1,6 +1,4 @@
 import { Router } from "express";
-import { openaiClientOptions } from "../openai-env";
-import { withSdaLens, SDA_LENS_VERSION } from "../services/sda-lens";
 import { db } from "../db";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
@@ -28,111 +26,32 @@ const COMMENTARY_SOURCES = [
   { apiId: "john-gill", dbId: "john-gill", name: "John Gill", dates: "1697–1771", tradition: "Baptist" },
 ];
 
-const EGW_COMMENTATOR = {
-  dbId: "egw",
-  name: "Ellen G. White",
-  dates: "1827–1915",
-  tradition: "Adventist",
-};
+/** Retired AI voices — match by slug dbId and display name, never by guessing UUIDs. */
+const RETIRED_AI_COMMENTATOR_IDS = new Set([
+  "egw",
+  "uriah-smith",
+  "jn-andrews",
+  "john-loughborough",
+  "joseph-bates",
+  "james-white",
+]);
 
-const ADVENTIST_PIONEERS = [
-  {
-    dbId: "uriah-smith",
-    name: "Uriah Smith",
-    dates: "1832–1903",
-    tradition: "Adventist",
-    focus: "prophetic interpretation, Daniel and Revelation, sanctuary doctrine, second advent",
-  },
-  {
-    dbId: "jn-andrews",
-    name: "J.N. Andrews",
-    dates: "1829–1883",
-    tradition: "Adventist",
-    focus: "Sabbath theology, church history, law and grace, prophetic fulfillment",
-  },
-  {
-    dbId: "john-loughborough",
-    name: "John Loughborough",
-    dates: "1832–1924",
-    tradition: "Adventist",
-    focus: "early church history, spiritual gifts, Adventist distinctives",
-  },
-  {
-    dbId: "joseph-bates",
-    name: "Joseph Bates",
-    dates: "1792–1872",
-    tradition: "Adventist",
-    focus: "Sabbath restoration, sanctification, the third angel's message",
-  },
-  {
-    dbId: "james-white",
-    name: "James White",
-    dates: "1821–1881",
-    tradition: "Adventist",
-    focus: "grace and the law, church organization, prophetic study",
-  },
-];
+const RETIRED_AI_COMMENTATOR_NAMES = new Set([
+  "Ellen G. White",
+  "Uriah Smith",
+  "J.N. Andrews",
+  "John Loughborough",
+  "Joseph Bates",
+  "James White",
+]);
 
-async function generateEgwInsight(bookName: string, chapter: number): Promise<string | null> {
-  try {
-    const OpenAI = (await import("openai")).default;
-    const { getTimeout } = await import("../services/api-client");
-    const { withAIConcurrency } = await import("../services/ai-semaphore");
-    const client = new OpenAI({
-      ...openaiClientOptions(),
-      timeout: getTimeout("openai"),
-    });
-    const resp = await withAIConcurrency(() => client.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.5,
-      max_tokens: 800,
-      messages: [
-        {
-          role: "system",
-          content: withSdaLens(`You are an Adventist Bible study assistant. Provide a brief Adventist perspective on the given Bible chapter, drawing on themes commonly found in Ellen G. White's writings. Focus on the Great Controversy theme, character of God, practical Christian living, and the Sabbath where relevant. Do NOT fabricate specific EGW quotes — instead summarize thematic insights she emphasized. Keep the tone reverent and educational. Write in third person ("White emphasized..." not "I wrote..."). Limit to 2-3 paragraphs.`),
-        },
-        {
-          role: "user",
-          content: `Provide an Adventist perspective on ${bookName} chapter ${chapter}, highlighting themes Ellen G. White commonly addressed regarding this passage.`,
-        },
-      ],
-    }));
-    return resp.choices[0]?.message?.content?.trim() || null;
-  } catch (err) {
-    console.error("[EGW Insight] Generation failed:", err);
-    return null;
-  }
-}
-
-async function generatePioneerInsight(pioneer: typeof ADVENTIST_PIONEERS[number], bookName: string, chapter: number): Promise<string | null> {
-  try {
-    const OpenAI = (await import("openai")).default;
-    const { getTimeout } = await import("../services/api-client");
-    const { withAIConcurrency } = await import("../services/ai-semaphore");
-    const client = new OpenAI({
-      ...openaiClientOptions(),
-      timeout: getTimeout("openai"),
-    });
-    const resp = await withAIConcurrency(() => client.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.5,
-      max_tokens: 600,
-      messages: [
-        {
-          role: "system",
-          content: withSdaLens(`You are an Adventist Bible study assistant. Provide a brief thematic summary of how ${pioneer.name} (${pioneer.dates}), an early Adventist pioneer, would have approached the given Bible chapter based on their known theological emphases: ${pioneer.focus}. Do NOT fabricate specific quotes — instead summarize thematic insights ${pioneer.name.split(" ").pop()} was known to emphasize. Write in third person ("${pioneer.name.split(" ").pop()} emphasized..." or "${pioneer.name.split(" ").pop()} argued..."). Keep the tone reverent and educational. Limit to 2-3 paragraphs.`),
-        },
-        {
-          role: "user",
-          content: `Provide a thematic summary of how ${pioneer.name} would have approached ${bookName} chapter ${chapter}, based on their theological emphases: ${pioneer.focus}.`,
-        },
-      ],
-    }));
-    return resp.choices[0]?.message?.content?.trim() || null;
-  } catch (err) {
-    console.error(`[Pioneer Insight] ${pioneer.name} generation failed:`, err);
-    return null;
-  }
+function isRetiredAiCommentator(row: {
+  entry?: { commentatorId?: string | null };
+  commentator?: { id?: string | null; name?: string | null } | null;
+}): boolean {
+  const id = row.entry?.commentatorId ?? row.commentator?.id ?? "";
+  const name = row.commentator?.name ?? "";
+  return RETIRED_AI_COMMENTATOR_IDS.has(id) || RETIRED_AI_COMMENTATOR_NAMES.has(name);
 }
 
 async function fetchRealCommentary(apiId: string, bookCode: string, ch: number): Promise<{ verses: { number: number; content: string }[] } | null> {
@@ -180,6 +99,7 @@ router.get("/api/commentary", async (req, res) => {
 
     const seen = new Set<string>();
     const deduped = entries.filter((e) => {
+      if (isRetiredAiCommentator(e)) return false;
       const key = `${e.entry.commentatorId}_${e.entry.bookId}_${e.entry.chapter}`;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -211,17 +131,14 @@ router.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =>
         )
       );
 
-    const existingIds = new Set(existing.map((e: any) => e.entry?.commentatorId || e.commentatorId));
+    const classicExisting = existing.filter((e) => !isRetiredAiCommentator(e));
+    const existingIds = new Set(classicExisting.map((e: any) => e.entry?.commentatorId || e.commentatorId));
 
-    const allExpectedIds = [
-      EGW_COMMENTATOR.dbId,
-      ...ADVENTIST_PIONEERS.map(p => p.dbId),
-      ...COMMENTARY_SOURCES.map(s => s.dbId),
-    ];
+    const allExpectedIds = COMMENTARY_SOURCES.map(s => s.dbId);
     const hasMissing = allExpectedIds.some(id => !existingIds.has(id));
 
-    if (existing.length > 0 && !hasMissing) {
-      return res.json(existing);
+    if (classicExisting.length > 0 && !hasMissing) {
+      return res.json(classicExisting);
     }
 
     const bookCode = BOOK_ID_TO_API[Number(bookId)];
@@ -291,89 +208,6 @@ router.post("/api/commentary/generate", aiGenerationLimiter, async (req, res) =>
 
       const cRow = await db.select().from(commentators).where(eq(commentators.id, src.dbId)).limit(1);
       results.push({ entry: inserted, commentator: cRow[0] || null });
-    }
-
-    if (!commentatorMap[EGW_COMMENTATOR.dbId]) {
-      await db.insert(commentators).values({
-        id: EGW_COMMENTATOR.dbId,
-        name: EGW_COMMENTATOR.name,
-        dates: EGW_COMMENTATOR.dates,
-        tradition: EGW_COMMENTATOR.tradition,
-      }).onConflictDoNothing();
-    }
-
-    const existingEgw = await db.select()
-      .from(commentaryEntries)
-      .where(and(
-        eq(commentaryEntries.commentatorId, EGW_COMMENTATOR.dbId),
-        eq(commentaryEntries.bookId, Number(bookId)),
-        eq(commentaryEntries.chapter, Number(chapter))
-      ))
-      .limit(1);
-
-    if (existingEgw.length > 0) {
-      const egwRow = await db.select().from(commentators).where(eq(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
-      results.unshift({ entry: existingEgw[0], commentator: egwRow[0] || null });
-    } else {
-      const egwContent = await generateEgwInsight(bookName, Number(chapter));
-      if (egwContent) {
-        const [egwInserted] = await db
-          .insert(commentaryEntries)
-          .values({
-            commentatorId: EGW_COMMENTATOR.dbId,
-            bookId: Number(bookId),
-            chapter: Number(chapter),
-            content: egwContent,
-            title: `${bookName} ${chapter} — ${EGW_COMMENTATOR.name}`,
-          })
-          .returning();
-
-        const egwRow = await db.select().from(commentators).where(eq(commentators.id, EGW_COMMENTATOR.dbId)).limit(1);
-        results.unshift({ entry: egwInserted, commentator: egwRow[0] || null });
-      }
-    }
-
-    for (const pioneer of ADVENTIST_PIONEERS) {
-      if (!commentatorMap[pioneer.dbId]) {
-        await db.insert(commentators).values({
-          id: pioneer.dbId,
-          name: pioneer.name,
-          dates: pioneer.dates,
-          tradition: pioneer.tradition,
-        }).onConflictDoNothing();
-        commentatorMap[pioneer.dbId] = pioneer.dbId;
-      }
-
-      const existingPioneer = await db.select()
-        .from(commentaryEntries)
-        .where(and(
-          eq(commentaryEntries.commentatorId, pioneer.dbId),
-          eq(commentaryEntries.bookId, Number(bookId)),
-          eq(commentaryEntries.chapter, Number(chapter))
-        ))
-        .limit(1);
-
-      if (existingPioneer.length > 0) {
-        const pRow = await db.select().from(commentators).where(eq(commentators.id, pioneer.dbId)).limit(1);
-        results.push({ entry: existingPioneer[0], commentator: pRow[0] || null });
-      } else {
-        const content = await generatePioneerInsight(pioneer, bookName, Number(chapter));
-        if (content) {
-          const [inserted] = await db
-            .insert(commentaryEntries)
-            .values({
-              commentatorId: pioneer.dbId,
-              bookId: Number(bookId),
-              chapter: Number(chapter),
-              content,
-              title: `${bookName} ${chapter} — ${pioneer.name}`,
-            })
-            .returning();
-
-          const pRow = await db.select().from(commentators).where(eq(commentators.id, pioneer.dbId)).limit(1);
-          results.push({ entry: inserted, commentator: pRow[0] || null });
-        }
-      }
     }
 
     return res.json(results);

@@ -221,7 +221,7 @@ export default function StudyCategoryScreen() {
           <>
             <TopicImageCard
               id="historic-voices"
-              title="Historic Voices"
+              title="Classic Commentators"
               subtitle="Matthew Henry, Adam Clarke, John Gill & more"
               onPress={() => router.push("/historic-voices" as any)}
             />

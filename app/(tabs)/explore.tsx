@@ -64,7 +64,7 @@ const CATEGORIES = [
   {
     id: "study-tools",
     title: "Study Tools",
-    subtitle: "Historic Voices, Bible Maps, Timeline",
+    subtitle: "Classic Commentators, Bible Maps, Timeline",
     icon: "compass" as const,
   },
 ];

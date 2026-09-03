@@ -143,7 +143,7 @@ function RootLayoutNav() {
       />
       <Stack.Screen name="passage-context" options={{ headerShown: true, title: "Passage Context" }} />
       <Stack.Screen name="word-study" options={{ headerShown: false }} />
-      <Stack.Screen name="historic-voices" options={{ headerShown: true, title: "Historic Voices" }} />
+      <Stack.Screen name="historic-voices" options={{ headerShown: true, title: "Classic Commentators" }} />
       <Stack.Screen name="verse-map" options={{ headerShown: false }} />
       <Stack.Screen name="study-guide" options={{ headerShown: false }} />
       <Stack.Screen name="devotionals" options={{ headerShown: false }} />

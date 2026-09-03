@@ -379,6 +379,25 @@ router.post("/api/highlights", requireAuth, validate(highlightSchema), async (re
   }
 });
 
+router.delete("/api/highlights/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const [existing] = await db
+      .select({ userId: userHighlights.userId })
+      .from(userHighlights)
+      .where(eq(userHighlights.id, String(req.params.id)));
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    if (existing.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+    await db
+      .delete(userHighlights)
+      .where(eq(userHighlights.id, String(req.params.id)));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/bookmarks/:userId", optionalAuth, async (req, res) => {
   try {
     const userId = getEffectiveUserId(req);

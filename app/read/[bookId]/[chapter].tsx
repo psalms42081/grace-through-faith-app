@@ -40,6 +40,11 @@ import {
   useCanPopNestedStack,
   useHardwareBackToHomeWhenAtStackRoot,
 } from "@/lib/use-hardware-back-to-home";
+import {
+  buildHighlightSheetPayload,
+  highlightIdsForVerses,
+  toggleVerseSelection,
+} from "@/lib/verse-selection";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
@@ -127,7 +132,8 @@ interface PassageResponse {
 }
 
 function BottomSheetToolbar({
-  verse,
+  verses,
+  highlightIds,
   bookName,
   bookId,
   chapter,
@@ -138,7 +144,8 @@ function BottomSheetToolbar({
   isDark,
   bottomPad,
 }: {
-  verse: Verse;
+  verses: Verse[];
+  highlightIds: string[];
   bookName: string;
   bookId: string;
   chapter: string;
@@ -153,14 +160,18 @@ function BottomSheetToolbar({
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const dragY = useRef(new Animated.Value(0)).current;
   const [activeColor, setActiveColor] = useState<HighlightColorKey | null>(null);
-  const [underlineActive, setUnderlineActive] = useState(false);
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const noteInputRef = useRef<TextInput>(null);
 
-  const reference = `${bookName} ${chapter}:${verse.verse}`;
-  const fullText = `${verse.text}\n\u2014 ${reference} (${translation})`;
+  const sheetPayload = useMemo(
+    () => buildHighlightSheetPayload({ bookName, chapter, translation, verses }),
+    [bookName, chapter, translation, verses],
+  );
+  const firstVerse = verses[0];
+  const reference = sheetPayload.reference;
+  const fullText = sheetPayload.copyText;
 
   useEffect(() => {
     Animated.parallel([
@@ -232,13 +243,30 @@ function BottomSheetToolbar({
 
   const handleHighlight = async (color: HighlightColorKey) => {
     if (!userId) { showFeedback("Sign in to highlight"); return; }
+    if (verses.length === 0) return;
     setActiveColor(color);
     try {
-      await apiRequest("POST", "/api/highlights", { userId, verseId: verse.id, color });
+      await Promise.all(
+        verses.map((v) => apiRequest("POST", "/api/highlights", { userId, verseId: v.id, color })),
+      );
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       showFeedback("Highlighted!");
     } catch {
       showFeedback("Failed to highlight", true);
+    }
+  };
+
+  const handleClearHighlights = async () => {
+    if (!userId) { showFeedback("Sign in to highlight"); return; }
+    try {
+      await Promise.all(
+        highlightIds.map((id) => apiRequest("DELETE", `/api/highlights/${id}`)),
+      );
+      queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
+      setActiveColor(null);
+      showFeedback("Cleared!");
+    } catch {
+      showFeedback("Failed to clear", true);
     }
   };
 
@@ -253,8 +281,9 @@ function BottomSheetToolbar({
 
   const handleBookmark = async () => {
     if (!isAuthenticated) { showFeedback("Sign in to save"); return; }
+    if (!firstVerse) return;
     try {
-      await apiRequest("POST", "/api/bookmarks", { userId, verseId: verse.id, label: reference });
+      await apiRequest("POST", "/api/bookmarks", { userId, verseId: firstVerse.id, label: reference });
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       showFeedback("Saved!");
     } catch {
@@ -264,9 +293,9 @@ function BottomSheetToolbar({
 
   const handleSaveNote = async () => {
     if (!isAuthenticated) { showFeedback("Sign in to add notes"); return; }
-    if (!noteText.trim()) return;
+    if (!noteText.trim() || !firstVerse) return;
     try {
-      await apiRequest("POST", "/api/notes", { userId, verseId: verse.id, content: noteText.trim() });
+      await apiRequest("POST", "/api/notes", { userId, verseId: firstVerse.id, content: noteText.trim() });
       queryClient.invalidateQueries({ queryKey: [`/api/notes/${userId}`] });
       showFeedback("Note saved!");
     } catch {
@@ -275,21 +304,21 @@ function BottomSheetToolbar({
   };
 
   const handleExplain = () => {
-    if (!bookName || !chapter || verse.verse === undefined) {
-      console.warn("[BottomSheetToolbar] Missing verse data for Explain:", { bookName, bookId, chapter, verse });
+    if (!bookName || !chapter || !firstVerse) {
+      console.warn("[BottomSheetToolbar] Missing verse data for Explain:", { bookName, bookId, chapter, firstVerse });
       return;
     }
     dismissSheet();
-    router.push({ pathname: "/verse-explain" as any, params: { bookId, bookName, chapter, verse: String(verse.verse), verseId: String(verse.id), text: verse.text, translation } });
+    router.push({ pathname: "/verse-explain" as any, params: { bookId, bookName, chapter, verse: String(firstVerse.verse), verseId: String(firstVerse.id), text: firstVerse.text, translation } });
   };
 
   const handleCompare = () => {
-    if (!bookName || !chapter || verse.verse === undefined) {
-      console.warn("[BottomSheetToolbar] Missing verse data for Compare:", { bookName, bookId, chapter, verse });
+    if (!bookName || !chapter || !firstVerse) {
+      console.warn("[BottomSheetToolbar] Missing verse data for Compare:", { bookName, bookId, chapter, firstVerse });
       return;
     }
     dismissSheet();
-    router.push({ pathname: "/verse-actions" as any, params: { bookId, bookName, chapter, verse: String(verse.verse), verseId: String(verse.id), text: verse.text, translation, tab: "compare" } });
+    router.push({ pathname: "/verse-actions" as any, params: { bookId, bookName, chapter, verse: String(firstVerse.verse), verseId: String(firstVerse.id), text: firstVerse.text, translation, tab: "compare" } });
   };
 
   const sheetBg = isDark ? DARK_SURFACE : "#FFFFFF";
@@ -324,7 +353,7 @@ function BottomSheetToolbar({
             {reference}
           </Text>
           <Text style={[sheetStyles.selectedText, { color: isDark ? DARK_TEXT : LIGHT_TEXT }]} numberOfLines={2}>
-            {verse.text}
+            {sheetPayload.preview}
           </Text>
         </View>
 
@@ -376,10 +405,11 @@ function BottomSheetToolbar({
           <>
             <View style={sheetStyles.colorRow}>
               <Pressable
-                onPress={() => setUnderlineActive(!underlineActive)}
-                style={[sheetStyles.underlineBtn, underlineActive && { backgroundColor: (isDark ? "#333" : "#EEE") }]}
+                onPress={handleClearHighlights}
+                accessibilityLabel="Clear highlights"
+                style={sheetStyles.underlineBtn}
               >
-                <Ionicons name="remove-outline" size={20} color={underlineActive ? "#1F1A12" : "#999"} />
+                <Ionicons name="remove-outline" size={20} color="#999" />
               </Pressable>
               <View style={sheetStyles.colorDots}>
                 {CANON_HIGHLIGHTS.map((key) => (
@@ -760,13 +790,19 @@ export default function VerseReaderScreen() {
     setTimeout(() => { isSyncingScroll.current = false; }, 50);
   }, []);
 
-  const [activeVerse, setActiveVerse] = useState<number | null>(null);
-  const [toolbarVerse, setToolbarVerse] = useState<Verse | null>(null);
+  const [selectedVerseNums, setSelectedVerseNums] = useState<number[]>([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const verseInteractedAt = useRef(0);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [highlightedFromNav, setHighlightedFromNav] = useState<number | null>(null);
   const [navHighlightAlpha, setNavHighlightAlpha] = useState(0);
   const verseTapFadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    setSelectedVerseNums([]);
+    setSheetOpen(false);
+  }, [bookId, chapter]);
 
 
 
@@ -947,6 +983,15 @@ export default function VerseReaderScreen() {
   const canGoNext = chapterNum < totalChapters;
 
   const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
+  const selectedVerseSet = useMemo(() => new Set(selectedVerseNums), [selectedVerseNums]);
+  const selectedVerseObjs = useMemo(
+    () => verses.filter((v) => selectedVerseSet.has(v.verse)).sort((a, b) => a.verse - b.verse),
+    [verses, selectedVerseSet],
+  );
+  const selectedHighlightIds = useMemo(
+    () => highlightIdsForVerses(highlightsData ?? [], selectedVerseObjs, Number(bookId), chapterNum),
+    [highlightsData, selectedVerseObjs, bookId, chapterNum],
+  );
   // Do not infer headings from KJV verse text. These maps are populated only
   // when the provider explicitly returned its own chapter structure.
   const providerHeadings = useMemo(() => {
@@ -1059,25 +1104,35 @@ export default function VerseReaderScreen() {
     (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
 
   const handleVerseTap = useCallback((item: Verse) => {
+    verseInteractedAt.current = Date.now();
     if (useNewTypography) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.selectionAsync();
-    setToolbarVerse(null);
-    setActiveVerse((prev) => (prev === item.verse ? null : item.verse));
+    setSelectedVerseNums((prev) => {
+      const next = toggleVerseSelection(prev, item.verse);
+      if (next.length === 0) setSheetOpen(false);
+      return next;
+    });
   }, [useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const handleVerseLongPress = useCallback((item: Verse) => {
+    verseInteractedAt.current = Date.now();
     if (useNewTypography) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setActiveVerse(item.verse);
-    setToolbarVerse(item);
+    setSelectedVerseNums((prev) => (prev.length === 0 ? [item.verse] : prev));
+    setSheetOpen(true);
   }, [useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const dismissToolbar = useCallback(() => {
-    setToolbarVerse(null);
-    setActiveVerse(null);
+    setSheetOpen(false);
+    setSelectedVerseNums([]);
   }, []);
+
+  const handleReaderBackgroundPress = useCallback(() => {
+    if (Date.now() - verseInteractedAt.current < 250) return;
+    dismissToolbar();
+  }, [dismissToolbar]);
 
   // A.3 strip actions
   const [stripToast, setStripToast] = useState<string | null>(null);
@@ -1109,12 +1164,12 @@ export default function VerseReaderScreen() {
   }, [isAuthenticated, firstVerseId, userId, bookName, chapter, showStripToast]);
 
   const handleStripHighlight = useCallback(async (color: HighlightColorKey) => {
-    if (!activeVerse) { showStripToast("Tap a verse first"); return; }
+    if (selectedVerseObjs.length === 0) { showStripToast("Tap a verse first"); return; }
     if (!userId) { showStripToast("Sign in to highlight"); return; }
-    const v = verses.find((x) => x.verse === activeVerse);
-    if (!v) return;
     try {
-      await apiRequest("POST", "/api/highlights", { userId, verseId: v.id, color });
+      await Promise.all(
+        selectedVerseObjs.map((v) => apiRequest("POST", "/api/highlights", { userId, verseId: v.id, color })),
+      );
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showStripToast("Highlighted");
@@ -1122,7 +1177,7 @@ export default function VerseReaderScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showStripToast("Failed to highlight");
     }
-  }, [activeVerse, userId, verses, showStripToast]);
+  }, [selectedVerseObjs, userId, showStripToast]);
 
   const getHighlightBg = useCallback((verseId: string, verseNum: number, index: number): string => {
     if (highlightedFromNav === verseNum) {
@@ -1322,7 +1377,7 @@ export default function VerseReaderScreen() {
               ref={scrollViewRef}
               onScrollBeginDrag={() => {
                 audio.onUserScroll();
-                if (toolbarVerse) dismissToolbar();
+                if (sheetOpen) dismissToolbar();
                 setShowTranslationPicker(false);
               }}
               onScroll={(e) => {
@@ -1340,14 +1395,14 @@ export default function VerseReaderScreen() {
               showsVerticalScrollIndicator={false}
             >
 
-              <View style={styles.chapterHeader}>
+              <Pressable onPress={handleReaderBackgroundPress} style={styles.chapterHeader}>
                 <Text style={[styles.bookNameLabel, { color: RV2_INK_MUTED }]}>
                   {bookName?.toUpperCase()}
                 </Text>
                 <Text style={[styles.chapterNumber, { color: chapterNumColor }]}>
                   {chapter}
                 </Text>
-              </View>
+              </Pressable>
 
               {showVerseTapHint && verses.length > 0 && (
                 <Pressable
@@ -1373,13 +1428,13 @@ export default function VerseReaderScreen() {
                     getHighlightBg={getHighlightBg}
                     onVerseTap={handleVerseTap}
                     onVerseLongPress={handleVerseLongPress}
-                    activeVerse={activeVerse}
+                    selectedVerses={selectedVerseSet}
                     bookmarkedVerseIds={bookmarkedVerseIds}
                     bookId={String(bookId)}
                     chapterNum={chapterNum}
                   />
                 ) : verses.map((v, i) => {
-                  const isActive = activeVerse === v.verse;
+                  const isActive = selectedVerseSet.has(v.verse);
                   const highlightBg = getHighlightBg(v.id, v.verse, i);
                   const isBookmarked = bookmarkedVerseIds.has(v.id) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);
                   const hasHighlightBg = highlightBg !== "transparent";
@@ -1436,7 +1491,7 @@ export default function VerseReaderScreen() {
                 })}
               </View>
 
-              <View style={styles.chapterCompleteRow}>
+              <Pressable onPress={handleReaderBackgroundPress} style={styles.chapterCompleteRow}>
                 <View style={[styles.chapterCompleteLine, { backgroundColor: RV2_BORDER }]} />
                 <View style={[styles.chapterCompleteBadge, { backgroundColor: RV2_PILL }]}>
                   <Ionicons name="checkmark-circle" size={14} color={RV2_INK_MUTED} />
@@ -1445,9 +1500,7 @@ export default function VerseReaderScreen() {
                   </Text>
                 </View>
                 <View style={[styles.chapterCompleteLine, { backgroundColor: RV2_BORDER }]} />
-              </View>
-
-              {/* A.6: scripture ends with completion mark + two quiet rows */}
+              </Pressable>
               <View style={{ marginTop: 20, gap: 4, paddingBottom: 8 }}>
                 {canGoNext && (
                   <Pressable
@@ -1568,9 +1621,10 @@ export default function VerseReaderScreen() {
             )}
             </View>
 
-            {toolbarVerse && (
+            {sheetOpen && selectedVerseObjs.length > 0 && (
               <BottomSheetToolbar
-                verse={toolbarVerse}
+                verses={selectedVerseObjs}
+                highlightIds={selectedHighlightIds}
                 bookName={bookName}
                 bookId={bookId as string}
                 chapter={chapter as string}
@@ -1585,7 +1639,7 @@ export default function VerseReaderScreen() {
 
             {/* New chrome: one floating play + chapter pill. Legacy keeps the A.3 strip. */}
             {useNewTypography ? (
-              !audio.isActive && !toolbarVerse && (
+              !audio.isActive && !sheetOpen && (
                 <Animated.View
                   testID="reader-floating-chrome"
                   style={[
@@ -1620,7 +1674,7 @@ export default function VerseReaderScreen() {
             ) : (
               <>
                 {/* A.3: reader controls strip — hides on scroll-down, reappears on scroll-up */}
-                {!audio.isActive && !toolbarVerse && (
+                {!audio.isActive && !sheetOpen && (
                   <Animated.View
                     style={[
                       styles.controlsStrip,
@@ -1658,7 +1712,7 @@ export default function VerseReaderScreen() {
                         hitSlop={6}
                         style={({ pressed }) => [
                           styles.stripDot,
-                          { backgroundColor: HIGHLIGHT_COLORS[key].bg, opacity: activeVerse ? (pressed ? 0.6 : 1) : 0.35 },
+                          { backgroundColor: HIGHLIGHT_COLORS[key].bg, opacity: selectedVerseNums.length > 0 ? (pressed ? 0.6 : 1) : 0.35 },
                         ]}
                       />
                     ))}
