@@ -125,23 +125,63 @@ describe("Devotions visual pass", () => {
   });
 
   it("uses category line icons on series list rows, never illustrations", () => {
-    assert.equal(resolveSeriesRowIconName({ theme: "Core Doctrines" }), "Landmark");
-    assert.equal(resolveSeriesRowIconName({ theme: "Christology" }), "BookOpen");
-    assert.equal(resolveSeriesRowIconName({ theme: "Prophecy & Fulfillment" }), "ScrollText");
-    assert.equal(resolveSeriesRowIconName({ theme: "Character Studies" }), "UserRound");
+    assert.equal(
+      resolveSeriesRowIconName({ title: "Living in Hope", theme: "hope", category: "foundations" }),
+      "Sunrise",
+    );
+    assert.equal(
+      resolveSeriesRowIconName({
+        title: "Strength in Weakness",
+        theme: "faith,strength",
+        category: "foundations",
+      }),
+      "Anchor",
+    );
+    assert.equal(resolveSeriesRowIconName({ theme: "hope" }), "Sunrise");
+    assert.equal(resolveSeriesRowIconName({ theme: "faith,strength" }), "Anchor");
+    assert.equal(resolveSeriesRowIconName({ theme: "peace,comfort" }), "Heart");
+    assert.equal(resolveSeriesRowIconName({ theme: "grace,faith" }), "HandHeart");
+    assert.equal(resolveSeriesRowIconName({ theme: "prayer" }), "Flame");
+    assert.equal(resolveSeriesRowIconName({ theme: "identity" }), "User");
+    assert.equal(resolveSeriesRowIconName({ theme: "relationships" }), "Users");
+    assert.equal(resolveSeriesRowIconName({ theme: "seasonal" }), "Leaf");
+    assert.equal(resolveSeriesRowIconName({ theme: "spiritual-growth" }), "Sprout");
+    assert.equal(resolveSeriesRowIconName({ theme: "Prophecy & Fulfillment" }), "Scroll");
+    assert.equal(resolveSeriesRowIconName({ title: "The Heavenly Sanctuary" }), "Church");
+    assert.equal(resolveSeriesRowIconName({ title: "Death, Sleep, and Resurrection" }), "Sunrise");
+    assert.equal(resolveSeriesRowIconName({ category: "prophetic" }), "Scroll");
     assert.equal(resolveSeriesRowIconName({ theme: "Comfort & Encouragement" }), "Heart");
-    assert.equal(resolveSeriesRowIconName({ theme: "Kingdom of God" }), "Crown");
-    assert.equal(resolveSeriesRowIconName({ theme: "Faith & Perseverance" }), "Mountain");
-    assert.equal(resolveSeriesRowIconName({ theme: "Spiritual Warfare" }), "Shield");
-    assert.equal(resolveSeriesRowIconName({ category: "foundations" }), "Landmark");
-    assert.equal(resolveSeriesRowIconName({ category: "prophetic" }), "ScrollText");
-    assert.equal(resolveSeriesRowIconName({ theme: "Unknown Theme", category: "thematic" }), "Library");
-    assert.equal(resolveSeriesRowIconName({}), "Library");
+    assert.equal(resolveSeriesRowIconName({ theme: "Faith & Perseverance" }), "Anchor");
+    assert.equal(resolveSeriesRowIconName({ theme: "Spiritual Warfare" }), "Sprout");
+    assert.equal(resolveSeriesRowIconName({ category: "foundations" }), "BookOpen");
+    assert.equal(resolveSeriesRowIconName({ theme: "Core Doctrines" }), "BookOpen");
+    assert.equal(resolveSeriesRowIconName({ theme: "Unknown Theme", category: "thematic" }), "BookOpen");
+    assert.equal(resolveSeriesRowIconName({}), "BookOpen");
+    assert.notEqual(
+      resolveSeriesRowIconName({ title: "Living in Hope", category: "foundations" }),
+      resolveSeriesRowIconName({ title: "Strength in Weakness", category: "foundations" }),
+    );
     assert.equal(SERIES_ROW_ICON.strokeWidth, 1.5);
     assert.equal(SERIES_ROW_ICON.color, "rgba(31, 26, 18, 0.70)");
     assert.match(preview, /resolveSeriesRowIconName/);
     assert.match(preview, /SERIES_ROW_ICONS/);
     assert.match(preview, /SeriesRowDisc/);
+    for (const icon of [
+      "Sunrise",
+      "Anchor",
+      "Heart",
+      "HandHeart",
+      "Flame",
+      "User",
+      "Users",
+      "Leaf",
+      "Sprout",
+      "Scroll",
+      "Church",
+      "BookOpen",
+    ]) {
+      assert.match(preview, new RegExp(`\\b${icon}\\b`), `SERIES_ROW_ICONS must include ${icon}`);
+    }
     const seriesBlock = preview.match(/catalogSeries\.map[\s\S]*?More series soon/);
     assert.ok(seriesBlock, "series list block should exist");
     assert.doesNotMatch(seriesBlock[0], /SERIES_ART/);

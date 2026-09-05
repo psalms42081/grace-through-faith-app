@@ -44,6 +44,12 @@ export function flattenSabbathSchoolLessonClips(
     .slice(0, limit);
 }
 
+export function hasSabbathSchoolLessonVideo(
+  videoByArtist: ArtistGroup[] | null | undefined,
+): boolean {
+  return flattenSabbathSchoolLessonClips(videoByArtist).length > 0;
+}
+
 export function firstPlayableSabbathSchoolClip(
   clips: SabbathSchoolVideoClip[],
 ): SabbathSchoolVideoClip | null {

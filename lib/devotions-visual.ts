@@ -56,25 +56,18 @@ export type SeriesArtKey =
 
 /** Lucide export names — one line icon per named series category/theme. */
 export type SeriesRowIconName =
-  | "Landmark"
-  | "BookOpen"
+  | "Sunrise"
+  | "Anchor"
   | "Heart"
-  | "UserRound"
-  | "ScrollText"
-  | "Crown"
-  | "Mountain"
-  | "Shield"
-  | "HeartPulse"
-  | "MoonStar"
-  | "GraduationCap"
-  | "Home"
-  | "HeartHandshake"
-  | "Handshake"
-  | "Fingerprint"
+  | "HandHeart"
+  | "Flame"
+  | "User"
+  | "Users"
+  | "Leaf"
   | "Sprout"
-  | "Brain"
-  | "CalendarDays"
-  | "Library";
+  | "Scroll"
+  | "Church"
+  | "BookOpen";
 
 const SERIES_ART_RULES: { key: SeriesArtKey; needles: string[] }[] = [
   { key: "end-times", needles: ["end time", "end-times", "second coming"] },
@@ -97,27 +90,23 @@ const SERIES_ART_RULES: { key: SeriesArtKey; needles: string[] }[] = [
   },
 ];
 
-/** Named series themes first, then schema categories, then art-key needles. */
+/**
+ * Keyword → Lucide. Specific themes before faith/strength so titles like
+ * "Grace Upon Grace" (theme grace,faith) keep HandHeart, not Anchor.
+ * Dove and Mirror are not lucide-react-native exports.
+ */
 const SERIES_ROW_ICON_RULES: { icon: SeriesRowIconName; needles: string[] }[] = [
-  { icon: "Crown", needles: ["kingdom"] },
-  { icon: "BookOpen", needles: ["christology"] },
-  { icon: "Shield", needles: ["warfare"] },
-  { icon: "Mountain", needles: ["perseverance"] },
-  { icon: "Heart", needles: ["comfort", "encouragement"] },
-  { icon: "UserRound", needles: ["character"] },
-  { icon: "Landmark", needles: ["doctrine", "foundations", "belief"] },
-  { icon: "ScrollText", needles: ["prophecy", "prophetic", "fulfillment", "daniel", "revelation"] },
-  { icon: "MoonStar", needles: ["sabbath"] },
-  { icon: "HeartPulse", needles: ["health", "healing"] },
-  { icon: "Brain", needles: ["mental", "anxiety", "depression"] },
-  { icon: "HeartHandshake", needles: ["relationship"] },
-  { icon: "Handshake", needles: ["forgiv"] },
-  { icon: "Home", needles: ["family", "parent"] },
-  { icon: "GraduationCap", needles: ["youth", "teen", "young"] },
-  { icon: "Fingerprint", needles: ["identity"] },
-  { icon: "CalendarDays", needles: ["seasonal", "lent"] },
-  { icon: "Heart", needles: ["prayer"] },
-  { icon: "Sprout", needles: ["new believer", "new in christ", "first steps", "spiritual", "faith", "growth"] },
+  { icon: "Sunrise", needles: ["hope", "death", "resurrection"] },
+  { icon: "HandHeart", needles: ["grace"] },
+  { icon: "Heart", needles: ["peace", "comfort"] },
+  { icon: "Flame", needles: ["prayer"] },
+  { icon: "User", needles: ["identity"] },
+  { icon: "Users", needles: ["relationship"] },
+  { icon: "Leaf", needles: ["seasonal"] },
+  { icon: "Sprout", needles: ["spiritual growth", "spiritual-growth", "spiritual"] },
+  { icon: "Scroll", needles: ["prophecy", "prophetic", "prophecies"] },
+  { icon: "Church", needles: ["sanctuary"] },
+  { icon: "Anchor", needles: ["faith", "strength"] },
 ];
 
 function haystack(parts: Array<string | null | undefined>): string {
@@ -167,8 +156,8 @@ export function resolveSeriesArtKey(input: {
 }
 
 /**
- * Category line icon for list rows. Never empty — unknown categories use Library
- * (bookshelf). Illustrations stay off list rows.
+ * Category line icon for list rows. Never empty — unknown categories use BookOpen.
+ * Illustrations stay off list rows.
  */
 export function resolveSeriesRowIconName(input: {
   theme?: string | null;
@@ -176,13 +165,13 @@ export function resolveSeriesRowIconName(input: {
   title?: string | null;
 }): SeriesRowIconName {
   const text = haystack([input.theme, input.category, input.title]);
-  if (!text) return "Library";
+  if (!text) return "BookOpen";
   for (const rule of SERIES_ROW_ICON_RULES) {
     if (rule.needles.some((needle) => text.includes(needle))) {
       return rule.icon;
     }
   }
-  return "Library";
+  return "BookOpen";
 }
 
 /** Category-token wash + ink when no illustration matches. */

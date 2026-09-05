@@ -17,12 +17,13 @@ interface Props {
   onContinue: () => void;
   onOpenOverview: () => void;
   onWatch: () => void;
+  showWatch?: boolean;
 }
 
 // The ONE gradient on this screen (§1.3). All other cards are flat white.
 export default function SSGradientCard({
   quarterTitle, quarterColor, lessonTitle, lessonNumber, progressDays, dayLabel,
-  onContinue, onOpenOverview, onWatch,
+  onContinue, onOpenOverview, onWatch, showWatch = false,
 }: Props) {
   const progress = Math.min(Math.max(progressDays / 7, 0), 1);
   const quarterTheme = getSabbathSchoolQuarterTheme(
@@ -68,14 +69,16 @@ export default function SSGradientCard({
           >
             <Text style={[s.continueLabel, { color: quarterTheme.primary }]}>Continue — {dayLabel}</Text>
           </Pressable>
-          <Pressable
-            style={s.watchBtn}
-            onPress={onWatch}
-            accessibilityRole="button"
-            accessibilityLabel="Watch this lesson"
-          >
-            <Text style={s.watchLabel}>▶ Watch</Text>
-          </Pressable>
+          {showWatch && (
+            <Pressable
+              style={s.watchBtn}
+              onPress={onWatch}
+              accessibilityRole="button"
+              accessibilityLabel="Watch this lesson"
+            >
+              <Text style={s.watchLabel}>▶ Watch</Text>
+            </Pressable>
+          )}
         </View>
       </LinearGradient>
     </View>

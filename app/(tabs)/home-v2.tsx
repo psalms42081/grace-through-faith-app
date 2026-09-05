@@ -42,6 +42,7 @@ import {
   SABBATH_SCHOOL_TAB_ROOT,
 } from "@/lib/sabbath-school-route-containment";
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
+import { hasSabbathSchoolLessonVideo } from "@/lib/sabbath-school-video-clips";
 
 interface TodayResponse {
   today: { dayNumber: number; title: string; passageLabel: string | null } | null;
@@ -233,6 +234,10 @@ export default function HomeV2Screen() {
         date: string | null;
         completed?: boolean;
       }[];
+      videoByArtist?: Array<{
+        artist: string;
+        clips: Array<{ src: string; title: string; thumbnail: string; target: string }>;
+      }> | null;
     } | null;
     completedDays: number;
     currentLessonNumber: number;
@@ -306,6 +311,9 @@ export default function HomeV2Screen() {
   const ssDoneToday =
     ssData?.currentLesson?.days.find((day) => day.dayNumber === ssDayIndex)
       ?.completed === true;
+  const hasLessonVideo = hasSabbathSchoolLessonVideo(
+    ssData?.currentLesson?.videoByArtist,
+  );
   const goToOverview = () => router.push(SABBATH_SCHOOL_TAB_ROOT as any);
   const goToWatch = () =>
     router.push(buildSabbathSchoolTabRoute("sabbath-school-video") as any);
@@ -402,6 +410,7 @@ export default function HomeV2Screen() {
         onContinue={goToContinueDay}
         onOpenOverview={goToOverview}
         onWatch={goToWatch}
+        showWatch={hasLessonVideo}
       />
 
       {!isKidsMode && myGroups.length > 0 && (
