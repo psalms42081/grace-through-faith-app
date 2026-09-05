@@ -7,6 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { D2, F } from "./tokens";
 import { ErrorState, Header, LoadingState } from "./PreviewPrimitives";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import {
+  ODB_AFTERNOON_HINT,
+  shouldShowOdbAfternoonHint,
+} from "@/lib/odb-afternoon-hint";
 
 type Odb = {
   id: number;
@@ -124,6 +128,11 @@ export default function OdbDevotionalPreview() {
         <View style={s.hero}>
           <Text style={s.kicker}>OUR DAILY BREAD</Text>
           <Text style={s.date}>{date}</Text>
+          {shouldShowOdbAfternoonHint(d.date) ? (
+            <Text style={s.date} testID="odb-afternoon-hint">
+              {ODB_AFTERNOON_HINT}
+            </Text>
+          ) : null}
           <Text style={s.title}>{decodeHtmlEntities(d.title)}</Text>
           {d.author ? (
             <Text style={s.author}>by {decodeHtmlEntities(d.author)}</Text>

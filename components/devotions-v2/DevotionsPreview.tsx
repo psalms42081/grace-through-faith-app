@@ -26,6 +26,10 @@ import { EmptyState, Header, LoadingState, PrimaryButton, SectionHeading } from 
 import { useTranslation } from "@/context/TranslationContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
+  ODB_AFTERNOON_HINT,
+  shouldShowOdbAfternoonHint,
+} from "@/lib/odb-afternoon-hint";
+import {
   DEVOTIONAL_CATALOG_QUERY_KEY,
   isApprovedHumanDevotionalPlan,
   type DevotionalCatalogPlan,
@@ -400,6 +404,11 @@ export default function DevotionsPreview() {
                 })
               : "A short pause for the day"}
           </Text>
+          {shouldShowOdbAfternoonHint(odb.data?.date) ? (
+            <Text style={s.cardSub} testID="odb-afternoon-hint">
+              {ODB_AFTERNOON_HINT}
+            </Text>
+          ) : null}
         </Pressable>
 
         <SectionHeading
