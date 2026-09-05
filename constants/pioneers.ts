@@ -24,7 +24,7 @@ export interface PioneerAuthorPortrait {
   sourceUrl: string;
 }
 
-/** Shelf order lives in shared/pioneer-authors.ts (birth year, then death year). */
+/** Shelf order lives in shared/pioneer-authors.ts (birth year, then explicit catalog order). */
 export const PIONEER_AUTHOR_PORTRAITS: PioneerAuthorPortrait[] = [
   {
     id: "john-loughborough",

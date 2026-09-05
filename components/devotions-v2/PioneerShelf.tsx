@@ -18,6 +18,7 @@ export default function PioneerShelf() {
   const [openAuthor, setOpenAuthor] = useState<string | null>(null);
   const [openBook, setOpenBook] = useState<string | null>(null);
 
+  // Shelf order is applied by GET /api/pioneers/shelf. Do not sort by name here.
   const authors = q.data?.authors || [];
 
   return (

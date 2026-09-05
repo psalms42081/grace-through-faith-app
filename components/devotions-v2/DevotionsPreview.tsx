@@ -380,36 +380,38 @@ export default function DevotionsPreview() {
           </Pressable>
         ) : null}
 
-        <SectionHeading
-          title="Daily Reading"
-          subtitle="A short pause for the day"
-          testID="devotions-preview-daily-section"
-        />
-        <Pressable
-          style={[s.dailyCard, { backgroundColor: D2.amberSoft }]}
-          onPress={() => router.push("/odb-devotional-preview" as any)}
-          testID="devotions-preview-odb-card"
-        >
-          <Ionicons name="sunny-outline" size={21} color={D2.amber} />
-          <Text style={s.metaAmber}>OUR DAILY BREAD</Text>
-          <Text style={s.cardTitle} numberOfLines={2}>
-            {odb.data?.title || "Today's bread"}
-          </Text>
-          <Text style={s.cardSub}>
-            {odb.data?.date
-              ? new Date(`${odb.data.date}T00:00:00`).toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })
-              : "A short pause for the day"}
-          </Text>
-          {shouldShowOdbAfternoonHint(odb.data?.date) ? (
-            <Text style={s.cardSub} testID="odb-afternoon-hint">
-              {ODB_AFTERNOON_HINT}
+        <View style={s.dailySection}>
+          <SectionHeading
+            title="Daily Reading"
+            subtitle="A short pause for the day"
+            testID="devotions-preview-daily-section"
+          />
+          <Pressable
+            style={[s.dailyCard, { backgroundColor: D2.amberSoft }]}
+            onPress={() => router.push("/odb-devotional-preview" as any)}
+            testID="devotions-preview-odb-card"
+          >
+            <Ionicons name="sunny-outline" size={21} color={D2.amber} />
+            <Text style={s.metaAmber}>OUR DAILY BREAD</Text>
+            <Text style={s.cardTitle} numberOfLines={2}>
+              {odb.data?.title || "Today's bread"}
             </Text>
-          ) : null}
-        </Pressable>
+            <Text style={s.cardSub}>
+              {odb.data?.date
+                ? new Date(`${odb.data.date}T00:00:00`).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "A short pause for the day"}
+            </Text>
+            {shouldShowOdbAfternoonHint(odb.data?.date) ? (
+              <Text style={s.cardSub} testID="odb-afternoon-hint">
+                {ODB_AFTERNOON_HINT}
+              </Text>
+            ) : null}
+          </Pressable>
+        </View>
 
         <SectionHeading
           title="Inspiration"
@@ -891,6 +893,10 @@ const s = StyleSheet.create({
     color: D2.violet,
     fontFamily: F.interSemi,
     fontSize: 11,
+  },
+  dailySection: {
+    alignSelf: "stretch",
+    width: "100%",
   },
   dailyCard: {
     alignSelf: "stretch",

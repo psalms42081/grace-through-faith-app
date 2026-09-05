@@ -73,8 +73,13 @@ export function SectionHeading({
   testID?: string;
 }) {
   return (
-    <View style={s.sectionHeading} testID={testID}>
-      <View style={{ flex: 1 }}>
+    <View
+      style={s.sectionHeading}
+      testID={testID}
+      accessibilityRole="header"
+      accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+    >
+      <View style={s.sectionHeadingCopy}>
         <Text style={s.sectionTitle}>{title}</Text>
         {subtitle ? <Text style={s.sectionSub}>{subtitle}</Text> : null}
       </View>
@@ -187,16 +192,25 @@ const s = StyleSheet.create({
     color: D2.ink,
   },
   sectionHeading: {
+    alignSelf: "stretch",
+    width: "100%",
     flexDirection: "row",
     alignItems: "flex-end",
+    flexShrink: 0,
     gap: 12,
     marginTop: 25,
     marginBottom: 11,
+  },
+  sectionHeadingCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   sectionTitle: {
     fontFamily: F.loraSemi,
     color: D2.ink,
     fontSize: 21,
+    lineHeight: 28,
   },
   sectionSub: {
     fontFamily: F.inter,

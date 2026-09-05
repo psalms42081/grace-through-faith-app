@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   PIONEER_AUTHORS,
   PIONEER_SHELF_PUBLIC_DOMAIN,
+  PIONEER_SHELF_SLUGS,
   publicDomainLine,
   sortPioneerAuthorsByBirth,
 } from "../shared/pioneer-authors";
@@ -52,51 +53,62 @@ describe("displayPioneerChapterTitle", () => {
   });
 });
 
+const SHELF_SLUGS = [
+  "joseph-bates",
+  "james-white",
+  "john-loughborough",
+  "uriah-smith",
+  "stephen-haskell",
+  "at-jones",
+  "ej-waggoner",
+] as const;
+
 describe("pioneer shelf author order", () => {
-  it("orders authors by birth year, then death year", () => {
-    const shuffled = [
-      { slug: "ej-waggoner" },
-      { slug: "john-loughborough" },
-      { slug: "at-jones" },
-      { slug: "joseph-bates" },
-      { slug: "stephen-haskell" },
-      { slug: "uriah-smith" },
-      { slug: "james-white" },
+  it("orders authors by birth year, Loughborough before Smith", () => {
+    const productionFirstNameOrder = [
+      { slug: "at-jones", name: "Alonzo Trevier Jones" },
+      { slug: "ej-waggoner", name: "Ellet Joseph Waggoner" },
+      { slug: "james-white", name: "James Springer White" },
+      { slug: "john-loughborough", name: "John Norton Loughborough" },
+      { slug: "joseph-bates", name: "Joseph Bates" },
+      { slug: "stephen-haskell", name: "Stephen Nelson Haskell" },
+      { slug: "uriah-smith", name: "Uriah Smith" },
     ];
     assert.deepEqual(
-      sortPioneerAuthorsByBirth(shuffled).map((author) => author.slug),
-      [
-        "joseph-bates",
-        "james-white",
-        "uriah-smith",
-        "john-loughborough",
-        "stephen-haskell",
-        "at-jones",
-        "ej-waggoner",
-      ],
+      sortPioneerAuthorsByBirth(productionFirstNameOrder).map((author) => author.slug),
+      [...SHELF_SLUGS],
+    );
+  });
+
+  it("puts Loughborough before Smith even though Smith died earlier", () => {
+    const smith = PIONEER_AUTHORS.find((author) => author.slug === "uriah-smith");
+    const loughborough = PIONEER_AUTHORS.find((author) => author.slug === "john-loughborough");
+    assert.equal(smith?.birthYear, 1832);
+    assert.equal(loughborough?.birthYear, 1832);
+    assert.equal(smith?.deathYear, 1903);
+    assert.equal(loughborough?.deathYear, 1924);
+    assert.ok((loughborough?.shelfOrder ?? 0) < (smith?.shelfOrder ?? 0));
+    assert.deepEqual(
+      sortPioneerAuthorsByBirth([{ slug: "uriah-smith" }, { slug: "john-loughborough" }]).map(
+        (author) => author.slug,
+      ),
+      ["john-loughborough", "uriah-smith"],
     );
   });
 
   it("records the birth years used for that order", () => {
+    assert.deepEqual(PIONEER_SHELF_SLUGS, [...SHELF_SLUGS]);
     assert.deepEqual(
       PIONEER_AUTHORS.map((author) => [author.slug, author.birthYear]),
       [
         ["joseph-bates", 1792],
         ["james-white", 1821],
-        ["uriah-smith", 1832],
         ["john-loughborough", 1832],
+        ["uriah-smith", 1832],
         ["stephen-haskell", 1833],
         ["at-jones", 1850],
         ["ej-waggoner", 1855],
       ],
-    );
-    assert.equal(
-      PIONEER_AUTHORS.find((author) => author.slug === "uriah-smith")?.deathYear,
-      1903,
-    );
-    assert.equal(
-      PIONEER_AUTHORS.find((author) => author.slug === "john-loughborough")?.deathYear,
-      1924,
     );
   });
 
@@ -105,6 +117,7 @@ describe("pioneer shelf author order", () => {
     const shelf = readFileSync(new URL("../components/devotions-v2/PioneerShelf.tsx", import.meta.url), "utf8");
     assert.match(service, /sortPioneerAuthorsByBirth/);
     assert.doesNotMatch(shelf, /sortPioneerAuthorsByBirth|birthYear|\.sort\(/);
+    assert.doesNotMatch(shelf, /localeCompare/);
   });
 });
 
