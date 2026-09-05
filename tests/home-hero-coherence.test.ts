@@ -162,7 +162,7 @@ describe("Home hero verse illustrations", () => {
     const rhythm = readFileSync(new URL("../components/home-v2/DailyRhythm.tsx", import.meta.url), "utf8");
     const groups = readFileSync(new URL("../components/home-v2/HomeBibleGroupCard.tsx", import.meta.url), "utf8");
     assert.match(hero, /heroIllustrationForDay/);
-    assert.match(hero, /artWrap/);
+    assert.match(hero, /s\.art\b/);
     assert.doesNotMatch(ss, /heroIllustrationForDay/);
     assert.doesNotMatch(rhythm, /heroIllustrationForDay/);
     assert.doesNotMatch(groups, /heroIllustrationForDay/);
@@ -178,11 +178,31 @@ describe("Home hero verse illustrations", () => {
     assert.equal(heroArtRatioForWidth(350), HERO_ART_RATIO_NARROW);
     assert.equal(heroArtRatioForWidth(700), HERO_ART_RATIO);
     assert.match(hero, /heroArtRatioForWidth/);
-    assert.match(hero, /bodyRow/);
+    assert.match(hero, /HERO_TEXT_COL_RATIO/);
+    assert.match(hero, /contentRow/);
     assert.match(hero, /flexDirection:\s*"row"/);
     assert.match(hero, /alignItems:\s*"flex-start"/);
+    assert.match(hero, /aspectRatio:\s*1/);
+    assert.match(hero, /resizeMode="contain"/);
     assert.doesNotMatch(hero, /LinearGradient/);
-    assert.doesNotMatch(hero, /bottom:\s*-10/);
+    assert.doesNotMatch(hero, /expo-linear-gradient/);
     assert.doesNotMatch(hero, /0\.38/);
+  });
+
+  it("keeps actions as a sibling below the art with no absolute bottom art", () => {
+    const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
+    const contentIdx = hero.indexOf("style={s.contentRow}");
+    const artIdx = hero.indexOf("style={[s.art, { width: artWidth }]}");
+    const contentClose = hero.indexOf("</View>", artIdx);
+    const actionsIdx = hero.indexOf("style={s.actions}");
+    assert.ok(contentIdx > 0, "contentRow missing");
+    assert.ok(artIdx > contentIdx, "art must be inside contentRow");
+    assert.ok(actionsIdx > contentClose && actionsIdx > artIdx, "actions must follow the art container");
+    assert.doesNotMatch(hero, /position:\s*["']absolute["']/);
+    assert.doesNotMatch(hero, /absoluteFill/);
+    assert.doesNotMatch(hero, /bottom:\s*-?\d+/);
+    assert.doesNotMatch(hero, /right:\s*-?\d+/);
+    const afterActions = hero.slice(actionsIdx);
+    assert.doesNotMatch(afterActions, /<Image\b/);
   });
 });

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator, Platform, Image } from "react-native";
+import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator, Platform, Image, useWindowDimensions } from "react-native";
 import { Bookmark, Share2 } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -13,7 +13,6 @@ import {
 } from "./home-data";
 import { buildHeroShareMessage, type HeroTab } from "./hero-share";
 import {
-  HERO_BODY_PAD_LEFT,
   HERO_TEXT_COL_RATIO,
   heroArtRatioForWidth,
   heroIllustrationForDay,
@@ -28,9 +27,6 @@ const HERO_ART: Record<HeroVerseIllustrationId, number> = {
   olive: require("@/assets/illustrations/plan-health.png"),
   path: require("@/assets/illustrations/plan-youth.png"),
 };
-
-/** Typical phone card width until onLayout measures the stage. */
-const STAGE_FALLBACK = 350;
 
 export type { HeroTab };
 
@@ -73,17 +69,22 @@ function showAuthGate() {
   });
 }
 
+function artWidthPercent(ratio: number): `${number}%` {
+  return `${Math.round(ratio * 100)}%`;
+}
+
 export default function HeroCard({
   activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection,
   reflectionDaypart, reflectionReadingTarget, translation, verseLoading, verseUnavailable,
   dayIndex = dayOfYear(),
 }: Props) {
   const [saved, setSaved] = useState(false);
-  const [stageWidth, setStageWidth] = useState(STAGE_FALLBACK);
+  const { width: windowWidth } = useWindowDimensions();
+  const [rowWidth, setRowWidth] = useState(0);
+  const measuredWidth = rowWidth > 0 ? rowWidth : Math.max(windowWidth - 40, 320);
   const art = heroIllustrationForDay(dayIndex, activeTab);
-  const artRatio = heroArtRatioForWidth(stageWidth);
-  const textWidth = Math.round(stageWidth * HERO_TEXT_COL_RATIO);
-  const artSize = Math.round(stageWidth * artRatio);
+  const artRatio = heroArtRatioForWidth(measuredWidth);
+  const artWidth = artWidthPercent(artRatio);
 
   const bookName = verse.reference.replace(/\s+\d+.*$/, "");
   assertReflectionReadingAlignment(
@@ -187,29 +188,28 @@ export default function HeroCard({
       </View>
 
       <View
-        style={s.stage}
+        style={s.contentRow}
         onLayout={(e) => {
           const next = Math.round(e.nativeEvent.layout.width);
-          if (next > 0 && next !== stageWidth) setStageWidth(next);
+          if (next > 0 && next !== rowWidth) setRowWidth(next);
         }}
       >
-        <View style={s.bodyRow}>
-          <View style={[s.textCol, { width: textWidth }]}>{copy}</View>
-          <View
-            style={[s.artWrap, { width: artSize, height: artSize }]}
-            pointerEvents="none"
-            accessible={false}
-            importantForAccessibility="no"
-          >
-            <Image
-              source={HERO_ART[art.id]}
-              style={{ width: artSize, height: artSize }}
-              resizeMode="contain"
-            />
-          </View>
+        <View style={[s.textCol, { width: artWidthPercent(HERO_TEXT_COL_RATIO) }]}>{copy}</View>
+        <View
+          style={[s.art, { width: artWidth }]}
+          pointerEvents="none"
+          accessible={false}
+          importantForAccessibility="no"
+        >
+          <Image
+            source={HERO_ART[art.id]}
+            style={s.artImage}
+            resizeMode="contain"
+          />
         </View>
+      </View>
 
-        <View style={s.actions}>
+      <View style={s.actions}>
         {activeTab === "signpost" ? (
           <Pressable
             style={s.primary}
@@ -247,7 +247,6 @@ export default function HeroCard({
         <Pressable style={s.iconBtn} onPress={handleShare} accessibilityLabel="Share">
           <Share2 size={19} color={HV2.ink} />
         </Pressable>
-        </View>
       </View>
     </View>
   );
@@ -274,25 +273,31 @@ const s = StyleSheet.create({
   tabActive: { backgroundColor: "#FFFFFF", ...HV2.rowShadow },
   tabLabel: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText },
   tabLabelActive: { color: HV2.ink },
-  stage: {
-    overflow: "hidden",
-  },
-  bodyRow: {
+  contentRow: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    paddingLeft: HERO_BODY_PAD_LEFT,
-    paddingRight: 0,
     paddingTop: 24,
     paddingBottom: 8,
   },
   textCol: {
+    paddingLeft: 24,
+    paddingRight: 8,
+    flexGrow: 0,
     flexShrink: 0,
   },
-  artWrap: {
+  art: {
+    aspectRatio: 1,
+    marginLeft: "auto",
+    flexGrow: 0,
     flexShrink: 0,
+    overflow: "hidden",
     alignItems: "flex-end",
     justifyContent: "flex-start",
+  },
+  artImage: {
+    width: "100%",
+    aspectRatio: 1,
   },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },
