@@ -398,6 +398,7 @@ export default function HomeV2Screen() {
         translation={translation}
         verseLoading={verseLoading}
         verseUnavailable={verseUnavailable}
+        dayIndex={localDay.dayIndex}
       />
 
       <SSGradientCard

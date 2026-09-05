@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator, Platform } from "react-native";
+import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator, Platform, Image } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Bookmark, Share2 } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -8,9 +9,23 @@ import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { HV2, F } from "./theme";
 import {
   assertReflectionReadingAlignment,
+  dayOfYear,
   type HomeDaypart,
 } from "./home-data";
 import { buildHeroShareMessage, type HeroTab } from "./hero-share";
+import {
+  heroIllustrationForDay,
+  type HeroVerseIllustrationId,
+} from "@/lib/home-hero-illustration";
+
+const HERO_ART: Record<HeroVerseIllustrationId, number> = {
+  lamp: require("@/assets/illustrations/plan-prayer.png"),
+  candle: require("@/assets/illustrations/rhythm-reflection.png"),
+  sunburst: require("@/assets/illustrations/rhythm-morning.png"),
+  "open-book": require("@/assets/illustrations/rhythm-plan.png"),
+  olive: require("@/assets/illustrations/plan-health.png"),
+  path: require("@/assets/illustrations/plan-youth.png"),
+};
 
 export type { HeroTab };
 
@@ -33,6 +48,7 @@ interface Props {
   translation?: string;
   verseLoading?: boolean;
   verseUnavailable?: boolean;
+  dayIndex?: number;
 }
 
 const TABS: { key: HeroTab; label: string }[] = [
@@ -55,8 +71,10 @@ function showAuthGate() {
 export default function HeroCard({
   activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection,
   reflectionDaypart, reflectionReadingTarget, translation, verseLoading, verseUnavailable,
+  dayIndex = dayOfYear(),
 }: Props) {
   const [saved, setSaved] = useState(false);
+  const art = heroIllustrationForDay(dayIndex, activeTab);
 
   const bookName = verse.reference.replace(/\s+\d+.*$/, "");
   assertReflectionReadingAlignment(
@@ -128,39 +146,56 @@ export default function HeroCard({
         })}
       </View>
 
-      {activeTab === "verse" && (
-        <View style={s.body}>
-          <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
-          {verseLoading ? (
-            <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
-          ) : verseUnavailable ? (
-            <Text style={[s.verse, { fontStyle: "italic", opacity: 0.75 }]}>
-              {translation
-                ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
-                : "This verse is currently unavailable. Open your Bible to read it."}
-            </Text>
-          ) : verse.text ? (
-            <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
-          ) : null}
-          <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
-        </View>
-      )}
-      {activeTab === "signpost" && (
-        <View style={s.body}>
-          <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
-          <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
-          {!!signpost?.description && <Text style={s.cite}>{signpost.description}</Text>}
-        </View>
-      )}
-      {activeTab === "reflection" && (
-        <View style={s.body}>
-          <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
-          <Text style={s.verse}>{reflection.thought}</Text>
-          <Text style={s.cite}>Reflection on {reflection.reference}</Text>
-        </View>
-      )}
+      <View style={s.stage}>
+        <Image
+          source={HERO_ART[art.id]}
+          style={s.art}
+          resizeMode="contain"
+          pointerEvents="none"
+          accessible={false}
+          importantForAccessibility="no"
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={["#FFFFFF", "rgba(255,255,255,0.94)", "rgba(251,247,238,0.55)", "rgba(251,247,238,0)"]}
+          locations={[0, 0.42, 0.68, 1]}
+          start={{ x: 0, y: 0.15 }}
+          end={{ x: 1, y: 1 }}
+          style={s.fade}
+        />
+        {activeTab === "verse" && (
+          <View style={s.body}>
+            <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
+            {verseLoading ? (
+              <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
+            ) : verseUnavailable ? (
+              <Text style={[s.verse, { fontStyle: "italic", opacity: 0.75 }]}>
+                {translation
+                  ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
+                  : "This verse is currently unavailable. Open your Bible to read it."}
+              </Text>
+            ) : verse.text ? (
+              <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
+            ) : null}
+            <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
+          </View>
+        )}
+        {activeTab === "signpost" && (
+          <View style={s.body}>
+            <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
+            <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
+            {!!signpost?.description && <Text style={s.cite}>{signpost.description}</Text>}
+          </View>
+        )}
+        {activeTab === "reflection" && (
+          <View style={s.body}>
+            <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
+            <Text style={s.verse}>{reflection.thought}</Text>
+            <Text style={s.cite}>Reflection on {reflection.reference}</Text>
+          </View>
+        )}
 
-      <View style={s.actions}>
+        <View style={s.actions}>
         {activeTab === "signpost" ? (
           <Pressable
             style={s.primary}
@@ -198,6 +233,7 @@ export default function HeroCard({
         <Pressable style={s.iconBtn} onPress={handleShare} accessibilityLabel="Share">
           <Share2 size={19} color={HV2.ink} />
         </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -224,7 +260,29 @@ const s = StyleSheet.create({
   tabActive: { backgroundColor: "#FFFFFF", ...HV2.rowShadow },
   tabLabel: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText },
   tabLabelActive: { color: HV2.ink },
-  body: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 8 },
+  stage: {
+    position: "relative",
+    overflow: "hidden",
+  },
+  art: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: "38%",
+    aspectRatio: 1,
+    zIndex: 0,
+  },
+  fade: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  body: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 8,
+    zIndex: 2,
+    position: "relative",
+  },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },
   cite: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText, marginTop: 12 },
@@ -235,6 +293,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 24,
+    zIndex: 2,
+    position: "relative",
   },
   primary: {
     flex: 1,

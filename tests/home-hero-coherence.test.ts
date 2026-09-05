@@ -13,6 +13,11 @@ import {
   buildHeroShareMessage,
   buildSignpostTopicUrl,
 } from "../components/home-v2/hero-share";
+import { contrastRatio } from "../lib/devotions-visual";
+import {
+  HERO_VERSE_ILLUSTRATION_LIST,
+  heroIllustrationForDay,
+} from "../lib/home-hero-illustration";
 
 const originalTimeZone = process.env.TZ;
 
@@ -121,5 +126,41 @@ describe("Home hero share payload", () => {
     );
     assert.match(heroSource, /buildHeroShareMessage/);
     assert.match(heroSource, /tab:\s*activeTab/);
+  });
+});
+
+describe("Home hero verse illustrations", () => {
+  it("rotates a fixed verse-card list by day-of-year with distinct tab assets", () => {
+    assert.deepEqual(
+      HERO_VERSE_ILLUSTRATION_LIST.map((item) => item.label),
+      ["lamp", "candle", "sunburst", "open book", "olive branch", "path"],
+    );
+    const verse = heroIllustrationForDay(248, "verse");
+    const signpost = heroIllustrationForDay(248, "signpost");
+    const reflection = heroIllustrationForDay(248, "reflection");
+    assert.notEqual(verse.id, signpost.id);
+    assert.notEqual(verse.id, reflection.id);
+    assert.notEqual(signpost.id, reflection.id);
+    assert.equal(heroIllustrationForDay(248, "verse").id, verse.id);
+    assert.notEqual(heroIllustrationForDay(249, "verse").id, verse.id);
+  });
+
+  it("keeps verse ink readable on cream/white (WCAG AA)", () => {
+    assert.ok(contrastRatio("#1F1A12", "#FFFFFF") >= 4.5);
+    assert.ok(contrastRatio("#1F1A12", "#FBF7EE") >= 4.5);
+    assert.ok(contrastRatio("#6B6660", "#FFFFFF") >= 4.5);
+  });
+
+  it("places the illustration only on the Home hero card", () => {
+    const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
+    const ss = readFileSync(new URL("../components/home-v2/SSGradientCard.tsx", import.meta.url), "utf8");
+    const rhythm = readFileSync(new URL("../components/home-v2/DailyRhythm.tsx", import.meta.url), "utf8");
+    const groups = readFileSync(new URL("../components/home-v2/HomeBibleGroupCard.tsx", import.meta.url), "utf8");
+    assert.match(hero, /heroIllustrationForDay/);
+    assert.match(hero, /width:\s*"38%"/);
+    assert.match(hero, /LinearGradient/);
+    assert.doesNotMatch(ss, /heroIllustrationForDay/);
+    assert.doesNotMatch(rhythm, /heroIllustrationForDay/);
+    assert.doesNotMatch(groups, /heroIllustrationForDay/);
   });
 });
