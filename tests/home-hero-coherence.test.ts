@@ -15,7 +15,12 @@ import {
 } from "../components/home-v2/hero-share";
 import { contrastRatio } from "../lib/devotions-visual";
 import {
+  HERO_ART_RATIO,
+  HERO_ART_RATIO_NARROW,
+  HERO_TEXT_COL_MIN_RATIO,
+  HERO_TEXT_COL_RATIO,
   HERO_VERSE_ILLUSTRATION_LIST,
+  heroArtRatioForWidth,
   heroIllustrationForDay,
 } from "../lib/home-hero-illustration";
 
@@ -158,10 +163,26 @@ describe("Home hero verse illustrations", () => {
     const groups = readFileSync(new URL("../components/home-v2/HomeBibleGroupCard.tsx", import.meta.url), "utf8");
     assert.match(hero, /heroIllustrationForDay/);
     assert.match(hero, /artWrap/);
-    assert.match(hero, /0\.38/);
-    assert.match(hero, /LinearGradient/);
     assert.doesNotMatch(ss, /heroIllustrationForDay/);
     assert.doesNotMatch(rhythm, /heroIllustrationForDay/);
     assert.doesNotMatch(groups, /heroIllustrationForDay/);
+  });
+
+  it("lays out top-right art beside a 62% text column with no fade overlay", () => {
+    const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
+    assert.equal(HERO_TEXT_COL_RATIO, 0.62);
+    assert.ok(HERO_TEXT_COL_RATIO >= HERO_TEXT_COL_MIN_RATIO);
+    assert.equal(HERO_ART_RATIO, 0.32);
+    assert.equal(HERO_ART_RATIO_NARROW, 0.26);
+    assert.equal(heroArtRatioForWidth(390), HERO_ART_RATIO_NARROW);
+    assert.equal(heroArtRatioForWidth(350), HERO_ART_RATIO_NARROW);
+    assert.equal(heroArtRatioForWidth(700), HERO_ART_RATIO);
+    assert.match(hero, /heroArtRatioForWidth/);
+    assert.match(hero, /bodyRow/);
+    assert.match(hero, /flexDirection:\s*"row"/);
+    assert.match(hero, /alignItems:\s*"flex-start"/);
+    assert.doesNotMatch(hero, /LinearGradient/);
+    assert.doesNotMatch(hero, /bottom:\s*-10/);
+    assert.doesNotMatch(hero, /0\.38/);
   });
 });

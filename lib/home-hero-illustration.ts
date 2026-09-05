@@ -31,3 +31,20 @@ export function heroIllustrationForDay(
   const index = (base + TAB_OFFSET[tab]) % n;
   return HERO_VERSE_ILLUSTRATION_LIST[index];
 }
+
+/** Text column stays ~62% of the card so copy never sits on the art. */
+export const HERO_TEXT_COL_RATIO = 0.62;
+export const HERO_TEXT_COL_MIN_RATIO = 0.6;
+/** Default art width; phones with a long Signpost drop to the narrow ratio. */
+export const HERO_ART_RATIO = 0.32;
+export const HERO_ART_RATIO_NARROW = 0.26;
+export const HERO_BODY_PAD_LEFT = 24;
+const ART_GAP = 12;
+
+/** Prefer 32% art; drop to 26% when 32% would squeeze the text column below 60%. */
+export function heroArtRatioForWidth(stageWidth: number): number {
+  const textW = stageWidth * HERO_TEXT_COL_RATIO;
+  const roomForArt = stageWidth - HERO_BODY_PAD_LEFT - textW - ART_GAP;
+  if (roomForArt >= stageWidth * HERO_ART_RATIO) return HERO_ART_RATIO;
+  return HERO_ART_RATIO_NARROW;
+}

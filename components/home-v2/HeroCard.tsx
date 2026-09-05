@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet, Share, ActivityIndicator, Platform, Image } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Bookmark, Share2 } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -14,6 +13,9 @@ import {
 } from "./home-data";
 import { buildHeroShareMessage, type HeroTab } from "./hero-share";
 import {
+  HERO_BODY_PAD_LEFT,
+  HERO_TEXT_COL_RATIO,
+  heroArtRatioForWidth,
   heroIllustrationForDay,
   type HeroVerseIllustrationId,
 } from "@/lib/home-hero-illustration";
@@ -27,8 +29,8 @@ const HERO_ART: Record<HeroVerseIllustrationId, number> = {
   path: require("@/assets/illustrations/plan-youth.png"),
 };
 
-/** ~38% of a phone hero; used until onLayout measures the stage. */
-const ART_FALLBACK = 148;
+/** Typical phone card width until onLayout measures the stage. */
+const STAGE_FALLBACK = 350;
 
 export type { HeroTab };
 
@@ -77,8 +79,11 @@ export default function HeroCard({
   dayIndex = dayOfYear(),
 }: Props) {
   const [saved, setSaved] = useState(false);
-  const [artSize, setArtSize] = useState(ART_FALLBACK);
+  const [stageWidth, setStageWidth] = useState(STAGE_FALLBACK);
   const art = heroIllustrationForDay(dayIndex, activeTab);
+  const artRatio = heroArtRatioForWidth(stageWidth);
+  const textWidth = Math.round(stageWidth * HERO_TEXT_COL_RATIO);
+  const artSize = Math.round(stageWidth * artRatio);
 
   const bookName = verse.reference.replace(/\s+\d+.*$/, "");
   assertReflectionReadingAlignment(
@@ -131,6 +136,37 @@ export default function HeroCard({
     }
   };
 
+  const copy =
+    activeTab === "verse" ? (
+      <>
+        <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
+        {verseLoading ? (
+          <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
+        ) : verseUnavailable ? (
+          <Text style={[s.verse, { fontStyle: "italic", opacity: 0.75 }]}>
+            {translation
+              ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
+              : "This verse is currently unavailable. Open your Bible to read it."}
+          </Text>
+        ) : verse.text ? (
+          <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
+        ) : null}
+        <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
+      </>
+    ) : activeTab === "signpost" ? (
+      <>
+        <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
+        <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
+        {!!signpost?.description && <Text style={s.cite}>{signpost.description}</Text>}
+      </>
+    ) : (
+      <>
+        <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
+        <Text style={s.verse}>{reflection.thought}</Text>
+        <Text style={s.cite}>Reflection on {reflection.reference}</Text>
+      </>
+    );
+
   return (
     <View style={s.card}>
       <View style={s.tabs}>
@@ -153,60 +189,25 @@ export default function HeroCard({
       <View
         style={s.stage}
         onLayout={(e) => {
-          const next = Math.round(e.nativeEvent.layout.width * 0.38);
-          if (next > 0 && next !== artSize) setArtSize(next);
+          const next = Math.round(e.nativeEvent.layout.width);
+          if (next > 0 && next !== stageWidth) setStageWidth(next);
         }}
       >
-        <View
-          style={[s.artWrap, { width: artSize, height: artSize }]}
-          pointerEvents="none"
-          accessible={false}
-          importantForAccessibility="no"
-        >
-          <Image
-            source={HERO_ART[art.id]}
-            style={{ width: artSize, height: artSize }}
-            resizeMode="contain"
-          />
-          <LinearGradient
-            colors={["#FFFFFF", "rgba(255,255,255,0.72)", "rgba(255,255,255,0)"]}
-            locations={[0, 0.35, 0.72]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
+        <View style={s.bodyRow}>
+          <View style={[s.textCol, { width: textWidth }]}>{copy}</View>
+          <View
+            style={[s.artWrap, { width: artSize, height: artSize }]}
+            pointerEvents="none"
+            accessible={false}
+            importantForAccessibility="no"
+          >
+            <Image
+              source={HERO_ART[art.id]}
+              style={{ width: artSize, height: artSize }}
+              resizeMode="contain"
+            />
+          </View>
         </View>
-        {activeTab === "verse" && (
-          <View style={s.body}>
-            <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
-            {verseLoading ? (
-              <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
-            ) : verseUnavailable ? (
-              <Text style={[s.verse, { fontStyle: "italic", opacity: 0.75 }]}>
-                {translation
-                  ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
-                  : "This verse is currently unavailable. Open your Bible to read it."}
-              </Text>
-            ) : verse.text ? (
-              <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
-            ) : null}
-            <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
-          </View>
-        )}
-        {activeTab === "signpost" && (
-          <View style={s.body}>
-            <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
-            <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
-            {!!signpost?.description && <Text style={s.cite}>{signpost.description}</Text>}
-          </View>
-        )}
-        {activeTab === "reflection" && (
-          <View style={s.body}>
-            <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
-            <Text style={s.verse}>{reflection.thought}</Text>
-            <Text style={s.cite}>Reflection on {reflection.reference}</Text>
-          </View>
-        )}
 
         <View style={s.actions}>
         {activeTab === "signpost" ? (
@@ -274,21 +275,24 @@ const s = StyleSheet.create({
   tabLabel: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText },
   tabLabelActive: { color: HV2.ink },
   stage: {
-    position: "relative",
     overflow: "hidden",
   },
-  artWrap: {
-    position: "absolute",
-    right: -6,
-    bottom: -10,
-    zIndex: 0,
-  },
-  body: {
-    paddingHorizontal: 24,
+  bodyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingLeft: HERO_BODY_PAD_LEFT,
+    paddingRight: 0,
     paddingTop: 24,
     paddingBottom: 8,
-    zIndex: 2,
-    position: "relative",
+  },
+  textCol: {
+    flexShrink: 0,
+  },
+  artWrap: {
+    flexShrink: 0,
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
   },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },
@@ -300,8 +304,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 24,
-    zIndex: 2,
-    position: "relative",
   },
   primary: {
     flex: 1,
