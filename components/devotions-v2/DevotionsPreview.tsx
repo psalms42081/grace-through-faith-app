@@ -519,11 +519,6 @@ export default function DevotionsPreview() {
           testID="devotions-preview-inspiration-section"
         />
         <VoiceOfTheWeekCard week={pioneerWeek.data} />
-        {pioneerWeek.data?.reading ? (
-          <Text style={s.votwDomain} testID="devotions-preview-votw-public-domain">
-            {pioneerWeek.data.reading.publicDomain}
-          </Text>
-        ) : null}
         <Pressable
           style={[s.rowCard, { backgroundColor: "#F7EBDD" }]}
           onPress={() => router.push("/egw-devotional-preview" as any)}
@@ -1108,14 +1103,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: 6,
-  },
-  votwDomain: {
-    fontFamily: F.inter,
-    color: D2.muted,
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 10,
-    marginTop: -2,
   },
   metaAmber: {
     fontFamily: F.interBold,

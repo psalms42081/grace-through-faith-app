@@ -40,6 +40,13 @@ describe("Pioneer writings surfaces stay source-only", () => {
     const egwAt = source.indexOf('testID="devotions-preview-egw-card"');
     assert.ok(dailyAt > 0 && inspirationAt > dailyAt);
     assert.ok(egwAt > inspirationAt);
+    assert.doesNotMatch(source, /devotions-preview-votw-public-domain/);
+    assert.doesNotMatch(source, /votwDomain/);
+    const between = source.slice(
+      source.indexOf("VoiceOfTheWeekCard"),
+      egwAt,
+    );
+    assert.doesNotMatch(between, /publicDomain/);
   });
 
   it("lets the full-width ODB card size to its content", () => {
