@@ -157,7 +157,8 @@ describe("Home hero verse illustrations", () => {
     const rhythm = readFileSync(new URL("../components/home-v2/DailyRhythm.tsx", import.meta.url), "utf8");
     const groups = readFileSync(new URL("../components/home-v2/HomeBibleGroupCard.tsx", import.meta.url), "utf8");
     assert.match(hero, /heroIllustrationForDay/);
-    assert.match(hero, /width:\s*"38%"/);
+    assert.match(hero, /artWrap/);
+    assert.match(hero, /0\.38/);
     assert.match(hero, /LinearGradient/);
     assert.doesNotMatch(ss, /heroIllustrationForDay/);
     assert.doesNotMatch(rhythm, /heroIllustrationForDay/);

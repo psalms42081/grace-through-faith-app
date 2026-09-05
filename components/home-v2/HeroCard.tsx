@@ -27,6 +27,9 @@ const HERO_ART: Record<HeroVerseIllustrationId, number> = {
   path: require("@/assets/illustrations/plan-youth.png"),
 };
 
+/** ~38% of a phone hero; used until onLayout measures the stage. */
+const ART_FALLBACK = 148;
+
 export type { HeroTab };
 
 interface Props {
@@ -74,6 +77,7 @@ export default function HeroCard({
   dayIndex = dayOfYear(),
 }: Props) {
   const [saved, setSaved] = useState(false);
+  const [artSize, setArtSize] = useState(ART_FALLBACK);
   const art = heroIllustrationForDay(dayIndex, activeTab);
 
   const bookName = verse.reference.replace(/\s+\d+.*$/, "");
@@ -146,23 +150,32 @@ export default function HeroCard({
         })}
       </View>
 
-      <View style={s.stage}>
-        <Image
-          source={HERO_ART[art.id]}
-          style={s.art}
-          resizeMode="contain"
+      <View
+        style={s.stage}
+        onLayout={(e) => {
+          const next = Math.round(e.nativeEvent.layout.width * 0.38);
+          if (next > 0 && next !== artSize) setArtSize(next);
+        }}
+      >
+        <View
+          style={[s.artWrap, { width: artSize, height: artSize }]}
           pointerEvents="none"
           accessible={false}
           importantForAccessibility="no"
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={["#FFFFFF", "rgba(255,255,255,0.94)", "rgba(251,247,238,0.55)", "rgba(251,247,238,0)"]}
-          locations={[0, 0.42, 0.68, 1]}
-          start={{ x: 0, y: 0.15 }}
-          end={{ x: 1, y: 1 }}
-          style={s.fade}
-        />
+        >
+          <Image
+            source={HERO_ART[art.id]}
+            style={{ width: artSize, height: artSize }}
+            resizeMode="contain"
+          />
+          <LinearGradient
+            colors={["#FFFFFF", "rgba(255,255,255,0.72)", "rgba(255,255,255,0)"]}
+            locations={[0, 0.35, 0.72]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
         {activeTab === "verse" && (
           <View style={s.body}>
             <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
@@ -264,17 +277,11 @@ const s = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
-  art: {
+  artWrap: {
     position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: "38%",
-    aspectRatio: 1,
+    right: -6,
+    bottom: -10,
     zIndex: 0,
-  },
-  fade: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
   },
   body: {
     paddingHorizontal: 24,
