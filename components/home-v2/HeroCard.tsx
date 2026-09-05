@@ -13,6 +13,7 @@ import {
 } from "./home-data";
 import { buildHeroShareMessage, type HeroTab } from "./hero-share";
 import {
+  HERO_ART_ASPECT,
   HERO_TEXT_COL_RATIO,
   heroArtRatioForWidth,
   heroIllustrationForDay,
@@ -23,7 +24,6 @@ const HERO_ART: Record<HeroVerseIllustrationId, number> = {
   lamp: require("@/assets/illustrations/plan-prayer.png"),
   candle: require("@/assets/illustrations/rhythm-reflection.png"),
   sunburst: require("@/assets/illustrations/rhythm-morning.png"),
-  "open-book": require("@/assets/illustrations/rhythm-plan.png"),
   olive: require("@/assets/illustrations/plan-health.png"),
   path: require("@/assets/illustrations/plan-youth.png"),
 };
@@ -69,8 +69,20 @@ function showAuthGate() {
   });
 }
 
-function artWidthPercent(ratio: number): `${number}%` {
+function widthPercent(ratio: number): `${number}%` {
   return `${Math.round(ratio * 100)}%`;
+}
+
+/**
+ * react-native-web ignores `aspectRatio` on `Image`, so a percentage width left
+ * the intrinsic 1024px asset height in place and `contain` centred the art far
+ * below the clipped column. Size the art in explicit pixels off the measured
+ * column width and the asset ratio instead. `Image.resolveAssetSource` does not
+ * exist on react-native-web, so the ratio is a constant that
+ * tests/home-hero-coherence.test.ts pins against the real PNG headers.
+ */
+function artPixelHeight(width: number): number {
+  return Math.round(width * HERO_ART_ASPECT);
 }
 
 export default function HeroCard({
@@ -84,7 +96,9 @@ export default function HeroCard({
   const measuredWidth = rowWidth > 0 ? rowWidth : Math.max(windowWidth - 40, 320);
   const art = heroIllustrationForDay(dayIndex, activeTab);
   const artRatio = heroArtRatioForWidth(measuredWidth);
-  const artWidth = artWidthPercent(artRatio);
+  const artSource = HERO_ART[art.id];
+  const artWidth = Math.round(measuredWidth * artRatio);
+  const artHeight = artPixelHeight(artWidth);
 
   const bookName = verse.reference.replace(/\s+\d+.*$/, "");
   assertReflectionReadingAlignment(
@@ -194,16 +208,16 @@ export default function HeroCard({
           if (next > 0 && next !== rowWidth) setRowWidth(next);
         }}
       >
-        <View style={[s.textCol, { width: artWidthPercent(HERO_TEXT_COL_RATIO) }]}>{copy}</View>
+        <View style={[s.textCol, { width: widthPercent(HERO_TEXT_COL_RATIO) }]}>{copy}</View>
         <View
-          style={[s.art, { width: artWidth }]}
+          style={[s.art, { width: artWidth, height: artHeight }]}
           pointerEvents="none"
           accessible={false}
           importantForAccessibility="no"
         >
           <Image
-            source={HERO_ART[art.id]}
-            style={s.artImage}
+            source={artSource}
+            style={{ width: artWidth, height: artHeight }}
             resizeMode="contain"
           />
         </View>
@@ -287,17 +301,14 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   art: {
-    aspectRatio: 1,
     marginLeft: "auto",
+    // Inset on the art, not the row: row padding would shrink the percentage
+    // basis and drop the text column under HERO_TEXT_COL_RATIO.
+    marginRight: 20,
     flexGrow: 0,
     flexShrink: 0,
-    overflow: "hidden",
     alignItems: "flex-end",
     justifyContent: "flex-start",
-  },
-  artImage: {
-    width: "100%",
-    aspectRatio: 1,
   },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },

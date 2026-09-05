@@ -15,6 +15,7 @@ import {
 } from "../components/home-v2/hero-share";
 import { contrastRatio } from "../lib/devotions-visual";
 import {
+  HERO_ART_ASPECT,
   HERO_ART_RATIO,
   HERO_ART_RATIO_NARROW,
   HERO_TEXT_COL_MIN_RATIO,
@@ -23,6 +24,13 @@ import {
   heroArtRatioForWidth,
   heroIllustrationForDay,
 } from "../lib/home-hero-illustration";
+
+/** Intrinsic size straight out of the PNG IHDR chunk — no image deps. */
+function pngSize(path: URL): { width: number; height: number } {
+  const buf = readFileSync(path);
+  assert.equal(buf.subarray(1, 4).toString("ascii"), "PNG", `${path} is not a PNG`);
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
 
 const originalTimeZone = process.env.TZ;
 
@@ -138,7 +146,7 @@ describe("Home hero verse illustrations", () => {
   it("rotates a fixed verse-card list by day-of-year with distinct tab assets", () => {
     assert.deepEqual(
       HERO_VERSE_ILLUSTRATION_LIST.map((item) => item.label),
-      ["lamp", "candle", "sunburst", "open book", "olive branch", "path"],
+      ["lamp", "candle", "sunburst", "olive branch", "path"],
     );
     const verse = heroIllustrationForDay(248, "verse");
     const signpost = heroIllustrationForDay(248, "signpost");
@@ -148,6 +156,71 @@ describe("Home hero verse illustrations", () => {
     assert.notEqual(signpost.id, reflection.id);
     assert.equal(heroIllustrationForDay(248, "verse").id, verse.id);
     assert.notEqual(heroIllustrationForDay(249, "verse").id, verse.id);
+  });
+
+  // The three tabs use consecutive offsets, so they only stay distinct while the
+  // list holds at least three entries. Dropping the list to two would silently
+  // repeat an asset across tabs; this pins the invariant for a whole year.
+  it("shows three different assets on every tab for every day of the year", () => {
+    assert.ok(
+      HERO_VERSE_ILLUSTRATION_LIST.length >= 3,
+      "consecutive tab offsets need at least three entries",
+    );
+    for (let dayIndex = 0; dayIndex <= 365; dayIndex++) {
+      const ids = new Set(
+        (["verse", "signpost", "reflection"] as const).map(
+          (tab) => heroIllustrationForDay(dayIndex, tab).id,
+        ),
+      );
+      assert.equal(ids.size, 3, `day ${dayIndex} repeats an asset: ${[...ids].join(", ")}`);
+    }
+  });
+
+  it("normalises out-of-range and negative day indexes onto the same rotation", () => {
+    const n = HERO_VERSE_ILLUSTRATION_LIST.length;
+    for (const tab of ["verse", "signpost", "reflection"] as const) {
+      for (let dayIndex = -400; dayIndex <= 400; dayIndex++) {
+        const picked = heroIllustrationForDay(dayIndex, tab);
+        assert.ok(
+          HERO_VERSE_ILLUSTRATION_LIST.some((item) => item.id === picked.id),
+          `day ${dayIndex} (${tab}) fell outside the list`,
+        );
+        assert.equal(
+          picked.id,
+          heroIllustrationForDay(dayIndex + n, tab).id,
+          `day ${dayIndex} (${tab}) is not stable across a full list cycle`,
+        );
+      }
+      // Negative indexes must also keep the three tabs distinct.
+      const ids = new Set(
+        (["verse", "signpost", "reflection"] as const).map(
+          (t) => heroIllustrationForDay(-7, t).id,
+        ),
+      );
+      assert.equal(ids.size, 3);
+    }
+  });
+
+  it("keeps HERO_ART ids in sync with the rotation list", () => {
+    const hero = readFileSync(
+      new URL("../components/home-v2/HeroCard.tsx", import.meta.url),
+      "utf8",
+    );
+    const map = hero.slice(hero.indexOf("const HERO_ART"));
+    const block = map.slice(0, map.indexOf("};") + 2);
+    for (const item of HERO_VERSE_ILLUSTRATION_LIST) {
+      assert.ok(block.includes(`${item.id}:`), `HERO_ART is missing ${item.id}`);
+      assert.ok(block.includes(item.file), `HERO_ART is missing ${item.file}`);
+    }
+    const entries = block.match(/require\(/g) ?? [];
+    assert.equal(
+      entries.length,
+      HERO_VERSE_ILLUSTRATION_LIST.length,
+      "HERO_ART has entries the rotation list does not declare",
+    );
+    // The coral headphones were pulled from the rotation as an off-theme media
+    // motif; the asset stays on disk but must not come back into the hero.
+    assert.doesNotMatch(hero, /rhythm-listen/);
   });
 
   it("keeps verse ink readable on cream/white (WCAG AA)", () => {
@@ -182,7 +255,6 @@ describe("Home hero verse illustrations", () => {
     assert.match(hero, /contentRow/);
     assert.match(hero, /flexDirection:\s*"row"/);
     assert.match(hero, /alignItems:\s*"flex-start"/);
-    assert.match(hero, /aspectRatio:\s*1/);
     assert.match(hero, /resizeMode="contain"/);
     assert.doesNotMatch(hero, /LinearGradient/);
     assert.doesNotMatch(hero, /expo-linear-gradient/);
@@ -192,7 +264,7 @@ describe("Home hero verse illustrations", () => {
   it("keeps actions as a sibling below the art with no absolute bottom art", () => {
     const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
     const contentIdx = hero.indexOf("style={s.contentRow}");
-    const artIdx = hero.indexOf("style={[s.art, { width: artWidth }]}");
+    const artIdx = hero.indexOf("style={[s.art, { width: artWidth, height: artHeight }]}");
     const contentClose = hero.indexOf("</View>", artIdx);
     const actionsIdx = hero.indexOf("style={s.actions}");
     assert.ok(contentIdx > 0, "contentRow missing");
@@ -204,5 +276,45 @@ describe("Home hero verse illustrations", () => {
     assert.doesNotMatch(hero, /right:\s*-?\d+/);
     const afterActions = hero.slice(actionsIdx);
     assert.doesNotMatch(afterActions, /<Image\b/);
+  });
+
+  // Regression: the art column rendered empty on react-native-web because
+  // `width: "100%"` + `aspectRatio: 1` on <Image> left the intrinsic 1024px
+  // height in place (measured <img> box was 91x1024 inside a 91x91 clipped
+  // parent), so `contain` centred the art ~466px below the visible window.
+  it("sizes the hero art in explicit pixels, never percentage + aspectRatio", () => {
+    const hero = readFileSync(
+      new URL("../components/home-v2/HeroCard.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(hero, /const artWidth = Math\.round\(measuredWidth \* artRatio\)/);
+    assert.match(hero, /const artHeight = artPixelHeight\(artWidth\)/);
+    assert.match(hero, /style=\{\{ width: artWidth, height: artHeight \}\}/);
+    // No style may set aspectRatio, and the old percentage-sized image is gone.
+    assert.doesNotMatch(hero, /aspectRatio:/);
+    assert.doesNotMatch(hero, /artImage/);
+
+    // The art container itself must not clip or percentage-size the art.
+    const artStyle = hero.slice(hero.indexOf("  art: {"));
+    const artBlock = artStyle.slice(0, artStyle.indexOf("},") + 1);
+    assert.ok(artBlock.includes('marginLeft: "auto"'), "art must stay right-aligned");
+    assert.doesNotMatch(artBlock, /overflow/);
+    assert.doesNotMatch(artBlock, /%/);
+  });
+
+  it("keeps every rotation asset square so HERO_ART_ASPECT stays honest", () => {
+    assert.equal(HERO_ART_ASPECT, 1);
+    for (const item of HERO_VERSE_ILLUSTRATION_LIST) {
+      const { width, height } = pngSize(
+        new URL(`../assets/illustrations/${item.file}`, import.meta.url),
+      );
+      assert.ok(width > 0 && height > 0, `${item.file} has no intrinsic size`);
+      assert.equal(
+        height / width,
+        HERO_ART_ASPECT,
+        `${item.file} is ${width}x${height}; HERO_ART_ASPECT assumes 1:1`,
+      );
+    }
   });
 });
