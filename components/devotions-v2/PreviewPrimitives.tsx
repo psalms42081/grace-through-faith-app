@@ -73,11 +73,13 @@ export function SectionHeading({
   title,
   subtitle,
   action,
+  trailing,
   testID,
 }: {
   title: string;
   subtitle?: string;
   action?: string;
+  trailing?: React.ReactNode;
   testID?: string;
 }) {
   return (
@@ -88,10 +90,12 @@ export function SectionHeading({
       accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
     >
       <View style={s.sectionHeadingCopy}>
-        <Text style={s.sectionTitle}>{title}</Text>
+        <View style={s.sectionHeadingTitleRow}>
+          <Text style={s.sectionTitle}>{title}</Text>
+          {trailing ?? (action ? <Text style={s.sectionAction}>{action}</Text> : null)}
+        </View>
         {subtitle ? <Text style={s.sectionSub}>{subtitle}</Text> : null}
       </View>
-      {action ? <Text style={s.sectionAction}>{action}</Text> : null}
     </View>
   );
 }
@@ -172,10 +176,12 @@ export function CoralTextLink({
   label,
   onPress,
   testID,
+  align = "start",
 }: {
   label: string;
   onPress: () => void;
   testID?: string;
+  align?: "start" | "end";
 }) {
   return (
     <Pressable
@@ -184,7 +190,7 @@ export function CoralTextLink({
       onPress={onPress}
       hitSlop={8}
       testID={testID}
-      style={s.coralLink}
+      style={[s.coralLink, align === "end" && s.coralLinkEnd]}
     >
       <Text style={s.coralLinkText}>{label}</Text>
     </Pressable>
@@ -240,10 +246,7 @@ const s = StyleSheet.create({
   sectionHeading: {
     alignSelf: "stretch",
     width: "100%",
-    flexDirection: "row",
-    alignItems: "flex-end",
     flexShrink: 0,
-    gap: 12,
     marginTop: 25,
     marginBottom: 11,
   },
@@ -252,7 +255,14 @@ const s = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
   },
+  sectionHeadingTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   sectionTitle: {
+    flexShrink: 1,
     fontFamily: F.loraSemi,
     color: D2.ink,
     fontSize: 21,
@@ -338,7 +348,9 @@ const s = StyleSheet.create({
   coralLink: {
     alignSelf: "flex-start",
     paddingVertical: 2,
-    marginBottom: 8,
+  },
+  coralLinkEnd: {
+    alignSelf: "flex-end",
   },
   coralLinkText: {
     fontFamily: F.interSemi,

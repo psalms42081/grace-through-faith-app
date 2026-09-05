@@ -10,6 +10,28 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  BookOpen,
+  Brain,
+  CalendarDays,
+  Crown,
+  Fingerprint,
+  GraduationCap,
+  Handshake,
+  Heart,
+  HeartHandshake,
+  HeartPulse,
+  Home,
+  Landmark,
+  Library,
+  MoonStar,
+  Mountain,
+  ScrollText,
+  Shield,
+  Sprout,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,11 +45,14 @@ import { getPioneerPortrait } from "@/constants/pioneers";
 import type { PioneerWeekResponse } from "@/shared/pioneer-api";
 import {
   DEVOTIONS_CORAL_LINKS,
+  SERIES_ROW_ICON,
   VOTW_CARD_TINT,
   VOTW_CATEGORY_HEX,
   resolveSeriesArtKey,
+  resolveSeriesRowIconName,
   seriesArtFallback,
   type SeriesArtKey,
+  type SeriesRowIconName,
 } from "@/lib/devotions-visual";
 import { D2, F } from "./tokens";
 import {
@@ -106,6 +131,50 @@ const SERIES_ART: Record<SeriesArtKey, number> = {
 };
 
 const BEGIN_TODAY_CANDLE = require("@/assets/illustrations/rhythm-reflection.png");
+
+const SERIES_ROW_ICONS: Record<SeriesRowIconName, LucideIcon> = {
+  Landmark,
+  BookOpen,
+  Heart,
+  UserRound,
+  ScrollText,
+  Crown,
+  Mountain,
+  Shield,
+  HeartPulse,
+  MoonStar,
+  GraduationCap,
+  Home,
+  HeartHandshake,
+  Handshake,
+  Fingerprint,
+  Sprout,
+  Brain,
+  CalendarDays,
+  Library,
+};
+
+function SeriesRowDisc({
+  theme,
+  category,
+  title,
+}: {
+  theme?: string | null;
+  category?: string | null;
+  title?: string | null;
+}) {
+  const Icon = SERIES_ROW_ICONS[resolveSeriesRowIconName({ theme, category, title })];
+  const fallback = seriesArtFallback(theme || category);
+  return (
+    <View style={[s.seriesTile, { backgroundColor: fallback.tint }]}>
+      <Icon
+        size={SERIES_ROW_ICON.size}
+        color={SERIES_ROW_ICON.color}
+        strokeWidth={SERIES_ROW_ICON.strokeWidth}
+      />
+    </View>
+  );
+}
 
 function formatPlanDayReference(books: Book[] | undefined, day: Day | undefined) {
   if (!day?.bookId || !day.chapter) return null;
@@ -461,11 +530,6 @@ export default function DevotionsPreview() {
             {pioneerWeek.data.reading.publicDomain}
           </Text>
         ) : null}
-        <CoralTextLink
-          label={DEVOTIONS_CORAL_LINKS.browseShelf.label}
-          onPress={() => router.push(DEVOTIONS_CORAL_LINKS.browseShelf.href as any)}
-          testID="devotions-preview-browse-shelf"
-        />
         <Pressable
           style={[s.rowCard, { backgroundColor: "#F7EBDD" }]}
           onPress={() => router.push("/egw-devotional-preview" as any)}
@@ -488,50 +552,34 @@ export default function DevotionsPreview() {
           title="Devotional Series"
           subtitle="Scripture, context, and a prayerful response"
           testID="devotions-preview-series-section"
-        />
-        <CoralTextLink
-          label={DEVOTIONS_CORAL_LINKS.allSeries.label}
-          onPress={() => router.push(DEVOTIONS_CORAL_LINKS.allSeries.href as any)}
-          testID="devotions-preview-all-series"
+          trailing={
+            <CoralTextLink
+              label={DEVOTIONS_CORAL_LINKS.allSeries.label}
+              onPress={() => router.push(DEVOTIONS_CORAL_LINKS.allSeries.href as any)}
+              testID="devotions-preview-all-series"
+            />
+          }
         />
         {devotionalPlans.isLoading ? (
           <LoadingState />
         ) : catalogSeries.length ? (
-          catalogSeries.map((p) => {
-            const artKey = resolveSeriesArtKey({
-              theme: p.theme,
-              category: p.category,
-              title: p.title,
-            });
-            const fallback = seriesArtFallback(p.category);
-            const art = artKey ? SERIES_ART[artKey] : null;
-            return (
-              <Pressable
-                key={p.id}
-                style={s.rowCard}
-                onPress={() => setSeriesId(p.id)}
-                testID={`devotions-preview-series-${p.id}`}
-              >
-                <View style={[s.seriesTile, { backgroundColor: fallback.tint }]}>
-                  {art ? (
-                    <Image
-                      source={art}
-                      style={s.seriesTileArt}
-                      resizeMode="contain"
-                      accessibilityLabel={`${p.theme || p.category || "Series"} illustration`}
-                    />
-                  ) : null}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.cardTitle}>{p.title}</Text>
-                  <Text style={s.cardSub}>
-                    {p.theme || "Guided devotional"} · {p.totalDays} days
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color={D2.muted} />
-              </Pressable>
-            );
-          })
+          catalogSeries.map((p) => (
+            <Pressable
+              key={p.id}
+              style={s.rowCard}
+              onPress={() => setSeriesId(p.id)}
+              testID={`devotions-preview-series-${p.id}`}
+            >
+              <SeriesRowDisc theme={p.theme} category={p.category} title={p.title} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.cardTitle}>{p.title}</Text>
+                <Text style={s.cardSub}>
+                  {p.theme || "Guided devotional"} · {p.totalDays} days
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={D2.muted} />
+            </Pressable>
+          ))
         ) : (
           <EmptyState title="More series soon" body="New guided devotional series will appear here." />
         )}
@@ -540,11 +588,13 @@ export default function DevotionsPreview() {
           title="Reading Plans"
           subtitle="A steady way through Scripture"
           testID="devotions-preview-plans-section"
-        />
-        <CoralTextLink
-          label={DEVOTIONS_CORAL_LINKS.allPlans.label}
-          onPress={() => router.push(DEVOTIONS_CORAL_LINKS.allPlans.href as any)}
-          testID="devotions-preview-all-plans"
+          trailing={
+            <CoralTextLink
+              label={DEVOTIONS_CORAL_LINKS.allPlans.label}
+              onPress={() => router.push(DEVOTIONS_CORAL_LINKS.allPlans.href as any)}
+              testID="devotions-preview-all-plans"
+            />
+          }
         />
         {plans.isLoading ? (
           <LoadingState label="Loading the library" />
@@ -588,22 +638,43 @@ export default function DevotionsPreview() {
         </ScrollView>
 
         <View style={s.libraryRow}>
-          {filteredPlans.map((p) => (
-            <Pressable
-              key={p.id}
-              style={s.libraryCard}
-              onPress={() => setDetailId(p.id)}
-              testID={`devotions-preview-plan-${p.id}`}
-            >
-              <View style={s.libraryDot}>
-                <Ionicons name="bookmark-outline" size={16} color={D2.violet} />
-              </View>
-              <Text style={s.cardTitle} numberOfLines={2}>
-                {p.title}
-              </Text>
-              <Text style={s.cardSub}>{p.category || "Scripture"} · {p.durationDays} days</Text>
-            </Pressable>
-          ))}
+          {filteredPlans.map((p) => {
+            const artKey = resolveSeriesArtKey({
+              category: p.category,
+              title: p.title,
+            });
+            const fallback = seriesArtFallback(p.category);
+            const art = artKey ? SERIES_ART[artKey] : null;
+            return (
+              <Pressable
+                key={p.id}
+                style={s.libraryCard}
+                onPress={() => setDetailId(p.id)}
+                testID={`devotions-preview-plan-${p.id}`}
+              >
+                <View style={[s.libraryArt, { backgroundColor: fallback.tint }]}>
+                  {art ? (
+                    <Image
+                      source={art}
+                      style={s.libraryArtImg}
+                      resizeMode="contain"
+                      accessibilityLabel={`${p.category || "Plan"} illustration`}
+                    />
+                  ) : (
+                    <Library
+                      size={22}
+                      color={SERIES_ROW_ICON.color}
+                      strokeWidth={SERIES_ROW_ICON.strokeWidth}
+                    />
+                  )}
+                </View>
+                <Text style={s.cardTitle} numberOfLines={2}>
+                  {p.title}
+                </Text>
+                <Text style={s.cardSub}>{p.category || "Scripture"} · {p.durationDays} days</Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <SectionHeading
@@ -685,34 +756,42 @@ function VoiceOfTheWeekCard({ week }: { week?: PioneerWeekResponse }) {
       }
       testID="devotions-preview-votw-card"
     >
-      {portrait ? (
-        <Image
-          source={portrait.photoAsset}
-          style={s.votwPortrait}
-          accessibilityLabel={reading?.chapter.author}
-        />
-      ) : (
-        <View style={s.votwPortraitFallback}>
-          <Ionicons name="library-outline" size={20} color={VOTW_CATEGORY_HEX} />
-        </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <Text style={s.metaBible}>VOICE OF THE WEEK</Text>
-        <Text style={s.cardTitle} numberOfLines={2}>
-          {reading ? reading.chapter.author : "A pioneer voice each Sabbath"}
-        </Text>
-        <Text style={s.cardSub} numberOfLines={2}>
-          {reading
-            ? `${reading.chapter.book} (${reading.chapter.year})`
-            : "Published readings will appear here."}
-        </Text>
-        {excerpt ? (
-          <Text style={s.votwExcerpt} numberOfLines={2}>
-            {excerpt}
+      <View style={s.votwMain}>
+        {portrait ? (
+          <Image
+            source={portrait.photoAsset}
+            style={s.votwPortrait}
+            accessibilityLabel={reading?.chapter.author}
+          />
+        ) : (
+          <View style={s.votwPortraitFallback}>
+            <Ionicons name="library-outline" size={20} color={VOTW_CATEGORY_HEX} />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={s.metaBible}>VOICE OF THE WEEK</Text>
+          <Text style={s.cardTitle} numberOfLines={2}>
+            {reading ? reading.chapter.author : "A pioneer voice each Sabbath"}
           </Text>
-        ) : null}
+          <Text style={s.cardSub} numberOfLines={2}>
+            {reading
+              ? `${reading.chapter.book} (${reading.chapter.year})`
+              : "Published readings will appear here."}
+          </Text>
+          {excerpt ? (
+            <Text style={s.votwExcerpt} numberOfLines={2}>
+              {excerpt}
+            </Text>
+          ) : null}
+        </View>
+        <Ionicons name="chevron-forward" size={17} color={D2.muted} />
       </View>
-      <Ionicons name="chevron-forward" size={17} color={D2.muted} />
+      <CoralTextLink
+        label={DEVOTIONS_CORAL_LINKS.browseShelf.label}
+        onPress={() => router.push(DEVOTIONS_CORAL_LINKS.browseShelf.href as any)}
+        testID="devotions-preview-browse-shelf"
+        align="end"
+      />
     </Pressable>
   );
 }
@@ -800,6 +879,12 @@ function SeriesModal({
   onClose: () => void;
   onStart: () => void;
 }) {
+  const artKey = plan
+    ? resolveSeriesArtKey({ theme: plan.theme, category: plan.category, title: plan.title })
+    : null;
+  const fallback = seriesArtFallback(plan?.theme || plan?.category);
+  const art = artKey ? SERIES_ART[artKey] : null;
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={s.modalShade}>
@@ -817,6 +902,22 @@ function SeriesModal({
             <LoadingState label="Opening the series" />
           ) : plan ? (
             <ScrollView>
+              <View style={[s.seriesDetailArt, { backgroundColor: fallback.tint }]}>
+                {art ? (
+                  <Image
+                    source={art}
+                    style={s.seriesDetailArtImg}
+                    resizeMode="contain"
+                    accessibilityLabel={`${plan.theme || plan.category || "Series"} illustration`}
+                  />
+                ) : (
+                  <Library
+                    size={36}
+                    color={SERIES_ROW_ICON.color}
+                    strokeWidth={SERIES_ROW_ICON.strokeWidth}
+                  />
+                )}
+              </View>
               <Text style={s.sheetEyebrow}>
                 DEVOTIONAL SERIES · {plan.totalDays} DAYS
               </Text>
@@ -973,15 +1074,18 @@ const s = StyleSheet.create({
     gap: 7,
   },
   votwCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    gap: 10,
     padding: 14,
     borderRadius: 16,
     backgroundColor: D2.card,
     borderWidth: 1,
     borderColor: D2.border,
     marginBottom: 9,
+  },
+  votwMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   votwPortrait: {
     width: 52,
@@ -1050,11 +1154,18 @@ const s = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  seriesDetailArt: {
+    height: 132,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
     overflow: "hidden",
   },
-  seriesTileArt: {
-    width: 40,
-    height: 40,
+  seriesDetailArtImg: {
+    width: 112,
+    height: 112,
   },
   planFeature: {
     borderRadius: 20,
@@ -1134,14 +1245,18 @@ const s = StyleSheet.create({
     borderColor: D2.border,
     minHeight: 125,
   },
-  libraryDot: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: D2.violetFill,
+  libraryArt: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 9,
+    overflow: "hidden",
+  },
+  libraryArtImg: {
+    width: 48,
+    height: 48,
   },
   shelfCard: {
     flexDirection: "row",
