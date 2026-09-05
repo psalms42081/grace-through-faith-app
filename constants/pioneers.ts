@@ -18,15 +18,18 @@ export interface Pioneer {
 export interface PioneerAuthorPortrait {
   id: string;
   name: string;
+  birthYear: number;
   photoAsset: any;
   photoPath: string;
   sourceUrl: string;
 }
 
+/** Shelf order lives in shared/pioneer-authors.ts (birth year, then death year). */
 export const PIONEER_AUTHOR_PORTRAITS: PioneerAuthorPortrait[] = [
   {
     id: "john-loughborough",
     name: "John Norton Loughborough",
+    birthYear: 1832,
     photoAsset: require("@/assets/images/john-loughborough.jpg"),
     photoPath: "assets/images/john-loughborough.jpg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:John_Norton_Loughborough.jpg",
@@ -34,6 +37,7 @@ export const PIONEER_AUTHOR_PORTRAITS: PioneerAuthorPortrait[] = [
   {
     id: "ej-waggoner",
     name: "Ellet Joseph Waggoner",
+    birthYear: 1855,
     photoAsset: require("@/assets/images/ellet-waggoner.jpg"),
     photoPath: "assets/images/ellet-waggoner.jpg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Ellet_Joseph_Waggoner.jpg",
@@ -41,6 +45,7 @@ export const PIONEER_AUTHOR_PORTRAITS: PioneerAuthorPortrait[] = [
   {
     id: "stephen-haskell",
     name: "Stephen Nelson Haskell",
+    birthYear: 1833,
     photoAsset: require("@/assets/images/stephen-haskell.jpg"),
     photoPath: "assets/images/stephen-haskell.jpg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Stephen_N_Haskell.jpg",
@@ -48,6 +53,7 @@ export const PIONEER_AUTHOR_PORTRAITS: PioneerAuthorPortrait[] = [
   {
     id: "at-jones",
     name: "Alonzo Trevier Jones",
+    birthYear: 1850,
     photoAsset: require("@/assets/images/alonzo-t-jones.jpg"),
     photoPath: "assets/images/alonzo-t-jones.jpg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Alonzo_T._Jones.jpg",

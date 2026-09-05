@@ -381,12 +381,12 @@ export default function DevotionsPreview() {
         ) : null}
 
         <SectionHeading
-          title="Daily Readings"
+          title="Daily Reading"
           subtitle="A short pause for the day"
           testID="devotions-preview-daily-section"
         />
         <Pressable
-          style={[s.dailyCard, s.dailyCardFull, { backgroundColor: D2.amberSoft }]}
+          style={[s.dailyCard, { backgroundColor: D2.amberSoft }]}
           onPress={() => router.push("/odb-devotional-preview" as any)}
           testID="devotions-preview-odb-card"
         >
@@ -892,20 +892,11 @@ const s = StyleSheet.create({
     fontFamily: F.interSemi,
     fontSize: 11,
   },
-  dailyRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
   dailyCard: {
-    flex: 1,
+    alignSelf: "stretch",
     borderRadius: 17,
     padding: 14,
-    minHeight: 150,
     gap: 7,
-  },
-  dailyCardFull: {
-    minHeight: 0,
-    marginBottom: 4,
   },
   votwCard: {
     flexDirection: "row",

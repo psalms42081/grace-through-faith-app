@@ -3,6 +3,7 @@ import { db } from "../db";
 import {
   getPioneerAuthorMeta,
   publicDomainLine,
+  sortPioneerAuthorsByBirth,
 } from "../../shared/pioneer-authors";
 import type {
   PioneerChapterPayload,
@@ -216,7 +217,6 @@ export async function getPioneerShelf(): Promise<PioneerShelfAuthor[]> {
       })
       .from(pioneerChapters)
       .orderBy(
-        asc(pioneerChapters.author),
         asc(pioneerChapters.year),
         asc(pioneerChapters.book),
         asc(pioneerChapters.chapterNumber),
@@ -255,7 +255,7 @@ export async function getPioneerShelf(): Promise<PioneerShelfAuthor[]> {
       });
       book.chapterCount = book.chapters.length;
     }
-    return [...authors.values()];
+    return sortPioneerAuthorsByBirth([...authors.values()]);
   } catch (error) {
     if (isMissingRelation(error)) return [];
     throw error;

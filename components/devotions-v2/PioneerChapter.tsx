@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { displayPioneerChapterTitle } from "@/shared/pioneer-title";
 import type { PioneerChapterPayload } from "@/shared/pioneer-api";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState } from "./PreviewPrimitives";
@@ -33,6 +34,9 @@ export default function PioneerChapter() {
   }
 
   const chapter = q.data;
+  const displayTitle = chapter
+    ? displayPioneerChapterTitle(chapter.chapterTitle)
+    : "";
   if (!chapter) {
     return (
       <View style={s.root}>
@@ -50,7 +54,7 @@ export default function PioneerChapter() {
   return (
     <View style={s.root}>
       <Header
-        title={chapter.chapterTitle}
+        title={displayTitle}
         eyebrow={chapter.author}
         topInset={insets.top}
         onBack={() => router.back()}
@@ -59,7 +63,7 @@ export default function PioneerChapter() {
         <View style={s.hero} testID="pioneer-chapter-hero">
           <Text style={s.kicker}>{chapter.author.toUpperCase()}</Text>
           {chapter.authorDates ? <Text style={s.dates}>{chapter.authorDates}</Text> : null}
-          <Text style={s.title}>{chapter.chapterTitle}</Text>
+          <Text style={s.title}>{displayTitle}</Text>
           <View style={s.source}>
             <Ionicons name="library-outline" size={15} color={D2.amber} />
             <Text style={s.sourceText}>

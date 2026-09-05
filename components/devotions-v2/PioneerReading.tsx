@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPioneerPortrait } from "@/constants/pioneers";
+import { displayPioneerChapterTitle } from "@/shared/pioneer-title";
 import type { PioneerReadingPayload, PioneerWeekResponse } from "@/shared/pioneer-api";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState } from "./PreviewPrimitives";
@@ -97,7 +98,7 @@ export default function PioneerReading() {
             {reading.chapter.book} ({reading.chapter.year})
           </Text>
           <Text style={s.chapter}>
-            {reading.chapter.chapterTitle}
+            {displayPioneerChapterTitle(reading.chapter.chapterTitle)}
             {reading.chapter.chapterNumber
               ? ` · Chapter ${reading.chapter.chapterNumber}`
               : ""}

@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPioneerPortrait } from "@/constants/pioneers";
-import type { PioneerShelfAuthor, PioneerShelfResponse } from "@/shared/pioneer-api";
+import { PIONEER_SHELF_PUBLIC_DOMAIN } from "@/shared/pioneer-authors";
+import { displayPioneerChapterTitle } from "@/shared/pioneer-title";
+import type { PioneerShelfResponse } from "@/shared/pioneer-api";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState } from "./PreviewPrimitives";
 import { PublicDomainLine } from "./PioneerProse";
@@ -17,7 +19,6 @@ export default function PioneerShelf() {
   const [openBook, setOpenBook] = useState<string | null>(null);
 
   const authors = q.data?.authors || [];
-  const domain = useMemo(() => firstPublicDomain(authors), [authors]);
 
   return (
     <View style={s.root}>
@@ -113,7 +114,9 @@ export default function PioneerShelf() {
                                   testID={`pioneer-shelf-chapter-${chapter.id}`}
                                 >
                                   <Text style={s.chapterNum}>{chapter.number}</Text>
-                                  <Text style={s.chapterTitle}>{chapter.title}</Text>
+                                  <Text style={s.chapterTitle}>
+                                    {displayPioneerChapterTitle(chapter.title)}
+                                  </Text>
                                 </Pressable>
                               ))
                             : null}
@@ -129,14 +132,15 @@ export default function PioneerShelf() {
           })
         )}
 
-        {domain ? <PublicDomainLine text={domain} testID="pioneer-shelf-public-domain" /> : null}
+        {authors.length > 0 ? (
+          <PublicDomainLine
+            text={PIONEER_SHELF_PUBLIC_DOMAIN}
+            testID="pioneer-shelf-public-domain"
+          />
+        ) : null}
       </ScrollView>
     </View>
   );
-}
-
-function firstPublicDomain(authors: PioneerShelfAuthor[]): string | null {
-  return authors[0]?.books[0]?.publicDomain ?? null;
 }
 
 const s = StyleSheet.create({
