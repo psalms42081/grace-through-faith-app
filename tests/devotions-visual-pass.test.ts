@@ -13,6 +13,7 @@ import {
   VOTW_EYEBROW_CONTRAST,
   VOTW_WASH_ON_WHITE,
   contrastRatio,
+  formatSeriesRowThemeLabel,
   resolveSeriesArtKey,
   resolveSeriesRowIconName,
   seriesArtFallback,
@@ -152,7 +153,11 @@ describe("Devotions visual pass", () => {
     assert.equal(resolveSeriesRowIconName({ category: "prophetic" }), "Scroll");
     assert.equal(resolveSeriesRowIconName({ theme: "Comfort & Encouragement" }), "Heart");
     assert.equal(resolveSeriesRowIconName({ theme: "Faith & Perseverance" }), "Anchor");
-    assert.equal(resolveSeriesRowIconName({ theme: "Spiritual Warfare" }), "Sprout");
+    assert.equal(resolveSeriesRowIconName({ theme: "Spiritual Warfare" }), "Shield");
+    assert.equal(resolveSeriesRowIconName({ theme: "spiritual warfare" }), "Shield");
+    assert.equal(resolveSeriesRowIconName({ theme: "wisdom" }), "Lightbulb");
+    assert.equal(resolveSeriesRowIconName({ theme: "sabbath,rest" }), "Moon");
+    assert.equal(resolveSeriesRowIconName({ theme: "rest" }), "Moon");
     assert.equal(resolveSeriesRowIconName({ category: "foundations" }), "BookOpen");
     assert.equal(resolveSeriesRowIconName({ theme: "Core Doctrines" }), "BookOpen");
     assert.equal(resolveSeriesRowIconName({ theme: "Unknown Theme", category: "thematic" }), "BookOpen");
@@ -178,6 +183,9 @@ describe("Devotions visual pass", () => {
       "Sprout",
       "Scroll",
       "Church",
+      "Shield",
+      "Lightbulb",
+      "Moon",
       "BookOpen",
     ]) {
       assert.match(preview, new RegExp(`\\b${icon}\\b`), `SERIES_ROW_ICONS must include ${icon}`);
@@ -188,6 +196,17 @@ describe("Devotions visual pass", () => {
     assert.doesNotMatch(seriesBlock[0], /<Image/);
     assert.doesNotMatch(seriesBlock[0], /resolveSeriesArtKey/);
     assert.match(seriesBlock[0], /SeriesRowDisc/);
+    assert.match(seriesBlock[0], /formatSeriesRowThemeLabel/);
+  });
+
+  it("formats comma-tag series subtitles and leaves proper labels", () => {
+    assert.equal(formatSeriesRowThemeLabel("faith,strength"), "Faith, Strength");
+    assert.equal(formatSeriesRowThemeLabel("peace,comfort"), "Peace, Comfort");
+    assert.equal(formatSeriesRowThemeLabel("hope"), "Hope");
+    assert.equal(formatSeriesRowThemeLabel("Core Doctrines"), "Core Doctrines");
+    assert.equal(formatSeriesRowThemeLabel("Comfort & Encouragement"), "Comfort & Encouragement");
+    assert.equal(formatSeriesRowThemeLabel(null), "Guided devotional");
+    assert.equal(formatSeriesRowThemeLabel(""), "Guided devotional");
   });
 
   it("maps series categories to plan illustrations off list rows", () => {

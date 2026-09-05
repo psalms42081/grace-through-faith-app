@@ -19,7 +19,10 @@ import {
   Heart,
   Leaf,
   Library,
+  Lightbulb,
+  Moon,
   Scroll,
+  Shield,
   Sprout,
   Sunrise,
   User,
@@ -42,6 +45,7 @@ import {
   SERIES_ROW_ICON,
   VOTW_CARD_TINT,
   VOTW_CATEGORY_HEX,
+  formatSeriesRowThemeLabel,
   resolveSeriesArtKey,
   resolveSeriesRowIconName,
   seriesArtFallback,
@@ -138,6 +142,9 @@ const SERIES_ROW_ICONS: Record<SeriesRowIconName, LucideIcon> = {
   Sprout,
   Scroll,
   Church,
+  Shield,
+  Lightbulb,
+  Moon,
   BookOpen,
 };
 
@@ -561,7 +568,7 @@ export default function DevotionsPreview() {
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{p.title}</Text>
                 <Text style={s.cardSub}>
-                  {p.theme || "Guided devotional"} · {p.totalDays} days
+                  {formatSeriesRowThemeLabel(p.theme)} · {p.totalDays} days
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={17} color={D2.muted} />

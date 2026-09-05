@@ -67,6 +67,9 @@ export type SeriesRowIconName =
   | "Sprout"
   | "Scroll"
   | "Church"
+  | "Shield"
+  | "Lightbulb"
+  | "Moon"
   | "BookOpen";
 
 const SERIES_ART_RULES: { key: SeriesArtKey; needles: string[] }[] = [
@@ -103,9 +106,12 @@ const SERIES_ROW_ICON_RULES: { icon: SeriesRowIconName; needles: string[] }[] = 
   { icon: "User", needles: ["identity"] },
   { icon: "Users", needles: ["relationship"] },
   { icon: "Leaf", needles: ["seasonal"] },
+  { icon: "Shield", needles: ["spiritual warfare", "warfare"] },
+  { icon: "Moon", needles: ["sabbath", "rest"] },
+  { icon: "Lightbulb", needles: ["wisdom"] },
   { icon: "Sprout", needles: ["spiritual growth", "spiritual-growth", "spiritual"] },
   { icon: "Scroll", needles: ["prophecy", "prophetic", "prophecies"] },
-  { icon: "Church", needles: ["sanctuary"] },
+  { icon: "Church", needles: ["sanctuary", "heavenly sanctuary"] },
   { icon: "Anchor", needles: ["faith", "strength"] },
 ];
 
@@ -153,6 +159,25 @@ export function resolveSeriesArtKey(input: {
     }
   }
   return null;
+}
+
+/**
+ * Series-row subtitle. Comma-tag strings ("faith,strength") become
+ * "Faith, Strength". Proper labels ("Core Doctrines") stay as stored.
+ */
+export function formatSeriesRowThemeLabel(raw: string | null | undefined): string {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "Guided devotional";
+  if (!trimmed.includes(",") && /\s/.test(trimmed)) return trimmed;
+  return trimmed
+    .split(",")
+    .map((tag) => {
+      const word = tag.trim();
+      if (!word) return "";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .filter(Boolean)
+    .join(", ");
 }
 
 /**
