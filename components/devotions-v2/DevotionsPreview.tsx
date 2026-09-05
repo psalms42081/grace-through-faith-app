@@ -14,16 +14,24 @@ import {
   Anchor,
   BookOpen,
   Church,
+  Cross,
+  Eye,
+  Feather,
   Flame,
+  Footprints,
   HandHeart,
   Heart,
+  Landmark,
   Leaf,
   Library,
   Lightbulb,
   Moon,
+  Mountain,
+  Music,
   Scroll,
   Shield,
   Sprout,
+  Sun,
   Sunrise,
   User,
   Users,
@@ -132,6 +140,7 @@ const BEGIN_TODAY_CANDLE = require("@/assets/illustrations/rhythm-reflection.png
 
 const SERIES_ROW_ICONS: Record<SeriesRowIconName, LucideIcon> = {
   Sunrise,
+  Sun,
   Anchor,
   Heart,
   HandHeart,
@@ -145,19 +154,28 @@ const SERIES_ROW_ICONS: Record<SeriesRowIconName, LucideIcon> = {
   Shield,
   Lightbulb,
   Moon,
+  Eye,
+  Footprints,
+  Feather,
+  Landmark,
+  Cross,
+  Music,
+  Mountain,
   BookOpen,
 };
 
 function SeriesRowDisc({
+  id,
   theme,
   category,
   title,
 }: {
+  id?: string | null;
   theme?: string | null;
   category?: string | null;
   title?: string | null;
 }) {
-  const Icon = SERIES_ROW_ICONS[resolveSeriesRowIconName({ theme, category, title })];
+  const Icon = SERIES_ROW_ICONS[resolveSeriesRowIconName({ id, theme, category, title })];
   const fallback = seriesArtFallback(theme || category);
   return (
     <View style={[s.seriesTile, { backgroundColor: fallback.tint }]}>
@@ -559,7 +577,7 @@ export default function DevotionsPreview() {
               onPress={() => setSeriesId(p.id)}
               testID={`devotions-preview-series-${p.id}`}
             >
-              <SeriesRowDisc theme={p.theme} category={p.category} title={p.title} />
+              <SeriesRowDisc id={p.id} theme={p.theme} category={p.category} title={p.title} />
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{p.title}</Text>
                 <Text style={s.cardSub}>

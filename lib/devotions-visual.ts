@@ -54,9 +54,10 @@ export type SeriesArtKey =
   | "mental-health"
   | "seasonal";
 
-/** Lucide export names — one line icon per named series category/theme. */
+/** Lucide export names — one line icon per catalog series, plus category fallbacks. */
 export type SeriesRowIconName =
   | "Sunrise"
+  | "Sun"
   | "Anchor"
   | "Heart"
   | "HandHeart"
@@ -70,7 +71,80 @@ export type SeriesRowIconName =
   | "Shield"
   | "Lightbulb"
   | "Moon"
+  | "Eye"
+  | "Footprints"
+  | "Feather"
+  | "Landmark"
+  | "Cross"
+  | "Music"
+  | "Mountain"
   | "BookOpen";
+
+export type CatalogSeriesRowIcon = {
+  slug: string;
+  title: string;
+  icon: SeriesRowIconName;
+};
+
+/** Stable lookup key for series slug, id, or title (apostrophes and punctuation dropped). */
+export function seriesRowKey(value: string | null | undefined): string {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * One Lucide icon per approved catalog series, keyed by stable title slug.
+ * Plan IDs are UUIDs at seed time, so slug + title are the durable keys.
+ */
+export const CATALOG_SERIES_ROW_ICONS: readonly CatalogSeriesRowIcon[] = [
+  { slug: "foundations-of-faith", title: "Foundations of Faith", icon: "Landmark" },
+  { slug: "the-life-of-christ", title: "The Life of Christ", icon: "Cross" },
+  { slug: "psalms-of-comfort", title: "Psalms of Comfort", icon: "Music" },
+  { slug: "women-of-the-bible", title: "Women of the Bible", icon: "Users" },
+  { slug: "prophets-and-prophecy", title: "Prophets and Prophecy", icon: "Eye" },
+  { slug: "parables-of-jesus", title: "Parables of Jesus", icon: "Sprout" },
+  { slug: "walking-through-the-wilderness", title: "Walking Through the Wilderness", icon: "Footprints" },
+  { slug: "the-armor-of-god", title: "The Armor of God", icon: "Shield" },
+  { slug: "the-sabbath-rest", title: "The Sabbath Rest", icon: "Moon" },
+  { slug: "daniels-prophecies-end-time-visions", title: "Daniel's Prophecies — End-Time Visions", icon: "Scroll" },
+  { slug: "gods-health-blueprint", title: "God's Health Blueprint", icon: "Leaf" },
+  { slug: "the-heavenly-sanctuary", title: "The Heavenly Sanctuary", icon: "Church" },
+  { slug: "death-sleep-and-resurrection", title: "Death, Sleep, and Resurrection", icon: "Sunrise" },
+  { slug: "a-life-of-prayer", title: "A Life of Prayer", icon: "Flame" },
+  { slug: "wisdom-for-life", title: "Wisdom for Life", icon: "Lightbulb" },
+  { slug: "gods-unfailing-love", title: "God's Unfailing Love", icon: "Heart" },
+  { slug: "living-in-hope", title: "Living in Hope", icon: "Sun" },
+  { slug: "strength-in-weakness", title: "Strength in Weakness", icon: "Anchor" },
+  { slug: "finding-peace", title: "Finding Peace", icon: "Feather" },
+  { slug: "grace-upon-grace", title: "Grace Upon Grace", icon: "HandHeart" },
+  { slug: "the-sermon-on-the-mount", title: "The Sermon on the Mount", icon: "Mountain" },
+];
+
+/** Extra slugs that should resolve to the same catalog row (short titles, no leading "the"). */
+const SERIES_ROW_ICON_SLUG_ALIASES: Record<string, string> = {
+  "daniels-prophecies": "daniels-prophecies-end-time-visions",
+  "heavenly-sanctuary": "the-heavenly-sanctuary",
+  "armor-of-god": "the-armor-of-god",
+  "sabbath-rest": "the-sabbath-rest",
+  "life-of-christ": "the-life-of-christ",
+  "sermon-on-the-mount": "the-sermon-on-the-mount",
+};
+
+const SERIES_ROW_ICON_BY_SLUG: Record<string, SeriesRowIconName> = Object.fromEntries(
+  CATALOG_SERIES_ROW_ICONS.flatMap((entry) => [
+    [entry.slug, entry.icon],
+    [seriesRowKey(entry.title), entry.icon],
+  ]),
+);
+
+for (const [alias, canonical] of Object.entries(SERIES_ROW_ICON_SLUG_ALIASES)) {
+  const icon = SERIES_ROW_ICON_BY_SLUG[canonical];
+  if (icon) SERIES_ROW_ICON_BY_SLUG[alias] = icon;
+}
 
 const SERIES_ART_RULES: { key: SeriesArtKey; needles: string[] }[] = [
   { key: "end-times", needles: ["end time", "end-times", "second coming"] },
@@ -94,8 +168,8 @@ const SERIES_ART_RULES: { key: SeriesArtKey; needles: string[] }[] = [
 ];
 
 /**
- * Keyword → Lucide. Specific themes before faith/strength so titles like
- * "Grace Upon Grace" (theme grace,faith) keep HandHeart, not Anchor.
+ * Category/theme fallback when a series is not in CATALOG_SERIES_ROW_ICONS.
+ * Specific themes before faith/strength so "grace,faith" keeps HandHeart.
  * Dove and Mirror are not lucide-react-native exports.
  */
 const SERIES_ROW_ICON_RULES: { icon: SeriesRowIconName; needles: string[] }[] = [
@@ -181,15 +255,33 @@ export function formatSeriesRowThemeLabel(raw: string | null | undefined): strin
 }
 
 /**
- * Category line icon for list rows. Never empty — unknown categories use BookOpen.
- * Illustrations stay off list rows.
+ * Per-series line icon for list rows. Look up slug/id/title first so two
+ * prophetic series never share Scroll. Unknown series fall back to the
+ * category/theme keyword map, then BookOpen. Illustrations stay off list rows.
  */
 export function resolveSeriesRowIconName(input: {
+  id?: string | null;
+  slug?: string | null;
   theme?: string | null;
   category?: string | null;
   title?: string | null;
 }): SeriesRowIconName {
-  const text = haystack([input.theme, input.category, input.title]);
+  const keys = [input.slug, input.id, input.title]
+    .flatMap((value) => {
+      const key = seriesRowKey(value);
+      if (!key) return [];
+      const beforeDash = key.split("-end-time-")[0];
+      const alias = SERIES_ROW_ICON_SLUG_ALIASES[key] ?? SERIES_ROW_ICON_SLUG_ALIASES[beforeDash];
+      return alias ? [key, alias, beforeDash] : [key, beforeDash];
+    })
+    .filter((key, index, all) => all.indexOf(key) === index);
+
+  for (const key of keys) {
+    const icon = SERIES_ROW_ICON_BY_SLUG[key];
+    if (icon) return icon;
+  }
+
+  const text = haystack([input.theme, input.category]);
   if (!text) return "BookOpen";
   for (const rule of SERIES_ROW_ICON_RULES) {
     if (rule.needles.some((needle) => text.includes(needle))) {

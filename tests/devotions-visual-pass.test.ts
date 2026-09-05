@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { PathB } from "../constants/colors";
+import { APPROVED_DEVOTIONAL_TITLES } from "../server/devotional-catalog-coordinator";
 import {
+  CATALOG_SERIES_ROW_ICONS,
   DEVOTIONS_CORAL_LINKS,
   DEVOTIONS_SECTION_HEADINGS,
   HOME_RHYTHM_ILLUSTRATION,
@@ -125,10 +127,10 @@ describe("Devotions visual pass", () => {
     assert.match(primitives, /sectionSub:[\s\S]*fontFamily:\s*F\.inter/);
   });
 
-  it("uses category line icons on series list rows, never illustrations", () => {
+  it("uses a unique per-series line icon on list rows, never illustrations", () => {
     assert.equal(
       resolveSeriesRowIconName({ title: "Living in Hope", theme: "hope", category: "foundations" }),
-      "Sunrise",
+      "Sun",
     );
     assert.equal(
       resolveSeriesRowIconName({
@@ -148,7 +150,14 @@ describe("Devotions visual pass", () => {
     assert.equal(resolveSeriesRowIconName({ theme: "seasonal" }), "Leaf");
     assert.equal(resolveSeriesRowIconName({ theme: "spiritual-growth" }), "Sprout");
     assert.equal(resolveSeriesRowIconName({ theme: "Prophecy & Fulfillment" }), "Scroll");
-    assert.equal(resolveSeriesRowIconName({ title: "The Heavenly Sanctuary" }), "Church");
+    assert.equal(
+      resolveSeriesRowIconName({ title: "The Heavenly Sanctuary", category: "prophetic" }),
+      "Church",
+    );
+    assert.equal(resolveSeriesRowIconName({ title: "Daniel's Prophecies — End-Time Visions", category: "prophetic" }), "Scroll");
+    assert.equal(resolveSeriesRowIconName({ title: "Daniel's Prophecies", category: "prophetic" }), "Scroll");
+    assert.equal(resolveSeriesRowIconName({ slug: "daniels-prophecies" }), "Scroll");
+    assert.equal(resolveSeriesRowIconName({ title: "Prophets and Prophecy", category: "prophetic" }), "Eye");
     assert.equal(resolveSeriesRowIconName({ title: "Death, Sleep, and Resurrection" }), "Sunrise");
     assert.equal(resolveSeriesRowIconName({ category: "prophetic" }), "Scroll");
     assert.equal(resolveSeriesRowIconName({ theme: "Comfort & Encouragement" }), "Heart");
@@ -166,6 +175,10 @@ describe("Devotions visual pass", () => {
       resolveSeriesRowIconName({ title: "Living in Hope", category: "foundations" }),
       resolveSeriesRowIconName({ title: "Strength in Weakness", category: "foundations" }),
     );
+    const catalogIcons = CATALOG_SERIES_ROW_ICONS.map((entry) => entry.icon);
+    assert.equal(new Set(catalogIcons).size, catalogIcons.length, "catalog series icons must be unique");
+    const catalogTitles = CATALOG_SERIES_ROW_ICONS.map((entry) => entry.title);
+    assert.deepEqual([...catalogTitles].sort(), [...APPROVED_DEVOTIONAL_TITLES].sort());
     assert.equal(SERIES_ROW_ICON.strokeWidth, 1.5);
     assert.equal(SERIES_ROW_ICON.color, "rgba(31, 26, 18, 0.70)");
     assert.match(preview, /resolveSeriesRowIconName/);
@@ -173,6 +186,7 @@ describe("Devotions visual pass", () => {
     assert.match(preview, /SeriesRowDisc/);
     for (const icon of [
       "Sunrise",
+      "Sun",
       "Anchor",
       "Heart",
       "HandHeart",
@@ -186,6 +200,13 @@ describe("Devotions visual pass", () => {
       "Shield",
       "Lightbulb",
       "Moon",
+      "Eye",
+      "Footprints",
+      "Feather",
+      "Landmark",
+      "Cross",
+      "Music",
+      "Mountain",
       "BookOpen",
     ]) {
       assert.match(preview, new RegExp(`\\b${icon}\\b`), `SERIES_ROW_ICONS must include ${icon}`);
