@@ -114,10 +114,19 @@ describe("pioneer shelf author order", () => {
 
   it("sorts the shelf in the API, not ad-hoc in the UI", () => {
     const service = readFileSync(new URL("../server/services/pioneerService.ts", import.meta.url), "utf8");
+    const routes = readFileSync(new URL("../server/routes/pioneers.ts", import.meta.url), "utf8");
     const shelf = readFileSync(new URL("../components/devotions-v2/PioneerShelf.tsx", import.meta.url), "utf8");
     assert.match(service, /sortPioneerAuthorsByBirth/);
+    assert.match(routes, /router\.get\("\/shelf"/);
+    assert.match(routes, /getPioneerShelf/);
     assert.doesNotMatch(shelf, /sortPioneerAuthorsByBirth|birthYear|\.sort\(/);
     assert.doesNotMatch(shelf, /localeCompare/);
+  });
+
+  it("drops the persisted first-name shelf payload", () => {
+    const qc = readFileSync(new URL("../lib/query-client.ts", import.meta.url), "utf8");
+    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v5-shelf-v1"/);
+    assert.match(qc, /"grace-through-faith-cache-v11-structure-v5"/);
   });
 });
 

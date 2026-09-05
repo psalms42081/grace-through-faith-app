@@ -1,5 +1,13 @@
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  type ImageSourcePropType,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BookOpen } from "lucide-react-native";
 import { D2, F } from "./tokens";
@@ -122,18 +130,33 @@ export function EmptyState({
   action,
   onAction,
   testID,
+  illustration,
+  illustrationLabel,
 }: {
   title: string;
   body: string;
   action?: string;
   onAction?: () => void;
   testID?: string;
+  illustration?: ImageSourcePropType;
+  illustrationLabel?: string;
 }) {
   return (
     <View style={s.empty} testID={testID}>
-      <View style={s.emptyIcon}>
-        <BookOpen size={25} color={D2.violet} strokeWidth={1.8} />
-      </View>
+      {illustration ? (
+        <View style={s.emptyRhythmDisc}>
+          <Image
+            source={illustration}
+            style={s.emptyRhythmImg}
+            resizeMode="contain"
+            accessibilityLabel={illustrationLabel}
+          />
+        </View>
+      ) : (
+        <View style={s.emptyIcon}>
+          <BookOpen size={25} color={D2.violet} strokeWidth={1.8} />
+        </View>
+      )}
       <Text style={s.stateTitle}>{title}</Text>
       <Text style={s.stateText}>{body}</Text>
       {action && onAction ? (
@@ -142,6 +165,29 @@ export function EmptyState({
         </Pressable>
       ) : null}
     </View>
+  );
+}
+
+export function CoralTextLink({
+  label,
+  onPress,
+  testID,
+}: {
+  label: string;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={8}
+      testID={testID}
+      style={s.coralLink}
+    >
+      <Text style={s.coralLinkText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -275,6 +321,29 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
+  },
+  emptyRhythmDisc: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: D2.amberSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  emptyRhythmImg: {
+    width: 28,
+    height: 28,
+  },
+  coralLink: {
+    alignSelf: "flex-start",
+    paddingVertical: 2,
+    marginBottom: 8,
+  },
+  coralLinkText: {
+    fontFamily: F.interSemi,
+    color: D2.coral,
+    fontSize: 13,
   },
   primaryButton: {
     minHeight: 50,

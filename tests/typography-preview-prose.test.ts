@@ -132,11 +132,12 @@ describe("typography preview source contracts", () => {
     const layout = readFileSync(new URL("../app/_layout.tsx", import.meta.url), "utf8");
     const scripture = readFileSync(new URL("../server/services/scripture-service.ts", import.meta.url), "utf8");
     const kjvStructure = readFileSync(new URL("../server/services/kjv-structure.ts", import.meta.url), "utf8");
-    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v5"/);
+    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v5-shelf-v1"/);
     assert.match(qc, /grace-through-faith-cache-v11-\$\{QUERY_PERSIST_BUSTER\}/);
     assert.match(qc, /"grace-through-faith-cache-v10"/);
     assert.match(qc, /"grace-through-faith-cache-v11-structure-v3"/);
     assert.match(qc, /"grace-through-faith-cache-v11-structure-v4"/);
+    assert.match(qc, /"grace-through-faith-cache-v11-structure-v5"/);
     assert.match(layout, /buster: QUERY_PERSIST_BUSTER/);
     assert.match(scripture, /apibible-\$\{KJV_STRUCTURE_VERSION\}-/);
     assert.match(scripture, /\$\{KJV_STRUCTURE_VERSION\}\|/);

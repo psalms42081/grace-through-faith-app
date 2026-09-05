@@ -21,8 +21,23 @@ import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import * as Haptics from "expo-haptics";
 import { getPioneerPortrait } from "@/constants/pioneers";
 import type { PioneerWeekResponse } from "@/shared/pioneer-api";
+import {
+  DEVOTIONS_CORAL_LINKS,
+  VOTW_CARD_TINT,
+  VOTW_CATEGORY_HEX,
+  resolveSeriesArtKey,
+  seriesArtFallback,
+  type SeriesArtKey,
+} from "@/lib/devotions-visual";
 import { D2, F } from "./tokens";
-import { EmptyState, Header, LoadingState, PrimaryButton, SectionHeading } from "./PreviewPrimitives";
+import {
+  CoralTextLink,
+  EmptyState,
+  Header,
+  LoadingState,
+  PrimaryButton,
+  SectionHeading,
+} from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -71,6 +86,26 @@ type Book = { id: number; name: string; abbreviation: string; testament: string;
 type Odb = { id: number; title: string; date: string; author: string };
 type Egw = { title: string; content: string; bookTitle: string; bookId: number; chapterNumber?: number; date: string; sourceUrl?: string; source?: "local" | "live" };
 type DevotionalPlanDay = { id: string; dayNumber: number; title: string; passageLabel: string | null };
+
+const SERIES_ART: Record<SeriesArtKey, number> = {
+  doctrine: require("@/assets/illustrations/plan-doctrine.png"),
+  prophecy: require("@/assets/illustrations/plan-prophecy.png"),
+  "end-times": require("@/assets/illustrations/plan-end-times.png"),
+  prayer: require("@/assets/illustrations/plan-prayer.png"),
+  health: require("@/assets/illustrations/plan-health.png"),
+  sabbath: require("@/assets/illustrations/plan-sabbath.png"),
+  youth: require("@/assets/illustrations/plan-youth.png"),
+  family: require("@/assets/illustrations/plan-family.png"),
+  relationships: require("@/assets/illustrations/plan-relationships.png"),
+  forgiveness: require("@/assets/illustrations/plan-forgiveness.png"),
+  identity: require("@/assets/illustrations/plan-identity.png"),
+  "new-believers": require("@/assets/illustrations/plan-new-believers.png"),
+  "spiritual-growth": require("@/assets/illustrations/plan-spiritual-growth.png"),
+  "mental-health": require("@/assets/illustrations/plan-mental-health.png"),
+  seasonal: require("@/assets/illustrations/plan-seasonal.png"),
+};
+
+const BEGIN_TODAY_CANDLE = require("@/assets/illustrations/rhythm-reflection.png");
 
 function formatPlanDayReference(books: Book[] | undefined, day: Day | undefined) {
   if (!day?.bookId || !day.chapter) return null;
@@ -313,6 +348,8 @@ export default function DevotionsPreview() {
             action="Explore plans"
             onAction={() => setDetailId((plans.data || [])[0]?.id || null)}
             testID="devotions-preview-continue-empty"
+            illustration={BEGIN_TODAY_CANDLE}
+            illustrationLabel="Reflection"
           />
         )}
 
@@ -424,6 +461,11 @@ export default function DevotionsPreview() {
             {pioneerWeek.data.reading.publicDomain}
           </Text>
         ) : null}
+        <CoralTextLink
+          label={DEVOTIONS_CORAL_LINKS.browseShelf.label}
+          onPress={() => router.push(DEVOTIONS_CORAL_LINKS.browseShelf.href as any)}
+          testID="devotions-preview-browse-shelf"
+        />
         <Pressable
           style={[s.rowCard, { backgroundColor: "#F7EBDD" }]}
           onPress={() => router.push("/egw-devotional-preview" as any)}
@@ -447,28 +489,49 @@ export default function DevotionsPreview() {
           subtitle="Scripture, context, and a prayerful response"
           testID="devotions-preview-series-section"
         />
+        <CoralTextLink
+          label={DEVOTIONS_CORAL_LINKS.allSeries.label}
+          onPress={() => router.push(DEVOTIONS_CORAL_LINKS.allSeries.href as any)}
+          testID="devotions-preview-all-series"
+        />
         {devotionalPlans.isLoading ? (
           <LoadingState />
         ) : catalogSeries.length ? (
-          catalogSeries.map((p) => (
-            <Pressable
-              key={p.id}
-              style={s.rowCard}
-              onPress={() => setSeriesId(p.id)}
-              testID={`devotions-preview-series-${p.id}`}
-            >
-              <View style={[s.rowIcon, { backgroundColor: D2.amberSoft }]}>
-                <Ionicons name="library-outline" size={19} color={D2.amber} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>{p.title}</Text>
-                <Text style={s.cardSub}>
-                  {p.theme || "Guided devotional"} · {p.totalDays} days
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={17} color={D2.muted} />
-            </Pressable>
-          ))
+          catalogSeries.map((p) => {
+            const artKey = resolveSeriesArtKey({
+              theme: p.theme,
+              category: p.category,
+              title: p.title,
+            });
+            const fallback = seriesArtFallback(p.category);
+            const art = artKey ? SERIES_ART[artKey] : null;
+            return (
+              <Pressable
+                key={p.id}
+                style={s.rowCard}
+                onPress={() => setSeriesId(p.id)}
+                testID={`devotions-preview-series-${p.id}`}
+              >
+                <View style={[s.seriesTile, { backgroundColor: fallback.tint }]}>
+                  {art ? (
+                    <Image
+                      source={art}
+                      style={s.seriesTileArt}
+                      resizeMode="contain"
+                      accessibilityLabel={`${p.theme || p.category || "Series"} illustration`}
+                    />
+                  ) : null}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.cardTitle}>{p.title}</Text>
+                  <Text style={s.cardSub}>
+                    {p.theme || "Guided devotional"} · {p.totalDays} days
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={D2.muted} />
+              </Pressable>
+            );
+          })
         ) : (
           <EmptyState title="More series soon" body="New guided devotional series will appear here." />
         )}
@@ -477,6 +540,11 @@ export default function DevotionsPreview() {
           title="Reading Plans"
           subtitle="A steady way through Scripture"
           testID="devotions-preview-plans-section"
+        />
+        <CoralTextLink
+          label={DEVOTIONS_CORAL_LINKS.allPlans.label}
+          onPress={() => router.push(DEVOTIONS_CORAL_LINKS.allPlans.href as any)}
+          testID="devotions-preview-all-plans"
         />
         {plans.isLoading ? (
           <LoadingState label="Loading the library" />
@@ -607,7 +675,7 @@ function VoiceOfTheWeekCard({ week }: { week?: PioneerWeekResponse }) {
 
   return (
     <Pressable
-      style={s.votwCard}
+      style={[s.votwCard, { backgroundColor: VOTW_CARD_TINT }]}
       onPress={() =>
         router.push(
           reading
@@ -625,11 +693,11 @@ function VoiceOfTheWeekCard({ week }: { week?: PioneerWeekResponse }) {
         />
       ) : (
         <View style={s.votwPortraitFallback}>
-          <Ionicons name="library-outline" size={20} color={D2.amber} />
+          <Ionicons name="library-outline" size={20} color={VOTW_CATEGORY_HEX} />
         </View>
       )}
       <View style={{ flex: 1 }}>
-        <Text style={s.metaAmber}>VOICE OF THE WEEK</Text>
+        <Text style={s.metaBible}>VOICE OF THE WEEK</Text>
         <Text style={s.cardTitle} numberOfLines={2}>
           {reading ? reading.chapter.author : "A pioneer voice each Sabbath"}
         </Text>
@@ -925,9 +993,16 @@ const s = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: D2.amberSoft,
+    backgroundColor: VOTW_CARD_TINT,
     alignItems: "center",
     justifyContent: "center",
+  },
+  metaBible: {
+    fontFamily: F.interBold,
+    color: VOTW_CATEGORY_HEX,
+    fontSize: 9,
+    letterSpacing: 1,
+    marginTop: 5,
   },
   votwExcerpt: {
     fontFamily: F.inter,
@@ -968,6 +1043,18 @@ const s = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
+  },
+  seriesTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  seriesTileArt: {
+    width: 40,
+    height: 40,
   },
   planFeature: {
     borderRadius: 20,

@@ -186,7 +186,7 @@ describe("locked constraints stay in place", () => {
     assert.match(schema, /export const bibleSmallGroups = pgTable/);
     assert.match(schema, /adultConfirmedAt/);
     const persist = read("lib/query-client.ts");
-    assert.match(persist, /QUERY_PERSIST_BUSTER = "structure-v5"/);
+    assert.match(persist, /QUERY_PERSIST_BUSTER = "structure-v5-shelf-v1"/);
     const pkg = read("package.json");
     assert.doesNotMatch(pkg, /bible-group/);
   });
