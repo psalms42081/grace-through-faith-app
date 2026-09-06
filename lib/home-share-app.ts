@@ -7,6 +7,18 @@ export const HOME_SHARE_DISMISS_MS = 30 * 24 * 60 * 60 * 1000;
 export const HOME_SHARE_MESSAGE =
   `Informed Ministries — Scripture, devotions and Sabbath School in one place: ${APP_SHARE_URL}`;
 
+export type AppShareOutcome = "shared" | "copied" | "cancelled";
+
+/** Home card only: Share now persists the same 30-day hide as Dismiss. */
+export function homeShareNowShouldDismiss(outcome: AppShareOutcome): boolean {
+  switch (outcome) {
+    case "shared":
+    case "copied":
+    case "cancelled":
+      return true;
+  }
+}
+
 export function shouldShowHomeShareCard(
   dismissedAt: number | null,
   now: number,

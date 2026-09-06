@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   HOME_SHARE_DISMISS_MS,
   HOME_SHARE_MESSAGE,
+  homeShareNowShouldDismiss,
   shouldShowHomeShareCard,
 } from "../lib/home-share-app";
 import { APP_SHARE_URL } from "../constants/app";
@@ -39,6 +40,19 @@ describe("Home share-app card", () => {
     assert.match(constSource, /export const APP_SHARE_URL/);
   });
 
+  it("treats Share now as the same 30-day dismiss as Dismiss", () => {
+    assert.equal(homeShareNowShouldDismiss("shared"), true);
+    assert.equal(homeShareNowShouldDismiss("copied"), true);
+    assert.equal(homeShareNowShouldDismiss("cancelled"), true);
+    const card = readFileSync(
+      new URL("../components/home-v2/ShareAppCard.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(card, /shareInformedMinistries/);
+    assert.match(card, /homeShareNowShouldDismiss/);
+    assert.match(card, /onDismiss\(\)/);
+  });
+
   it("is wired on adult Home and gated out of kids mode", () => {
     const home = readFileSync(
       new URL("../app/(tabs)/home-v2.tsx", import.meta.url),
@@ -48,11 +62,16 @@ describe("Home share-app card", () => {
       new URL("../components/home-v2/ShareAppCard.tsx", import.meta.url),
       "utf8",
     );
+    const shareHelper = readFileSync(
+      new URL("../lib/share-app.ts", import.meta.url),
+      "utf8",
+    );
     assert.match(home, /ShareAppCard/);
     assert.match(home, /!isKidsMode && showShareCard/);
     assert.match(card, /plan-family\.png/);
     assert.match(card, /Link copied/);
-    assert.match(card, /navigator\.share/);
+    assert.match(shareHelper, /navigator\.share/);
+    assert.match(shareHelper, /export async function shareInformedMinistries/);
     assert.doesNotMatch(card, /gold|#C9933A/i);
     const header = readFileSync(
       new URL("../components/home-v2/HomeHeader.tsx", import.meta.url),
@@ -61,5 +80,18 @@ describe("Home share-app card", () => {
     assert.match(header, /numberOfLines=\{1\}/);
     assert.match(header, /fontSize: 22/);
     assert.match(header, /flexWrap: "wrap"/);
+  });
+
+  it("wires a permanent adult Profile share row that is not dismiss-gated", () => {
+    const profile = readFileSync(
+      new URL("../app/(tabs)/profile.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(profile, /Share Informed Ministries/);
+    assert.match(profile, /!isKidsMode && \(/);
+    assert.match(profile, /shareInformedMinistries/);
+    assert.match(profile, /profile-share-app/);
+    assert.match(profile, /profile-about-section/);
+    assert.doesNotMatch(profile, /persistHomeShareDismissedAt|HOME_SHARE_DISMISS|showShareCard/);
   });
 });

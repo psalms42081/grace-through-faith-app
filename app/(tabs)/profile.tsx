@@ -29,6 +29,7 @@ import { apiRequest } from "@/lib/query-client";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { displayInitials } from "@/lib/user-initials";
 import ProfileGroupsSection from "@/components/bible-groups/ProfileGroupsSection";
+import { shareInformedMinistries } from "@/lib/share-app";
 
 const C = {
   surface: PathB.surface,
@@ -712,6 +713,25 @@ function ProfileScreenInner() {
         </>
       )}
       </>)}
+
+      {!isKidsMode && (
+        <View style={st.sectionPad} testID="profile-about-section">
+          <Text style={{ color: C.inkMuted, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+            About
+          </Text>
+          <ListItem
+            icon="share-outline"
+            iconColor={C.coral}
+            title="Share Informed Ministries"
+            onPress={() => {
+              void shareInformedMinistries({
+                onCopied: () => showToast("Link copied", "success"),
+              });
+            }}
+            testID="profile-share-app"
+          />
+        </View>
+      )}
 
     </ScrollView>
 

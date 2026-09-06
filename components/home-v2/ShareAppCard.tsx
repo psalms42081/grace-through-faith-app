@@ -5,11 +5,10 @@ import {
   Pressable,
   StyleSheet,
   Image,
-  Platform,
-  Share,
 } from "react-native";
 import { HV2, F } from "./theme";
-import { HOME_SHARE_MESSAGE } from "@/lib/home-share-app";
+import { homeShareNowShouldDismiss } from "@/lib/home-share-app";
+import { shareInformedMinistries } from "@/lib/share-app";
 import { useToast } from "@/contexts/ToastContext";
 
 interface Props {
@@ -20,22 +19,11 @@ export default function ShareAppCard({ onDismiss }: Props) {
   const { showToast } = useToast();
 
   const shareNow = async () => {
-    const message = HOME_SHARE_MESSAGE;
-    try {
-      if (Platform.OS === "web") {
-        if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-          await navigator.share({ text: message });
-          return;
-        }
-        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(message);
-          showToast("Link copied", "success");
-          return;
-        }
-      }
-      await Share.share({ message });
-    } catch {
-      // User cancelled the sheet — do not toast.
+    const outcome = await shareInformedMinistries({
+      onCopied: () => showToast("Link copied", "success"),
+    });
+    if (homeShareNowShouldDismiss(outcome)) {
+      onDismiss();
     }
   };
 
