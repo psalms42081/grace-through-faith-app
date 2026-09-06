@@ -14,6 +14,7 @@ import {
 import { buildHeroShareMessage, type HeroTab } from "./hero-share";
 import {
   HERO_ART_ASPECT,
+  HERO_BODY_PAD_LEFT,
   HERO_TEXT_COL_RATIO,
   heroArtRatioForWidth,
   heroIllustrationForDay,
@@ -151,7 +152,9 @@ export default function HeroCard({
     }
   };
 
-  const copy =
+  // HeadBlock lives in the art row. Body is a full-width sibling below the row.
+  // Verse: eyebrow + quote + citation. Signpost: eyebrow + title. Reflection: eyebrow + thought.
+  const head =
     activeTab === "verse" ? (
       <>
         <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
@@ -172,15 +175,24 @@ export default function HeroCard({
       <>
         <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
         <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
-        {!!signpost?.description && <Text style={s.cite}>{signpost.description}</Text>}
       </>
     ) : (
       <>
         <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
-        <Text style={s.verse}>{reflection.thought}</Text>
-        <Text style={s.cite}>Reflection on {reflection.reference}</Text>
+        <Text style={s.verseQuote}>{reflection.thought}</Text>
       </>
     );
+
+  const body =
+    activeTab === "signpost" && signpost?.description ? (
+      <View style={s.body} testID="hero-body">
+        <Text style={s.bodyText}>{signpost.description}</Text>
+      </View>
+    ) : activeTab === "reflection" ? (
+      <View style={s.body} testID="hero-body">
+        <Text style={s.bodyText}>Reflection on {reflection.reference}</Text>
+      </View>
+    ) : null;
 
   return (
     <View style={s.card}>
@@ -203,14 +215,21 @@ export default function HeroCard({
 
       <View
         style={s.contentRow}
+        testID="hero-row"
         onLayout={(e) => {
           const next = Math.round(e.nativeEvent.layout.width);
           if (next > 0 && next !== rowWidth) setRowWidth(next);
         }}
       >
-        <View style={[s.textCol, { width: widthPercent(HERO_TEXT_COL_RATIO) }]}>{copy}</View>
+        <View
+          style={[s.textCol, { width: widthPercent(HERO_TEXT_COL_RATIO) }]}
+          testID="hero-head"
+        >
+          {head}
+        </View>
         <View
           style={[s.art, { width: artWidth, height: artHeight }]}
+          testID="hero-art"
           pointerEvents="none"
           accessible={false}
           importantForAccessibility="no"
@@ -223,7 +242,9 @@ export default function HeroCard({
         </View>
       </View>
 
-      <View style={s.actions}>
+      {body}
+
+      <View style={s.actions} testID="hero-actions">
         {activeTab === "signpost" ? (
           <Pressable
             style={s.primary}
@@ -311,9 +332,15 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
-  verseQuote: { fontFamily: F.loraSemi, fontSize: 18, lineHeight: 26, color: HV2.ink, marginTop: 12 },
+  verseQuote: { fontFamily: F.loraSemi, fontSize: 20, lineHeight: 28, color: HV2.ink, marginTop: 12 },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },
   cite: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText, marginTop: 12 },
+  body: {
+    width: "100%",
+    paddingHorizontal: HERO_BODY_PAD_LEFT,
+    paddingTop: 12,
+  },
+  bodyText: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText },
   actions: {
     flexDirection: "row",
     alignItems: "center",

@@ -268,20 +268,28 @@ describe("Home hero verse illustrations", () => {
     assert.doesNotMatch(hero, /0\.38/);
   });
 
-  it("steps Verse Lora down without shrinking Signpost or Reflection body", () => {
+  it("uses Lora 20/28 for Verse and Reflection HeadBlock, Signpost title stays 22/32", () => {
     const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
-    assert.match(hero, /verseQuote:\s*\{[^}]*fontSize:\s*18/);
-    assert.match(hero, /verseQuote:\s*\{[^}]*lineHeight:\s*26/);
+    assert.match(hero, /verseQuote:\s*\{[^}]*fontSize:\s*20/);
+    assert.match(hero, /verseQuote:\s*\{[^}]*lineHeight:\s*28/);
     assert.match(hero, /verse:\s*\{[^}]*fontSize:\s*22/);
     assert.match(hero, /verse:\s*\{[^}]*lineHeight:\s*32/);
-    assert.match(hero, /s\.verseQuote/);
-    // Signpost title and Reflection thought still use the shared body style.
-    const signpostBlock = hero.slice(hero.indexOf('activeTab === "signpost"'), hero.indexOf("Explore Topic"));
-    const reflectionBlock = hero.slice(hero.indexOf("reflectionDaypart.toUpperCase"));
-    assert.match(signpostBlock, /style=\{s\.verse\}/);
-    assert.doesNotMatch(signpostBlock, /s\.verseQuote/);
-    assert.match(reflectionBlock, /style=\{s\.verse\}/);
-    assert.doesNotMatch(reflectionBlock.slice(0, 400), /s\.verseQuote/);
+    assert.match(hero, /bodyText:\s*\{[^}]*fontSize:\s*13\.5/);
+    assert.match(hero, /cite:\s*\{[^}]*fontSize:\s*13\.5/);
+    const signpostHead = hero.slice(
+      hero.indexOf('activeTab === "signpost"'),
+      hero.indexOf("A signpost for today") + 40,
+    );
+    assert.match(signpostHead, /style=\{s\.verse\}/);
+    assert.doesNotMatch(signpostHead, /s\.verseQuote/);
+    assert.doesNotMatch(signpostHead, /signpost\.description/);
+    const reflectionHead = hero.slice(
+      hero.indexOf("reflectionDaypart.toUpperCase"),
+      hero.indexOf("const body"),
+    );
+    assert.match(reflectionHead, /style=\{s\.verseQuote\}/);
+    assert.doesNotMatch(reflectionHead, /style=\{s\.verse\}/);
+    assert.doesNotMatch(reflectionHead, /Reflection on/);
   });
 
   it("keeps actions as a sibling below the art with no absolute bottom art", () => {
@@ -299,6 +307,48 @@ describe("Home hero verse illustrations", () => {
     assert.doesNotMatch(hero, /right:\s*-?\d+/);
     const afterActions = hero.slice(actionsIdx);
     assert.doesNotMatch(afterActions, /<Image\b/);
+  });
+
+  // The existing suite is source-string based (no RN renderer in this runner).
+  // These assertions encode the Card > Tabs > Row(HeadBlock+Art) > Body > ButtonRow
+  // tree for every tab, which a render test would check via sibling/parent queries.
+  it("places Body as a Row sibling and Art inside the Row on every tab", () => {
+    const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
+    const rowOpen = hero.indexOf("testID=\"hero-row\"");
+    const rowClose = hero.indexOf("{body}", rowOpen);
+    const rowBlock = hero.slice(rowOpen, rowClose);
+    const afterRow = hero.slice(rowClose);
+    const actionsIdx = afterRow.indexOf("testID=\"hero-actions\"");
+    const bodyAssign = hero.slice(hero.indexOf("const body ="), hero.indexOf("return ("));
+
+    assert.ok(rowOpen > 0, "hero-row missing");
+    assert.match(rowBlock, /testID="hero-head"/);
+    assert.match(rowBlock, /testID="hero-art"/);
+    assert.match(rowBlock, /\{head\}/);
+    assert.doesNotMatch(rowBlock, /testID="hero-body"/);
+    assert.doesNotMatch(rowBlock, /testID="hero-actions"/);
+    assert.doesNotMatch(rowBlock, /signpost\?\.description/);
+    assert.doesNotMatch(rowBlock, /Reflection on/);
+    assert.match(afterRow, /\{body\}/);
+    assert.ok(actionsIdx > afterRow.indexOf("{body}"), "ButtonRow must follow Body");
+
+    assert.match(bodyAssign, /testID="hero-body"/);
+    assert.match(bodyAssign, /signpost\.description/);
+    assert.match(bodyAssign, /Reflection on \{reflection\.reference\}/);
+    assert.match(bodyAssign, /activeTab === "signpost"/);
+    assert.match(bodyAssign, /activeTab === "reflection"/);
+    assert.doesNotMatch(bodyAssign, /activeTab === "verse"/);
+    assert.doesNotMatch(bodyAssign, /s\.verseQuote/);
+    assert.doesNotMatch(bodyAssign, /s\.verse\b/);
+
+    const headAssign = hero.slice(hero.indexOf("const head ="), hero.indexOf("const body ="));
+    assert.match(headAssign, /s\.cite/);
+    assert.match(headAssign, /verse\.reference/);
+    assert.doesNotMatch(headAssign, /signpost\?\.description/);
+    assert.doesNotMatch(headAssign, /Reflection on/);
+    assert.match(headAssign, /reflection\.thought/);
+    assert.match(headAssign, /s\.verseQuote/);
+    assert.match(headAssign, /s\.verse\}/);
   });
 
   // Regression: the art column rendered empty on react-native-web because
