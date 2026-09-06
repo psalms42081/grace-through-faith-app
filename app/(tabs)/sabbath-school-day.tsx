@@ -15,7 +15,8 @@ import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { sabbathSchoolAudioUrl } from "@/lib/sabbath-school-media";
 import { useTheme } from "@/hooks/useTheme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +24,9 @@ import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
 import {
   SABBATH_SCHOOL_AUDIO_UNAVAILABLE_MESSAGE,
+  sabbathSchoolPlaybackHasStarted,
   toggleSabbathSchoolAudio,
+  waitForSabbathSchoolPlaybackStart,
   type SabbathSchoolPlaybackStatus,
   type SabbathSchoolSound,
 } from "@/lib/sabbath-school-audio";
@@ -379,7 +382,10 @@ export default function SabbathSchoolDayScreen() {
     if (!existingSound) setIsAudioLoading(true);
 
     const result = await toggleSabbathSchoolAudio({
-      url: day.audioUrl,
+      url: sabbathSchoolAudioUrl(day.audioUrl, {
+        platform: Platform.OS,
+        baseUrl: getApiUrl(),
+      }),
       sound: existingSound as SabbathSchoolSound | null,
       hasFinished: hasAudioFinished,
       prepareAudio: () =>
@@ -392,7 +398,7 @@ export default function SabbathSchoolDayScreen() {
         const player: AudioPlayer = createAudioPlayer({ uri: url }, { updateInterval: 250 });
         const sound: SabbathSchoolSound = {
           getStatusAsync: async () => ({
-            isLoaded: true,
+            isLoaded: player.duration > 0 || player.currentTime > 0,
             isPlaying: player.playing,
             didJustFinish: false,
           }),
@@ -411,6 +417,10 @@ export default function SabbathSchoolDayScreen() {
           },
         };
         player.addListener("playbackStatusUpdate", (status) => {
+          if (!status.isLoaded && (status as { error?: string }).error) {
+            onStatus({ isLoaded: false, error: (status as { error?: string }).error });
+            return;
+          }
           onStatus({
             isLoaded: status.isLoaded,
             isPlaying: status.playing,
@@ -418,6 +428,17 @@ export default function SabbathSchoolDayScreen() {
           });
         });
         player.play();
+        const started = await waitForSabbathSchoolPlaybackStart(() =>
+          sabbathSchoolPlaybackHasStarted({
+            playing: player.playing,
+            currentTime: player.currentTime,
+            duration: player.duration,
+          }),
+        );
+        if (!started) {
+          player.remove();
+          throw new Error("Sabbath School audio did not start");
+        }
         return {
           sound,
           status: { isLoaded: true, isPlaying: true },

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  sabbathSchoolPlaybackHasStarted,
   toggleSabbathSchoolAudio,
+  waitForSabbathSchoolPlaybackStart,
   type SabbathSchoolPlaybackStatus,
   type SabbathSchoolSound,
 } from "../lib/sabbath-school-audio";
@@ -97,5 +99,26 @@ describe("Sabbath School audio player", () => {
     });
     assert.equal(replayed.kind, "playing");
     assert.deepEqual(finished.calls, ["status", "replay"]);
+  });
+
+  it("treats silent play as not started until duration or currentTime is real", () => {
+    assert.equal(sabbathSchoolPlaybackHasStarted({ playing: true }), false);
+    assert.equal(
+      sabbathSchoolPlaybackHasStarted({ playing: true, duration: 0, currentTime: 0 }),
+      false,
+    );
+    assert.equal(
+      sabbathSchoolPlaybackHasStarted({ playing: true, duration: 12 }),
+      true,
+    );
+    assert.equal(
+      sabbathSchoolPlaybackHasStarted({ playing: false, duration: 12 }),
+      false,
+    );
+  });
+
+  it("times out when playback never starts", async () => {
+    const started = await waitForSabbathSchoolPlaybackStart(() => false, 80);
+    assert.equal(started, false);
   });
 });

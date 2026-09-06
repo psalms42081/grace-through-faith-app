@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import fetch from "node-fetch";
 import { db } from "../db";
 import {
@@ -34,69 +34,81 @@ import {
 
 const router = Router();
 
-router.get("/api/sabbath-school/video", async (req, res) => {
-  const source = typeof req.query.url === "string" ? req.query.url : "";
-  let sourceUrl: URL;
-  try {
-    sourceUrl = new URL(source);
-  } catch {
-    return res.status(400).json({ error: "Invalid video URL" });
-  }
+function adventechMediaProxy(kind: "video" | "audio") {
+  const prefix = kind === "video" ? "/video/" : "/audio/";
+  const invalid = kind === "video" ? "Invalid video URL" : "Invalid audio URL";
+  const unsupported =
+    kind === "video" ? "Unsupported video source" : "Unsupported audio source";
+  const unavailable =
+    kind === "video" ? "Lesson video unavailable" : "Lesson audio unavailable";
 
-  if (
-    sourceUrl.protocol !== "https:" ||
-    sourceUrl.hostname !== "sabbath-school-media.adventech.io" ||
-    !sourceUrl.pathname.startsWith("/video/")
-  ) {
-    return res.status(400).json({ error: "Unsupported video source" });
-  }
-
-  try {
-    const headers: Record<string, string> = {};
-    if (req.headers.range) headers.Range = req.headers.range;
-    const controller = new AbortController();
-    const connectionTimer = setTimeout(() => controller.abort(), 20_000);
-    let upstream;
+  return async (req: Request, res: Response) => {
+    const source = typeof req.query.url === "string" ? req.query.url : "";
+    let sourceUrl: URL;
     try {
-      upstream = await fetch(sourceUrl, {
-        headers,
-        signal: controller.signal,
+      sourceUrl = new URL(source);
+    } catch {
+      return res.status(400).json({ error: invalid });
+    }
+
+    if (
+      sourceUrl.protocol !== "https:" ||
+      sourceUrl.hostname !== "sabbath-school-media.adventech.io" ||
+      !sourceUrl.pathname.startsWith(prefix)
+    ) {
+      return res.status(400).json({ error: unsupported });
+    }
+
+    try {
+      const headers: Record<string, string> = {};
+      if (req.headers.range) headers.Range = req.headers.range;
+      const controller = new AbortController();
+      const connectionTimer = setTimeout(() => controller.abort(), 20_000);
+      let upstream;
+      try {
+        upstream = await fetch(sourceUrl, {
+          headers,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(connectionTimer);
+      }
+      if (!upstream.ok && upstream.status !== 206) {
+        return res.status(502).json({ error: unavailable });
+      }
+
+      res.status(upstream.status);
+      for (const name of [
+        "content-type",
+        "content-length",
+        "content-range",
+        "accept-ranges",
+        "etag",
+        "last-modified",
+      ]) {
+        const value = upstream.headers.get(name);
+        if (value) res.setHeader(name, value);
+      }
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.removeHeader("Access-Control-Allow-Credentials");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
+      if (!upstream.body) return res.end();
+      upstream.body.on("error", () => {
+        if (!res.headersSent) res.status(502);
+        res.end();
       });
-    } finally {
-      clearTimeout(connectionTimer);
+      upstream.body.pipe(res);
+      return;
+    } catch {
+      return res.status(502).json({ error: unavailable });
     }
-    if (!upstream.ok && upstream.status !== 206) {
-      return res.status(502).json({ error: "Lesson video unavailable" });
-    }
+  };
+}
 
-    res.status(upstream.status);
-    for (const name of [
-      "content-type",
-      "content-length",
-      "content-range",
-      "accept-ranges",
-      "etag",
-      "last-modified",
-    ]) {
-      const value = upstream.headers.get(name);
-      if (value) res.setHeader(name, value);
-    }
-    res.setHeader("Cache-Control", "public, max-age=3600");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.removeHeader("Access-Control-Allow-Credentials");
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-
-    if (!upstream.body) return res.end();
-    upstream.body.on("error", () => {
-      if (!res.headersSent) res.status(502);
-      res.end();
-    });
-    upstream.body.pipe(res);
-    return;
-  } catch {
-    return res.status(502).json({ error: "Lesson video unavailable" });
-  }
-});
+router.get("/api/sabbath-school/video", adventechMediaProxy("video"));
+router.get("/api/sabbath-school/audio", adventechMediaProxy("audio"));
 
 async function findDayTutorContext(lessonId: string, dayId: string) {
   const [context] = await db

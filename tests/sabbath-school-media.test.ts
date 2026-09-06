@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { sabbathSchoolMediaUrl } from "../lib/sabbath-school-media";
+import {
+  sabbathSchoolAudioUrl,
+  sabbathSchoolMediaUrl,
+} from "../lib/sabbath-school-media";
 import {
   firstPlayableSabbathSchoolClip,
   flattenSabbathSchoolLessonClips,
@@ -55,6 +58,30 @@ describe("Sabbath School web media proxy", () => {
       }).includes("//api"),
       false,
     );
+  });
+
+  it("proxies Adventech lesson audio on web only", () => {
+    const adventechAudio =
+      "https://sabbath-school-media.adventech.io/audio/en/2026-03/lesson.mp3";
+    const proxied = sabbathSchoolAudioUrl(adventechAudio, {
+      platform: "web",
+      baseUrl: "https://gracethroughfaith.app/",
+    });
+    assert.equal(
+      proxied,
+      `https://gracethroughfaith.app/api/sabbath-school/audio?url=${encodeURIComponent(adventechAudio)}`,
+    );
+    assert.doesNotMatch(proxied, /\/\/api/);
+    assert.equal(
+      sabbathSchoolAudioUrl(adventechAudio, { platform: "ios" }),
+      adventechAudio,
+    );
+    const daySource = readFileSync(
+      new URL("../app/(tabs)/sabbath-school-day.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(daySource, /sabbathSchoolAudioUrl/);
+    assert.match(daySource, /waitForSabbathSchoolPlaybackStart/);
   });
 
   it("uses the proxy helper for Watch This Lesson thumbs and names the muted fallback", () => {
