@@ -29,6 +29,12 @@ import SSGradientCard from "@/components/home-v2/SSGradientCard";
 import DailyRhythm, { RhythmRowData } from "@/components/home-v2/DailyRhythm";
 import TopicChips from "@/components/home-v2/TopicChips";
 import HomeBibleGroupCard from "@/components/home-v2/HomeBibleGroupCard";
+import ShareAppCard from "@/components/home-v2/ShareAppCard";
+import {
+  persistHomeShareDismissedAt,
+  readHomeShareDismissedAt,
+  shouldShowHomeShareCard,
+} from "@/lib/home-share-app";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -60,6 +66,7 @@ export default function HomeV2Screen() {
   const { enterKidsMode, lastActiveChildId, isKidsMode } = useKidsMode();
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
+  const [showShareCard, setShowShareCard] = useState(false);
   const [clock, setClock] = useState(() => new Date());
   const scrollRef = useRef<ScrollView>(null);
   const { translation } = useAppTranslation();
@@ -71,6 +78,21 @@ export default function HomeV2Screen() {
     const timer = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (isKidsMode) {
+      setShowShareCard(false);
+      return;
+    }
+    let cancelled = false;
+    readHomeShareDismissedAt().then((dismissedAt) => {
+      if (cancelled) return;
+      setShowShareCard(shouldShowHomeShareCard(dismissedAt, Date.now()));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isKidsMode]);
 
   const localDay = useMemo(() => getHomeLocalDay(clock), [clock]);
   const { dateLine, dayLabel } = localDay;
@@ -423,6 +445,16 @@ export default function HomeV2Screen() {
 
       <DailyRhythm rows={rhythmRows} />
       <TopicChips />
+
+      {!isKidsMode && showShareCard && (
+        <ShareAppCard
+          onDismiss={() => {
+            const now = Date.now();
+            setShowShareCard(false);
+            persistHomeShareDismissedAt(now).catch(() => {});
+          }}
+        />
+      )}
 
       <ChildPickerModal
         visible={showChildPicker}

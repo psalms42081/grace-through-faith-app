@@ -12,9 +12,11 @@ interface Props {
 export default function HomeHeader({ dateLine, greeting, streak, onKidsPress }: Props) {
   return (
     <View style={s.row}>
-      <View style={{ flex: 1, marginRight: 10 }}>
+      <View style={s.left}>
         <Text style={s.date}>{dateLine}</Text>
-        <Text style={s.greeting} numberOfLines={2}>{greeting}</Text>
+        <Text style={s.greeting} numberOfLines={1} testID="home-greeting">
+          {greeting}
+        </Text>
       </View>
       <View style={s.right}>
         <Pressable
@@ -40,13 +42,16 @@ export default function HomeHeader({ dateLine, greeting, streak, onKidsPress }: 
 const s = StyleSheet.create({
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 16,
+    rowGap: 10,
   },
+  left: { flexGrow: 1, flexShrink: 1, flexBasis: 180, marginRight: 10, minWidth: 0 },
   date: { fontFamily: F.interMed, fontSize: 13, color: HV2.inkMutedText },
-  greeting: { fontFamily: F.loraSemi, fontSize: 26, color: HV2.ink, marginTop: 2 },
+  greeting: { fontFamily: F.loraSemi, fontSize: 22, color: HV2.ink, marginTop: 2 },
   right: { flexDirection: "row", alignItems: "center", gap: 10, flexShrink: 0 },
   pill: {
     flexDirection: "row",
