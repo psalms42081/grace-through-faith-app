@@ -25,7 +25,7 @@ const HERO_ART: Record<HeroVerseIllustrationId, number> = {
   candle: require("@/assets/illustrations/rhythm-reflection.png"),
   sunburst: require("@/assets/illustrations/rhythm-morning.png"),
   olive: require("@/assets/illustrations/plan-health.png"),
-  path: require("@/assets/illustrations/plan-youth.png"),
+  hearth: require("@/assets/illustrations/plan-family.png"),
 };
 
 export type { HeroTab };
@@ -158,13 +158,13 @@ export default function HeroCard({
         {verseLoading ? (
           <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
         ) : verseUnavailable ? (
-          <Text style={[s.verse, { fontStyle: "italic", opacity: 0.75 }]}>
+          <Text style={[s.verseQuote, { fontStyle: "italic", opacity: 0.75 }]}>
             {translation
               ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
               : "This verse is currently unavailable. Open your Bible to read it."}
           </Text>
         ) : verse.text ? (
-          <Text style={s.verse}>{`\u201C${verse.text}\u201D`}</Text>
+          <Text style={s.verseQuote}>{`\u201C${verse.text}\u201D`}</Text>
         ) : null}
         <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
       </>
@@ -290,7 +290,7 @@ const s = StyleSheet.create({
   contentRow: {
     width: "100%",
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingTop: 24,
     paddingBottom: 8,
   },
@@ -308,9 +308,10 @@ const s = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 0,
     alignItems: "flex-end",
-    justifyContent: "flex-start",
+    justifyContent: "center",
   },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
+  verseQuote: { fontFamily: F.loraSemi, fontSize: 18, lineHeight: 26, color: HV2.ink, marginTop: 12 },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },
   cite: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText, marginTop: 12 },
   actions: {

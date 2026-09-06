@@ -3,7 +3,7 @@
  * Motifs from the existing 26-asset set, each transparent and 1:1.
  * Five scripture motifs, no repeats and no gold. The sixth slot held
  * rhythm-listen.png (coral headphones) for a while; a media motif read wrong
- * beside lamp/candle/sunburst/olive/path, so the list is deliberately five.
+ * beside lamp/candle/sunburst/olive/hearth, so the list is deliberately five.
  * Keep it at five or more — TAB_OFFSET below assumes the list can hold three
  * distinct entries.
  */
@@ -12,7 +12,7 @@ export const HERO_VERSE_ILLUSTRATION_LIST = [
   { id: "candle", file: "rhythm-reflection.png", label: "candle" },
   { id: "sunburst", file: "rhythm-morning.png", label: "sunburst" },
   { id: "olive", file: "plan-health.png", label: "olive branch" },
-  { id: "path", file: "plan-youth.png", label: "path" },
+  { id: "hearth", file: "plan-family.png", label: "hearth" },
 ] as const;
 
 export type HeroVerseIllustrationId =
@@ -53,19 +53,20 @@ export function heroIllustrationForDay(
  */
 export const HERO_ART_ASPECT = 1;
 
-/** Text column stays ~62% of the card so copy never sits on the art. */
-export const HERO_TEXT_COL_RATIO = 0.62;
+/** Text column is 60% of the card. MIN_RATIO is the same floor — never go below. */
+export const HERO_TEXT_COL_RATIO = 0.6;
 export const HERO_TEXT_COL_MIN_RATIO = 0.6;
-/** Default art width; phones with a long Signpost drop to the narrow ratio. */
-export const HERO_ART_RATIO = 0.32;
-export const HERO_ART_RATIO_NARROW = 0.26;
+/** Wide-card art; phones drop to the narrow ratio so text stays at 60%. */
+export const HERO_ART_RATIO = 0.36;
+export const HERO_ART_RATIO_NARROW = 0.32;
 export const HERO_BODY_PAD_LEFT = 24;
-const ART_GAP = 12;
+/** Matches the art column's marginRight so the room check uses the real inset. */
+const ART_INSET_RIGHT = 20;
 
-/** Prefer 32% art; drop to 26% when 32% would squeeze the text column below 60%. */
+/** Prefer 36% art; drop to 32% when 36% plus the right inset would overlap the 60% text column. */
 export function heroArtRatioForWidth(stageWidth: number): number {
-  const textW = stageWidth * HERO_TEXT_COL_RATIO;
-  const roomForArt = stageWidth - HERO_BODY_PAD_LEFT - textW - ART_GAP;
+  const reservedText = stageWidth * HERO_TEXT_COL_MIN_RATIO;
+  const roomForArt = stageWidth - reservedText - ART_INSET_RIGHT;
   if (roomForArt >= stageWidth * HERO_ART_RATIO) return HERO_ART_RATIO;
   return HERO_ART_RATIO_NARROW;
 }

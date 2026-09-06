@@ -146,7 +146,7 @@ describe("Home hero verse illustrations", () => {
   it("rotates a fixed verse-card list by day-of-year with distinct tab assets", () => {
     assert.deepEqual(
       HERO_VERSE_ILLUSTRATION_LIST.map((item) => item.label),
-      ["lamp", "candle", "sunburst", "olive branch", "path"],
+      ["lamp", "candle", "sunburst", "olive branch", "hearth"],
     );
     const verse = heroIllustrationForDay(248, "verse");
     const signpost = heroIllustrationForDay(248, "signpost");
@@ -221,6 +221,12 @@ describe("Home hero verse illustrations", () => {
     // The coral headphones were pulled from the rotation as an off-theme media
     // motif; the asset stays on disk but must not come back into the hero.
     assert.doesNotMatch(hero, /rhythm-listen/);
+    // Square-clipped hill tile — stays on disk for Devotions SERIES_ART, not the hero.
+    assert.doesNotMatch(hero, /plan-youth/);
+    assert.doesNotMatch(
+      HERO_VERSE_ILLUSTRATION_LIST.map((item) => item.file).join(" "),
+      /plan-youth|plan-doctrine|plan-prophecy|rhythm-listen/,
+    );
   });
 
   it("keeps verse ink readable on cream/white (WCAG AA)", () => {
@@ -241,12 +247,13 @@ describe("Home hero verse illustrations", () => {
     assert.doesNotMatch(groups, /heroIllustrationForDay/);
   });
 
-  it("lays out top-right art beside a 62% text column with no fade overlay", () => {
+  it("lays out vertically centred art beside a 60% text column with no fade overlay", () => {
     const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
-    assert.equal(HERO_TEXT_COL_RATIO, 0.62);
+    assert.equal(HERO_TEXT_COL_RATIO, 0.6);
+    assert.equal(HERO_TEXT_COL_MIN_RATIO, 0.6);
     assert.ok(HERO_TEXT_COL_RATIO >= HERO_TEXT_COL_MIN_RATIO);
-    assert.equal(HERO_ART_RATIO, 0.32);
-    assert.equal(HERO_ART_RATIO_NARROW, 0.26);
+    assert.equal(HERO_ART_RATIO, 0.36);
+    assert.equal(HERO_ART_RATIO_NARROW, 0.32);
     assert.equal(heroArtRatioForWidth(390), HERO_ART_RATIO_NARROW);
     assert.equal(heroArtRatioForWidth(350), HERO_ART_RATIO_NARROW);
     assert.equal(heroArtRatioForWidth(700), HERO_ART_RATIO);
@@ -254,11 +261,27 @@ describe("Home hero verse illustrations", () => {
     assert.match(hero, /HERO_TEXT_COL_RATIO/);
     assert.match(hero, /contentRow/);
     assert.match(hero, /flexDirection:\s*"row"/);
-    assert.match(hero, /alignItems:\s*"flex-start"/);
+    assert.match(hero, /alignItems:\s*"center"/);
     assert.match(hero, /resizeMode="contain"/);
     assert.doesNotMatch(hero, /LinearGradient/);
     assert.doesNotMatch(hero, /expo-linear-gradient/);
     assert.doesNotMatch(hero, /0\.38/);
+  });
+
+  it("steps Verse Lora down without shrinking Signpost or Reflection body", () => {
+    const hero = readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8");
+    assert.match(hero, /verseQuote:\s*\{[^}]*fontSize:\s*18/);
+    assert.match(hero, /verseQuote:\s*\{[^}]*lineHeight:\s*26/);
+    assert.match(hero, /verse:\s*\{[^}]*fontSize:\s*22/);
+    assert.match(hero, /verse:\s*\{[^}]*lineHeight:\s*32/);
+    assert.match(hero, /s\.verseQuote/);
+    // Signpost title and Reflection thought still use the shared body style.
+    const signpostBlock = hero.slice(hero.indexOf('activeTab === "signpost"'), hero.indexOf("Explore Topic"));
+    const reflectionBlock = hero.slice(hero.indexOf("reflectionDaypart.toUpperCase"));
+    assert.match(signpostBlock, /style=\{s\.verse\}/);
+    assert.doesNotMatch(signpostBlock, /s\.verseQuote/);
+    assert.match(reflectionBlock, /style=\{s\.verse\}/);
+    assert.doesNotMatch(reflectionBlock.slice(0, 400), /s\.verseQuote/);
   });
 
   it("keeps actions as a sibling below the art with no absolute bottom art", () => {
