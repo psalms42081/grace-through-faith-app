@@ -148,7 +148,7 @@ export default function TermsScreen() {
           </P>
           <P theme={theme}>
             Informed Ministries{"\n"}
-            gracethroughfaith.app
+            informedministries.app
           </P>
         </Section>
       </ScrollView>

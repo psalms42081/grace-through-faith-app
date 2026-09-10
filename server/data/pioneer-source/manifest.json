@@ -1,5 +1,5 @@
 {
-  "userAgent": "GraceThroughFaith/1.0 (joseph@gracethroughfaith.app; +https://gracethroughfaith.app)",
+  "userAgent": "GraceThroughFaith/1.0 (joseph@gracethroughfaith.app; +https://informedministries.app)",
   "notes": "Pioneer books have no media2 EPUB on egwwritings.org (API files.epub empty; PDF/ePub buttons disabled). Official Download control returns media4 json-v4 zips. This ingest converts those zips into EPUBs so the same ZIP/OPF/NCX parser can run. Hashes are public content checksums from a.egwwritings.org book metadata.",
   "books": [
     {

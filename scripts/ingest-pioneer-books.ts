@@ -19,7 +19,7 @@ import { Client } from "pg";
 const SOURCE_DIR = path.resolve(process.cwd(), "server/data/pioneer-source");
 const MANIFEST_PATH = path.join(SOURCE_DIR, "manifest.json");
 const UA =
-  "GraceThroughFaith/1.0 (joseph@gracethroughfaith.app; +https://gracethroughfaith.app)";
+  "GraceThroughFaith/1.0 (joseph@gracethroughfaith.app; +https://informedministries.app)";
 
 const SKIP_TITLE =
   /^(contents|table of contents|copyright|title page|cover|titlepage|nav|information about this book|illustrations|index(\s+of\b.*)?)$/i;

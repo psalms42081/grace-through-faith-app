@@ -100,7 +100,7 @@ describe("ODB refresh URL and backoff", () => {
   it("uses the odb.org RSS feed as the listing URL", () => {
     assert.equal(ODB_FEED_URL, "https://odb.org/feed/");
     assert.match(ODB_USER_AGENT, /Informed Ministries/);
-    assert.match(ODB_USER_AGENT, /gracethroughfaith\.app/);
+    assert.match(ODB_USER_AGENT, /informedministries\.app/);
     assert.match(ODB_USER_AGENT, new RegExp(ODB_CONTACT_EMAIL.replace(".", "\\.")));
   });
 

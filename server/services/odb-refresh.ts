@@ -17,7 +17,7 @@ export const ODB_FAILURES_BEFORE_BACKOFF = 2;
 export const ODB_JITTER_MS = 30_000;
 export const ODB_CONTACT_EMAIL = "joseph@gracethroughfaith.app";
 export const ODB_USER_AGENT =
-  `Informed Ministries (https://gracethroughfaith.app; ${ODB_CONTACT_EMAIL})`;
+  `Informed Ministries (https://informedministries.app; ${ODB_CONTACT_EMAIL})`;
 
 const DATE_IN_PATH = /\/(\d{4})\/(\d{2})\/(\d{2})(?:\/|$)/;
 

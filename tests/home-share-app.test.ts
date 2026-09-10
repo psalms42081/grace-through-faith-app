@@ -7,7 +7,7 @@ import {
   homeShareNowShouldDismiss,
   shouldShowHomeShareCard,
 } from "../lib/home-share-app";
-import { APP_SHARE_URL } from "../constants/app";
+import { APP_PUBLIC_ORIGINS, APP_RENDER_ORIGIN, APP_SHARE_URL } from "../constants/app";
 
 describe("Home share-app card", () => {
   it("shows when never dismissed", () => {
@@ -30,7 +30,7 @@ describe("Home share-app card", () => {
   });
 
   it("pins the share URL constant and message", () => {
-    assert.equal(APP_SHARE_URL, "https://informed-ministries-api.onrender.com");
+    assert.equal(APP_SHARE_URL, "https://informedministries.app");
     assert.match(HOME_SHARE_MESSAGE, /Informed Ministries/);
     assert.match(HOME_SHARE_MESSAGE, new RegExp(APP_SHARE_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const constSource = readFileSync(
@@ -38,6 +38,8 @@ describe("Home share-app card", () => {
       "utf8",
     );
     assert.match(constSource, /export const APP_SHARE_URL/);
+    assert.ok(APP_PUBLIC_ORIGINS.includes(APP_RENDER_ORIGIN));
+    assert.ok(APP_PUBLIC_ORIGINS.includes(APP_SHARE_URL));
   });
 
   it("treats Share now as the same 30-day dismiss as Dismiss", () => {

@@ -1,6 +1,8 @@
 export type HeroTab = "verse" | "signpost" | "reflection";
 
-export const SIGNPOST_SHARE_ORIGIN = "https://gracethroughfaith.app";
+import { APP_SHARE_URL } from "@/constants/app";
+
+export const SIGNPOST_SHARE_ORIGIN = APP_SHARE_URL;
 
 export function buildSignpostTopicUrl(
   topicId: string,

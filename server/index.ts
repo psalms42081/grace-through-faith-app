@@ -1,5 +1,6 @@
 import { logSecurityPosture } from "./env";
 import { liveKitCspConnectSrc } from "./livekit-csp";
+import { APP_PUBLIC_ORIGINS } from "../constants/app";
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
@@ -45,7 +46,7 @@ function isSameOrigin(req: Request, origin: string): boolean {
 
 function setupCors(app: express.Application) {
   app.use((req, res, next) => {
-    const origins = new Set<string>();
+    const origins = new Set<string>(APP_PUBLIC_ORIGINS);
 
     if (process.env.REPLIT_DEV_DOMAIN) {
       origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
@@ -477,8 +478,8 @@ function setupErrorHandler(app: express.Application) {
         imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com", "https://*.tile.openstreetmap.org", "https://res.cloudinary.com"],
         fontSrc: ["'self'", "https:", "data:"],
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://grace-through-faith.replit.app", "https://*.replit.dev"],
-        frameAncestors: ["'self'", "https://grace-through-faith.replit.app", "https://*.replit.dev"],
+        frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://informedministries.app", "https://www.informedministries.app", "https://informed-ministries-api.onrender.com", "https://grace-through-faith.replit.app", "https://*.replit.dev"],
+        frameAncestors: ["'self'", "https://informedministries.app", "https://www.informedministries.app", "https://informed-ministries-api.onrender.com", "https://grace-through-faith.replit.app", "https://*.replit.dev"],
       },
     },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },

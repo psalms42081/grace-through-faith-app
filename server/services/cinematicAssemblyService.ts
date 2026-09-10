@@ -213,7 +213,7 @@ export async function assembleCinematicVideo(
     })();
 
     const scriptureText = scriptureAnchor || "";
-    const urlText = "gracethroughfaith.app";
+    const urlText = "informedministries.app";
 
     let logoPath: string | null = null;
     try {

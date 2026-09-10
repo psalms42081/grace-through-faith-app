@@ -46,7 +46,7 @@ export function getApiUrl(): string {
     if (typeof window !== "undefined" && window.location?.origin) {
       return `${window.location.origin.replace(/\/$/, "")}/`;
     }
-    return "https://gracethroughfaith.app/";
+    return "https://informedministries.app/";
   }
 
   const host = process.env.EXPO_PUBLIC_DOMAIN;
