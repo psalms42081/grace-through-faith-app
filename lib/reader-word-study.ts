@@ -27,6 +27,41 @@ export type ReaderStrongMap = {
   } | null;
 };
 
+export type AlignableMap = {
+  translatedWord?: string | null;
+  kjvUsage?: string | null;
+  map?: { translatedWord?: string | null };
+  entry?: { kjvUsage?: string | null };
+};
+
+const STOP = new Set(
+  "a an the of to in for and or but so as by at on from with without into unto upon than that this these those he she it they we i thou thee ye you me my his her its their our thy your is are was were be been being am not no nor neither him them us".split(
+    " ",
+  ),
+);
+
+const EQUIV: Record<string, readonly string[]> = {
+  yahweh: ["lord", "jehovah"],
+  jehovah: ["lord", "yahweh"],
+  lord: ["yahweh", "jehovah"],
+  amen: ["verily"],
+  verily: ["amen"],
+  signs: ["miracles", "sign", "miracle"],
+  miracles: ["signs", "miracle", "sign"],
+  miracle: ["sign"],
+  sign: ["miracle"],
+  sheep: ["shepherd", "shepherds"],
+  shepherd: ["sheep"],
+  shepherds: ["sheep"],
+  you: ["thou", "thee", "ye"],
+  thou: ["you", "thee", "ye"],
+  thee: ["you", "thou"],
+  ye: ["you", "thou"],
+  yourself: ["thou", "thee", "you"],
+  able: ["can"],
+  can: ["able"],
+};
+
 /** Display Strong's numbers without leading zeros: G25, H7225. */
 export function formatStrongId(raw: string | null | undefined): string {
   return normalizeStrongId(raw ?? "") ?? (raw ?? "").trim().toUpperCase();
@@ -43,22 +78,244 @@ export function tokenizeVerseSurface(text: string): VerseSurfaceToken[] {
   return tokens;
 }
 
-function normalizeGloss(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z\s']/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+export function normalizeAlignWord(raw: string): string {
+  return raw.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+export function foldKjvVariants(raw: string): string[] {
+  const w = normalizeAlignWord(raw);
+  if (!w) return [];
+  const out = new Set<string>([w]);
+  const strip = (re: RegExp, min = 2) => {
+    if (re.test(w)) {
+      const next = w.replace(re, "");
+      if (next.length >= min) out.add(next);
+    }
+  };
+  strip(/eth$/);
+  strip(/est$/);
+  strip(/ath$/);
+  strip(/ith$/);
+  strip(/iest$/);
+  strip(/ied$/);
+  strip(/ies$/);
+  strip(/ing$/);
+  strip(/ed$/);
+  strip(/es$/);
+  strip(/ly$/);
+  strip(/st$/);
+  strip(/s$/);
+  if (w.endsWith("eth") && w.length > 4) out.add(`${w.slice(0, -3)}e`);
+  if (w.endsWith("est") && w.length > 4) out.add(`${w.slice(0, -3)}e`);
+  return [...out];
+}
+
+export function wordsSimilar(a: string, b: string): boolean {
+  const va = foldKjvVariants(a);
+  const vb = foldKjvVariants(b);
+  if (va.length === 0 || vb.length === 0) return false;
+  for (const x of va) {
+    for (const y of vb) {
+      if (x === y) return true;
+      const n = Math.min(x.length, y.length);
+      if (n >= 3 && (x.startsWith(y) || y.startsWith(x))) return true;
+    }
+  }
+  const na = normalizeAlignWord(a);
+  const nb = normalizeAlignWord(b);
+  const eqA = EQUIV[na];
+  const eqB = EQUIV[nb];
+  if (eqA?.some((w) => foldKjvVariants(w).some((x) => vb.includes(x)))) return true;
+  if (eqB?.some((w) => foldKjvVariants(w).some((x) => va.includes(x)))) return true;
+  return false;
+}
+
+const PRONOUN = new Set(
+  "me my him his her them their you your us our i we it its thee thou thy ye".split(" "),
+);
+
+export function isAlignStopWord(raw: string): boolean {
+  return STOP.has(normalizeAlignWord(raw));
+}
+
+function isPronounWord(raw: string): boolean {
+  return PRONOUN.has(normalizeAlignWord(raw));
+}
+
+function glossLooksLikeParticle(item: AlignableMap): boolean {
+  const gloss = glossPhrase(item.translatedWord ?? item.map?.translatedWord ?? "");
+  if (gloss.length === 0) return false;
+  return gloss.every((word) => isAlignStopWord(word) && !isPronounWord(word));
+}
+
+function glossLooksLikePronounOnly(item: AlignableMap): boolean {
+  const gloss = glossPhrase(item.translatedWord ?? item.map?.translatedWord ?? "");
+  return gloss.length > 0 && gloss.every(isPronounWord);
+}
+
+function trimPhraseStops(words: string[]): string[] {
+  const next = [...words];
+  while (
+    next.length > 1 &&
+    isAlignStopWord(next[0]!) &&
+    !isPronounWord(next[0]!)
+  ) {
+    next.shift();
+  }
+  while (
+    next.length > 1 &&
+    isAlignStopWord(next[next.length - 1]!) &&
+    !isPronounWord(next[next.length - 1]!)
+  ) {
+    next.pop();
+  }
+  return next;
+}
+
+function usagePhrases(usage: string): string[][] {
+  const phrases: string[][] = [];
+  for (const chunk of usage.split(/[,;]/)) {
+    const words = [...chunk.matchAll(/[A-Za-z']+/g)].map((m) => m[0]);
+    if (words.length > 0) phrases.push(trimPhraseStops(words));
+    for (const word of words) {
+      if (!isAlignStopWord(word)) phrases.push([word]);
+    }
+  }
+  return phrases;
+}
+
+function glossPhrase(translatedWord: string): string[] {
+  const words = [...translatedWord.matchAll(/[A-Za-z']+/g)].map((m) => m[0]);
+  return trimPhraseStops(words);
+}
+
+function uniquePhrases(phrases: string[][]): string[][] {
+  const seen = new Set<string>();
+  const unique: string[][] = [];
+  for (const phrase of phrases.sort((a, b) => b.length - a.length)) {
+    const key = phrase.map((w) => normalizeAlignWord(w)).join(" ");
+    if (!key || seen.has(key)) continue;
+    if (phrase.every(isAlignStopWord) && !phrase.some(isPronounWord)) continue;
+    seen.add(key);
+    unique.push(phrase);
+  }
+  return unique;
+}
+
+function glossPhrasesFor(item: AlignableMap): string[][] {
+  const gloss = item.translatedWord ?? item.map?.translatedWord ?? "";
+  const fromGloss = glossPhrase(gloss);
+  return uniquePhrases(fromGloss.length ? [fromGloss] : []);
+}
+
+function usagePhrasesFor(item: AlignableMap): string[][] {
+  const usage = item.kjvUsage ?? item.entry?.kjvUsage ?? "";
+  return uniquePhrases(usagePhrases(usage));
+}
+
+function matchPhraseFrom(
+  tokens: AlignedWordToken[],
+  wordIndexes: number[],
+  start: number,
+  phrase: string[],
+): { from: number; to: number } | null {
+  let p = 0;
+  let i = start;
+  let from: number | null = null;
+  let lastHit = start;
+  while (i < wordIndexes.length && p < phrase.length) {
+    const token = tokens[wordIndexes[i]!];
+    if (!token) return null;
+    if (token.mapIndex != null) {
+      if (from != null) return null;
+      i += 1;
+      continue;
+    }
+    if (wordsSimilar(token.surface, phrase[p]!)) {
+      if (from == null) from = i;
+      lastHit = i;
+      p += 1;
+      i += 1;
+      continue;
+    }
+    if (from != null && isAlignStopWord(token.surface)) {
+      i += 1;
+      continue;
+    }
+    return null;
+  }
+  if (p !== phrase.length || from == null) return null;
+  return { from, to: lastHit };
+}
+
+function collapseAlignedPhrases(tokens: AlignedWordToken[]): AlignedWordToken[] {
+  const out: AlignedWordToken[] = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i]!;
+    if (token.mapIndex == null || token.kind === "sep") {
+      out.push(token);
+      i += 1;
+      continue;
+    }
+    const idx = token.mapIndex;
+    let surface = token.surface;
+    let j = i + 1;
+    while (j < tokens.length) {
+      const next = tokens[j]!;
+      if (next.mapIndex === idx) {
+        surface += next.surface;
+        j += 1;
+        continue;
+      }
+      const following = tokens[j + 1];
+      if (next.kind === "sep" && next.mapIndex == null && following?.mapIndex === idx) {
+        surface += next.surface;
+        j += 1;
+        continue;
+      }
+      break;
+    }
+    out.push({ surface, kind: "word", mapIndex: idx });
+    i = j;
+  }
+  return out;
+}
+
+function applyPhrases(
+  tokens: AlignedWordToken[],
+  wordIndexes: number[],
+  mapIndex: number,
+  phrases: string[][],
+): boolean {
+  if (tokens.some((token) => token.mapIndex === mapIndex)) return true;
+  let best: { from: number; to: number; score: number } | null = null;
+  for (const phrase of phrases) {
+    if (phrase.length === 0) continue;
+    if (phrase.every(isAlignStopWord) && !phrase.some(isPronounWord)) continue;
+    for (let start = 0; start < wordIndexes.length; start += 1) {
+      const hit = matchPhraseFrom(tokens, wordIndexes, start, phrase);
+      if (!hit) continue;
+      const score = phrase.length * 10 + (hit.to - hit.from);
+      if (!best || score > best.score) best = { ...hit, score };
+    }
+  }
+  if (!best) return false;
+  for (let i = best.from; i <= best.to; i += 1) {
+    const tokenIndex = wordIndexes[i];
+    if (tokenIndex == null) continue;
+    const token = tokens[tokenIndex];
+    if (token && token.mapIndex == null) token.mapIndex = mapIndex;
+  }
+  return true;
 }
 
 /**
- * Walk STEP glosses in verse order and attach them to KJV surface words.
- * Unmatched English words stay untappable (mapIndex null).
+ * Attach STEP maps to KJV surface words using the stored gloss plus Strong's
+ * KJV usage, so translator-English / Hebrew-order glosses still light the
+ * KJV words they tag. Consecutive hits for one map collapse to a phrase.
  */
-export function alignMapsToSurface(
-  text: string,
-  maps: Array<{ translatedWord?: string | null; map?: { translatedWord?: string | null } }>,
-): AlignedWordToken[] {
+export function alignMapsToSurface(text: string, maps: AlignableMap[]): AlignedWordToken[] {
   const tokens = tokenizeVerseSurface(text).map((token) => ({
     ...token,
     mapIndex: null as number | null,
@@ -68,48 +325,50 @@ export function alignMapsToSurface(
     .filter((index) => index >= 0);
 
   maps.forEach((item, mapIndex) => {
-    const glossWords = normalizeGloss(item.translatedWord ?? item.map?.translatedWord ?? "")
-      .split(" ")
-      .filter(Boolean);
-    if (glossWords.length === 0) return;
-
-    const unusedMatch = (start: number, span: number): boolean => {
-      if (start + span > wordIndexes.length) return false;
-      for (let i = 0; i < span; i += 1) {
-        const token = tokens[wordIndexes[start + i]!];
-        if (!token || token.mapIndex != null) return false;
-        if (normalizeGloss(token.surface) !== glossWords[i]) return false;
-      }
-      return true;
-    };
-
-    let found: number | null = null;
-    let span = 1;
-    for (let start = 0; start < wordIndexes.length; start += 1) {
-      if (unusedMatch(start, glossWords.length)) {
-        found = start;
-        span = glossWords.length;
-        break;
-      }
-    }
-    if (found == null) {
-      for (let start = 0; start < wordIndexes.length; start += 1) {
-        const token = tokens[wordIndexes[start]!];
-        if (token && token.mapIndex == null && normalizeGloss(token.surface) === glossWords[0]) {
-          found = start;
-          span = 1;
-          break;
-        }
-      }
-    }
-    if (found == null) return;
-
-    for (let i = 0; i < span; i += 1) {
-      const tokenIndex = wordIndexes[found + i];
-      if (tokenIndex == null) continue;
-      tokens[tokenIndex]!.mapIndex = mapIndex;
-    }
+    if (glossLooksLikePronounOnly(item)) return;
+    applyPhrases(tokens, wordIndexes, mapIndex, glossPhrasesFor(item));
+  });
+  maps.forEach((item, mapIndex) => {
+    if (glossLooksLikeParticle(item)) return;
+    applyPhrases(tokens, wordIndexes, mapIndex, usagePhrasesFor(item));
   });
 
-  return tokens;
+  return collapseAlignedPhrases(tokens);
 }
+
+export type WordStudyChip = {
+  surface: string;
+  strongId: string;
+  mapIndex: number;
+};
+
+/** Unique aligned STEP words for verse-sheet chips (English → unpadded G/H). */
+export function wordStudyChipsForVerse(
+  text: string,
+  maps: ReaderStrongMap[],
+): WordStudyChip[] {
+  const aligned = alignMapsToSurface(
+    text,
+    maps.map((item) => ({
+      translatedWord: item.map.translatedWord,
+      kjvUsage: item.entry?.kjvUsage,
+    })),
+  );
+  const chips: WordStudyChip[] = [];
+  const seen = new Set<number>();
+  for (const token of aligned) {
+    if (token.kind !== "word" || token.mapIndex == null || seen.has(token.mapIndex)) continue;
+    seen.add(token.mapIndex);
+    const mapping = maps[token.mapIndex];
+    if (!mapping) continue;
+    const strongId = formatStrongId(mapping.map.strongId);
+    if (!strongId) continue;
+    chips.push({
+      surface: token.surface.replace(/\s+/g, " ").trim(),
+      strongId,
+      mapIndex: token.mapIndex,
+    });
+  }
+  return chips;
+}
+

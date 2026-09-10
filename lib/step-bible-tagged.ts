@@ -222,7 +222,31 @@ export function cleanEnglishGloss(raw: string): string {
     .split("/")
     .map((p) => p.replace(/[\\׃:.]+$/g, "").trim())
     .filter(Boolean);
-  const root = parts[parts.length - 1] ?? "";
+  const SUFFIX = new Set([
+    "me",
+    "my",
+    "him",
+    "his",
+    "her",
+    "them",
+    "their",
+    "you",
+    "your",
+    "us",
+    "our",
+    "i",
+    "we",
+    "it",
+    "its",
+    "thee",
+    "thou",
+    "thy",
+    "ye",
+  ]);
+  while (parts.length > 1 && SUFFIX.has(parts[parts.length - 1]!.toLowerCase())) {
+    parts.pop();
+  }
+  const root = (parts[parts.length - 1] ?? "").replace(/^(is|was|are)\s+/i, "");
   return root.replace(/\s+/g, " ").trim();
 }
 

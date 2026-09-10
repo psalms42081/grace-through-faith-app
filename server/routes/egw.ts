@@ -1,5 +1,8 @@
 import { Router } from "express";
+import { eq } from "drizzle-orm";
 import { requireRole } from "../middleware/auth";
+import { db } from "../db";
+import { egwChapters } from "../../shared/schema";
 import {
   isEgwConfigured,
   getBooks,
@@ -114,6 +117,40 @@ router.get("/search/topical", async (req, res) => {
   } catch (error: any) {
     console.error("[EGW] Topical search error:", error.message);
     res.status(500).json({ error: "Failed to search by topic" });
+  }
+});
+
+router.get("/local-chapter/:id", async (req, res) => {
+  try {
+    const [row] = await db
+      .select()
+      .from(egwChapters)
+      .where(eq(egwChapters.id, String(req.params.id)))
+      .limit(1);
+    if (!row) {
+      return res.status(404).json({ error: "Chapter not found" });
+    }
+    const paragraphs = Array.isArray(row.paragraphs)
+      ? row.paragraphs.filter((item): item is string => typeof item === "string")
+      : [];
+    return res.json({
+      id: row.id,
+      author: "Ellen G. White",
+      authorSlug: "ellen-white",
+      authorDates: "1827–1915",
+      book: row.book,
+      bookSlug: row.bookSlug,
+      year: 0,
+      chapterNumber: row.chapterNumber,
+      chapterTitle: row.chapterTitle,
+      sourceUrl: "https://egwwritings.org",
+      publicDomain:
+        "Ellen G. White writings published in the United States during her lifetime are in the public domain.",
+      paragraphs,
+    });
+  } catch (error: any) {
+    console.error("[EGW] Local chapter error:", error.message);
+    return res.status(500).json({ error: "Failed to fetch chapter" });
   }
 });
 

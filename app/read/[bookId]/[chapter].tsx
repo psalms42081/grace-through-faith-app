@@ -21,7 +21,6 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Languages } from "lucide-react-native";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,13 +29,14 @@ import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
-import { VerseSelectionBar } from "@/components/reader/VerseSelectionBar";
+import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/VerseSheet";
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
+  bibleTabBookPath,
   goBibleReaderBack,
   isBibleTabSegments,
   openBibleTabBooks,
@@ -73,6 +73,7 @@ const HIGHLIGHT_COLORS = {
   pink: { bg: "#F48FB1", label: "Pink" },
   green: { bg: "#A5D6A7", label: "Green" },
   orange: { bg: "#FFCC80", label: "Orange" },
+  rose: { bg: "#F8BBD0", label: "Rose" },
   purple: { bg: "#CE93D8", label: "Purple" },
 } as const;
 
@@ -1132,6 +1133,10 @@ export default function VerseReaderScreen() {
   const tabBarClearance = isTabReader ? (Platform.OS === "web" ? 84 : 64) : 0;
   const bottomPad =
     (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
+  const readerScrollBottomPad =
+    (sheetOpen && !wordStudyMode ? VERSE_SHEET_COLLAPSED_HEIGHT : READER_FLOATING_CHROME_HEIGHT) +
+    READER_SCROLL_END_AIR +
+    bottomPad;
 
   const handleVerseTap = useCallback((item: Verse) => {
     if (wordStudyMode) return;
@@ -1146,14 +1151,7 @@ export default function VerseReaderScreen() {
     });
   }, [wordStudyMode, useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
-  const handleVerseLongPress = useCallback((item: Verse) => {
-    verseInteractedAt.current = Date.now();
-    if (useNewTypography) setStripHidden(false);
-    if (showVerseTapHint) dismissVerseTapHint();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedVerseNums((prev) => (prev.length === 0 ? [item.verse] : prev));
-    setSheetOpen(true);
-  }, [useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
+  const handleVerseLongPress = handleVerseTap;
 
   const dismissToolbar = useCallback(() => {
     setSheetOpen(false);
@@ -1366,11 +1364,17 @@ export default function VerseReaderScreen() {
                 onPress={toggleWordStudyMode}
                 style={styles.headerIconBtn}
               >
-                <Languages
-                  size={18}
-                  color={kjvWordStudy && wordStudyMode ? RV2_INK : RV2_INK_MUTED}
-                  strokeWidth={2}
-                />
+                <Text
+                  style={{
+                    fontSize: 11,
+                    lineHeight: 14,
+                    letterSpacing: 0.2,
+                    fontFamily: "Inter_600SemiBold",
+                    color: kjvWordStudy && wordStudyMode ? RV2_INK : RV2_INK_MUTED,
+                  }}
+                >
+                  Word study
+                </Text>
               </Pressable>
               <Pressable
                 testID="split-screen-toggle"
@@ -1522,7 +1526,7 @@ export default function VerseReaderScreen() {
               scrollEventThrottle={16}
               contentContainerStyle={[
                 styles.scrollContent,
-                { paddingBottom: READER_FLOATING_CHROME_HEIGHT + READER_SCROLL_END_AIR + bottomPad },
+                { paddingBottom: readerScrollBottomPad },
                 splitMode && isSideBySide && { paddingHorizontal: 16 },
               ]}
               showsVerticalScrollIndicator={false}
@@ -1547,7 +1551,7 @@ export default function VerseReaderScreen() {
                   <Text style={[styles.verseTapHintText, { color: RV2_INK_MUTED }]}>
                     {wordStudyMode
                       ? "Tap an underlined word for its Strong's entry."
-                      : "Tap a verse to select. Tap more to add. Done clears."}
+                      : "Tap a verse to select. Tap more to add. Drag down to dismiss."}
                   </Text>
                   <Ionicons name="close" size={12} color={RV2_INK_MUTED} />
                 </Pressable>
@@ -1727,7 +1731,7 @@ export default function VerseReaderScreen() {
                   scrollEventThrottle={16}
                   contentContainerStyle={[
                     styles.scrollContent,
-                    { paddingBottom: READER_FLOATING_CHROME_HEIGHT + READER_SCROLL_END_AIR + bottomPad, paddingHorizontal: 16 },
+                    { paddingBottom: readerScrollBottomPad, paddingHorizontal: 16 },
                   ]}
                   showsVerticalScrollIndicator={false}
                 >
@@ -1762,16 +1766,32 @@ export default function VerseReaderScreen() {
             )}
             </View>
 
-            {sheetOpen && selectedVerseObjs.length > 0 && !wordStudyTarget && !wordStudyMode && (
-              <VerseSelectionBar
-                count={selectedVerseObjs.length}
-                reference={selectionPayload.reference}
+            {sheetOpen && selectedVerseObjs.length > 0 && !wordStudyMode && (
+              <VerseSheet
+                verses={selectedVerseObjs}
+                bookName={bookName ?? ""}
+                bookId={String(bookId)}
+                chapter={String(chapter)}
+                translation={translation}
                 bottomPad={bottomPad}
+                maps={mapsByVerseId.get(selectedVerseObjs[0]?.id ?? "") ?? []}
+                userId={userId}
+                isAuthenticated={isAuthenticated}
                 onHighlight={handleStripHighlight}
                 onBookmark={handleSelectionBookmark}
-                onShare={handleSelectionShare}
                 onCopy={handleSelectionCopy}
-                onDone={dismissToolbar}
+                onShare={handleSelectionShare}
+                onDismiss={dismissToolbar}
+                onWordActivate={(surface, mapping) => handleWordActivate(surface, mapping)}
+                onOpenDeepDive={() =>
+                  router.push({
+                    pathname: "/(tabs)/study",
+                    params: { bookId: String(bookId), chapter: String(chapter) },
+                  } as any)
+                }
+                onOpenBookOverview={() =>
+                  router.push((isTabReader ? bibleTabBookPath(bookId) : `/read/${bookId}`) as any)
+                }
               />
             )}
 

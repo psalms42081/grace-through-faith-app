@@ -12,22 +12,27 @@ import { PioneerProse, PublicDomainLine } from "./PioneerProse";
 
 export default function PioneerChapter() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; kind?: string }>();
   const chapterId = typeof params.id === "string" && params.id.length > 0
     ? params.id
     : Array.isArray(params.id) && params.id[0]
       ? params.id[0]
       : null;
+  const isEgw = params.kind === "egw";
 
   const q = useQuery<PioneerChapterPayload>({
-    queryKey: [`/api/pioneers/chapter/${chapterId}`],
+    queryKey: [
+      isEgw
+        ? `/api/egw/local-chapter/${chapterId}`
+        : `/api/pioneers/chapter/${chapterId}`,
+    ],
     enabled: !!chapterId,
   });
 
   if (!chapterId || q.isLoading) {
     return (
       <View style={s.root}>
-        <Header title="Pioneer writings" topInset={insets.top} onBack={() => router.back()} />
+        <Header title={isEgw ? "Ellen White" : "Pioneer writings"} topInset={insets.top} onBack={() => router.back()} />
         <LoadingState label="Opening the chapter" />
       </View>
     );
@@ -40,7 +45,7 @@ export default function PioneerChapter() {
   if (!chapter) {
     return (
       <View style={s.root}>
-        <Header title="Pioneer writings" topInset={insets.top} onBack={() => router.back()} />
+        <Header title={isEgw ? "Ellen White" : "Pioneer writings"} topInset={insets.top} onBack={() => router.back()} />
         <EmptyState
           title="This chapter could not be opened"
           body="Return to the shelf and choose another chapter."
@@ -67,7 +72,8 @@ export default function PioneerChapter() {
           <View style={s.source}>
             <Ionicons name="library-outline" size={15} color={D2.amber} />
             <Text style={s.sourceText}>
-              {chapter.book} ({chapter.year})
+              {chapter.book}
+              {chapter.year ? ` (${chapter.year})` : ""}
               {chapter.chapterNumber ? ` · Chapter ${chapter.chapterNumber}` : ""}
             </Text>
           </View>

@@ -167,27 +167,33 @@ describe("verseSurfaceStyle", () => {
 });
 
 describe("reader wiring", () => {
-  it("toggles selection by verse number and renders selectedVerses.has in prose", () => {
+  it("toggles selection by verse number and renders the collapsed verse sheet", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
     const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
-    const bar = readFileSync(new URL("../components/reader/VerseSelectionBar.tsx", import.meta.url), "utf8");
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
     assert.match(reader, /toggleVerseSelection/);
     assert.match(reader, /buildHighlightSheetPayload/);
     assert.match(reader, /highlightIdsForVerses/);
     assert.match(reader, /selectedVerses=\{selectedVerseSet\}/);
     assert.match(reader, /setSheetOpen\(next\.length > 0\)/);
-    assert.match(reader, /setSelectedVerseNums\(\(prev\) => \(prev\.length === 0 \? \[item\.verse\] : prev\)\)/);
+    assert.match(reader, /const handleVerseLongPress = handleVerseTap/);
+    assert.match(reader, /if \(wordStudyMode\) return/);
     assert.match(reader, /setSelectedVerseNums\(\[\]\);\s*setSheetOpen\(false\);/);
-    assert.match(reader, /VerseSelectionBar/);
+    assert.match(reader, /VerseSheet/);
+    assert.doesNotMatch(reader, /VerseSelectionBar/);
     assert.doesNotMatch(reader, /if \(sheetOpen\) dismissToolbar\(\)/);
-    assert.match(bar, /Highlight/);
-    assert.match(bar, /Bookmark/);
-    assert.match(bar, /Share/);
-    assert.match(bar, /Copy/);
-    assert.match(bar, /Done/);
-    assert.doesNotMatch(bar, /absoluteFill/);
+    assert.match(sheet, /Bookmark/);
+    assert.match(sheet, /Note/);
+    assert.match(sheet, /Share/);
+    assert.match(sheet, /Copy/);
+    assert.match(sheet, /reader-verse-highlight-\$\{dot\.key\}/);
+    assert.match(sheet, /VERSE_SHEET_HIGHLIGHTS/);
+    assert.doesNotMatch(sheet, />Done</);
+    assert.match(sheet, /rgba\(31, 26, 18, 0\.4\)/);
     assert.match(prose, /selectedVerses\.has\(v\.verse\)/);
     assert.match(prose, /verseSurfaceStyle/);
     assert.match(prose, /IS_WEB \|\| useWordTokens \? undefined : \{ accessibilityRole: "button"/);
+    assert.doesNotMatch(prose, /selectedRing/);
+    assert.doesNotMatch(prose, /textDecorationStyle: "dotted"/);
   });
 });

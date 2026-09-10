@@ -134,13 +134,6 @@ export function TypographyPreviewProse({
                     bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);
                   const surface = verseSurfaceStyle({ selected: isActive, highlightBg });
                   const bg = surface.backgroundColor;
-                  const selectedRing = isActive
-                    ? {
-                        textDecorationLine: "underline" as const,
-                        textDecorationStyle: "dotted" as const,
-                        textDecorationColor: surface.outline,
-                      }
-                    : null;
                   const lines = v.text.split("\n");
                   const { firstWord, remainder } = splitLeadingWord(lines[0] ?? "");
                   const maps = mapsByVerseId?.get(v.id);
@@ -179,7 +172,7 @@ export function TypographyPreviewProse({
                       {...versePress}
                       suppressHighlighting={false}
                       selectable={false}
-                      style={[{ backgroundColor: bg }, webVerseStyle, selectedRing]}
+                      style={[{ backgroundColor: bg }, webVerseStyle]}
                       {...(IS_WEB || useWordTokens ? undefined : { accessibilityRole: "button" as const })}
                       accessibilityLabel={`Verse ${v.verse}`}
                     >

@@ -23,9 +23,8 @@ const webInline: TextStyle | undefined = IS_WEB
 
 const taggedStyle: TextStyle = {
   textDecorationLine: "underline",
-  textDecorationStyle: "solid",
-  textDecorationColor: "#5B6B7A",
-  backgroundColor: "rgba(91, 107, 122, 0.12)",
+  textDecorationStyle: "dotted",
+  textDecorationColor: "#1F1A12",
 };
 
 export function ReaderVerseWords({
@@ -50,7 +49,14 @@ export function ReaderVerseWords({
   onWordActivate: (surface: string, mapping: ReaderStrongMap) => void;
 }) {
   const tokens = useMemo(
-    () => alignMapsToSurface(text, maps.map((item) => item.map)),
+    () =>
+      alignMapsToSurface(
+        text,
+        maps.map((item) => ({
+          translatedWord: item.map.translatedWord,
+          kjvUsage: item.entry?.kjvUsage,
+        })),
+      ),
     [text, maps],
   );
   const activateRef = useRef(onWordActivate);
@@ -159,9 +165,9 @@ export function ReaderVerseWords({
               tagged && mark
                 ? IS_WEB
                   ? ({
-                      textDecoration: "underline",
-                      textDecorationColor: "#5B6B7A",
-                      backgroundColor: "rgba(91, 107, 122, 0.14)",
+                      textDecorationLine: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: "#1F1A12",
                     } as unknown as TextStyle)
                   : mark
                 : null,

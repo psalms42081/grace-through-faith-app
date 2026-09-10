@@ -155,6 +155,12 @@ describe("gloss helpers", () => {
     assert.equal(cleanEnglishGloss("[The] book"), "The book");
   });
 
+  it("keeps the verbal gloss when a pronoun suffix is on the slash", () => {
+    assert.equal(cleanEnglishGloss("he makes lie down/ me"), "he makes lie down");
+    assert.equal(cleanEnglishGloss("[is] shepherd/ my"), "shepherd");
+    assert.equal(cleanEnglishGloss("he leads/ me"), "he leads");
+  });
+
   it("takes the Hebrew root after prefixes", () => {
     assert.equal(surfaceOriginalWord("בְּ/רֵאשִׁ֖ית", "he"), "רֵאשִׁ֖ית");
   });

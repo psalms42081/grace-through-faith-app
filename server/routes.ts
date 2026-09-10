@@ -53,6 +53,7 @@ import youtubeRoutes from "./routes/youtube";
 import { createOdbRouter } from "./routes/odb";
 import { createDefaultOdbStore } from "./odb-store";
 import bibleGroupRoutes from "./routes/bible-groups";
+import verseSheetRoutes from "./routes/verse-sheet";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -140,6 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(bibleRoutes);
   app.use(strongsRoutes);
   app.use(commentaryRoutes);
+  app.use(verseSheetRoutes);
   app.use(contextRoutes);
   app.use(locationsTimelineRoutes);
   app.use(studyGuideRoutes);
