@@ -30,6 +30,7 @@ import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
+import { VerseSelectionBar } from "@/components/reader/VerseSelectionBar";
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
@@ -46,8 +47,10 @@ import {
 } from "@/lib/use-hardware-back-to-home";
 import {
   buildHighlightSheetPayload,
+  formatVerseRangeLabel,
   highlightIdsForVerses,
   toggleVerseSelection,
+  verseSurfaceStyle,
 } from "@/lib/verse-selection";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
@@ -796,6 +799,9 @@ export default function VerseReaderScreen() {
 
   const [selectedVerseNums, setSelectedVerseNums] = useState<number[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [localHighlightMap, setLocalHighlightMap] = useState<Map<string, HighlightColorKey>>(
+    () => new Map(),
+  );
   const [wordStudyMode, setWordStudyMode] = useState(false);
   const [wordStudyTarget, setWordStudyTarget] = useState<WordStudySheetTarget | null>(null);
   const verseInteractedAt = useRef(0);
@@ -809,6 +815,7 @@ export default function VerseReaderScreen() {
     setSelectedVerseNums([]);
     setSheetOpen(false);
     setWordStudyTarget(null);
+    setLocalHighlightMap(new Map());
   }, [bookId, chapter]);
 
 
@@ -1127,16 +1134,17 @@ export default function VerseReaderScreen() {
     (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
 
   const handleVerseTap = useCallback((item: Verse) => {
+    if (wordStudyMode) return;
     verseInteractedAt.current = Date.now();
     if (useNewTypography) setStripHidden(false);
     if (showVerseTapHint) dismissVerseTapHint();
     Haptics.selectionAsync();
     setSelectedVerseNums((prev) => {
       const next = toggleVerseSelection(prev, item.verse);
-      if (next.length === 0) setSheetOpen(false);
+      setSheetOpen(next.length > 0);
       return next;
     });
-  }, [useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
+  }, [wordStudyMode, useNewTypography, setStripHidden, showVerseTapHint, dismissVerseTapHint]);
 
   const handleVerseLongPress = useCallback((item: Verse) => {
     verseInteractedAt.current = Date.now();
@@ -1213,7 +1221,16 @@ export default function VerseReaderScreen() {
 
   const handleStripHighlight = useCallback(async (color: HighlightColorKey) => {
     if (selectedVerseObjs.length === 0) { showStripToast("Tap a verse first"); return; }
-    if (!userId) { showStripToast("Sign in to highlight"); return; }
+    if (!isAuthenticated || !userId) {
+      setLocalHighlightMap((prev) => {
+        const next = new Map(prev);
+        for (const v of selectedVerseObjs) next.set(v.id, color);
+        return next;
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showStripToast("Sign in to save highlights");
+      return;
+    }
     try {
       await Promise.all(
         selectedVerseObjs.map((v) => apiRequest("POST", "/api/highlights", { userId, verseId: v.id, color })),
@@ -1225,7 +1242,53 @@ export default function VerseReaderScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showStripToast("Failed to highlight");
     }
-  }, [selectedVerseObjs, userId, showStripToast]);
+  }, [selectedVerseObjs, isAuthenticated, userId, showStripToast]);
+
+  const selectionPayload = useMemo(
+    () =>
+      buildHighlightSheetPayload({
+        bookName: bookName ?? "",
+        chapter: chapter as string,
+        translation,
+        verses: selectedVerseObjs,
+      }),
+    [bookName, chapter, translation, selectedVerseObjs],
+  );
+
+  const handleSelectionBookmark = useCallback(async () => {
+    if (!isAuthenticated) { showStripToast("Sign in to save"); return; }
+    if (selectedVerseObjs.length === 0) return;
+    try {
+      await Promise.all(
+        selectedVerseObjs.map((v) =>
+          apiRequest("POST", "/api/bookmarks", {
+            userId,
+            verseId: v.id,
+            label: formatVerseRangeLabel(bookName ?? "", chapter as string, [v.verse]),
+          }),
+        ),
+      );
+      queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showStripToast("Bookmarked");
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showStripToast("Failed to save");
+    }
+  }, [isAuthenticated, selectedVerseObjs, userId, bookName, chapter, showStripToast]);
+
+  const handleSelectionCopy = useCallback(async () => {
+    await Clipboard.setStringAsync(selectionPayload.copyText);
+    showStripToast("Copied");
+  }, [selectionPayload.copyText, showStripToast]);
+
+  const handleSelectionShare = useCallback(async () => {
+    try {
+      await Share.share({ message: selectionPayload.copyText });
+    } catch {
+      /* user cancelled */
+    }
+  }, [selectionPayload.copyText]);
 
   const getHighlightBg = useCallback((verseId: string, verseNum: number, index: number): string => {
     if (highlightedFromNav === verseNum) {
@@ -1234,14 +1297,17 @@ export default function VerseReaderScreen() {
     if (index === audio.speakingVerseIndex) {
       return "rgba(255, 241, 118, 0.28)";
     }
-    const hColor = highlightColorMap.get(verseId) ?? highlightColorMap.get(`${bookId}:${chapterNum}:${verseNum}`);
+    const hColor =
+      localHighlightMap.get(verseId) ??
+      highlightColorMap.get(verseId) ??
+      highlightColorMap.get(`${bookId}:${chapterNum}:${verseNum}`);
     if (hColor) {
       const c = canonHighlightBg(hColor);
       if (c) return c + "50";
       return "rgba(255, 241, 118, 0.28)";
     }
     return "transparent";
-  }, [highlightedFromNav, navHighlightAlpha, audio.speakingVerseIndex, highlightColorMap, bookId, chapterNum]);
+  }, [highlightedFromNav, navHighlightAlpha, audio.speakingVerseIndex, highlightColorMap, localHighlightMap, bookId, chapterNum]);
 
   const readerBg = RV2_SURFACE;
   const textColor = RV2_INK;
@@ -1445,7 +1511,6 @@ export default function VerseReaderScreen() {
               ref={scrollViewRef}
               onScrollBeginDrag={() => {
                 audio.onUserScroll();
-                if (sheetOpen) dismissToolbar();
                 setShowTranslationPicker(false);
               }}
               onScroll={(e) => {
@@ -1482,7 +1547,7 @@ export default function VerseReaderScreen() {
                   <Text style={[styles.verseTapHintText, { color: RV2_INK_MUTED }]}>
                     {wordStudyMode
                       ? "Tap an underlined word for its Strong's entry."
-                      : "Tap a verse to select. Long press for actions."}
+                      : "Tap a verse to select. Tap more to add. Done clears."}
                   </Text>
                   <Ionicons name="close" size={12} color={RV2_INK_MUTED} />
                 </Pressable>
@@ -1517,11 +1582,10 @@ export default function VerseReaderScreen() {
                   const hasHighlightBg = highlightBg !== "transparent";
                   const isSpeaking = i === audio.speakingVerseIndex && audio.isSpeaking && !audio.isPaused;
 
-                  const verseBg = isActive
-                    ? "rgba(31,26,18,0.06)"
-                    : hasHighlightBg
-                      ? highlightBg
-                      : "transparent";
+                  const verseBg = verseSurfaceStyle({
+                    selected: isActive,
+                    highlightBg: hasHighlightBg ? highlightBg : "transparent",
+                  }).backgroundColor;
 
                   return (
                     <View key={v.id}>
@@ -1698,19 +1762,16 @@ export default function VerseReaderScreen() {
             )}
             </View>
 
-            {sheetOpen && selectedVerseObjs.length > 0 && !wordStudyTarget && (
-              <BottomSheetToolbar
-                verses={selectedVerseObjs}
-                highlightIds={selectedHighlightIds}
-                bookName={bookName}
-                bookId={bookId as string}
-                chapter={chapter as string}
-                translation={translation}
-                userId={userId}
-                isAuthenticated={isAuthenticated}
-                onDismiss={dismissToolbar}
-                isDark={isDark}
+            {sheetOpen && selectedVerseObjs.length > 0 && !wordStudyTarget && !wordStudyMode && (
+              <VerseSelectionBar
+                count={selectedVerseObjs.length}
+                reference={selectionPayload.reference}
                 bottomPad={bottomPad}
+                onHighlight={handleStripHighlight}
+                onBookmark={handleSelectionBookmark}
+                onShare={handleSelectionShare}
+                onCopy={handleSelectionCopy}
+                onDone={dismissToolbar}
               />
             )}
 

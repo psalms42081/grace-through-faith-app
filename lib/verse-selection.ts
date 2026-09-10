@@ -1,6 +1,26 @@
 /** En-dash used in contiguous verse ranges, e.g. `1–3`. */
 export const VERSE_RANGE_DASH = "\u2013";
 
+/** Ink wash for a selected verse that has no highlight colour. Distinct from highlight tints. */
+export const VERSE_SELECTION_WASH = "rgba(31,26,18,0.10)";
+/** Ink inset ring so selection stays visible on top of a highlight colour. */
+export const VERSE_SELECTION_OUTLINE = "#1F1A12";
+
+export function verseSurfaceStyle(opts: {
+  selected: boolean;
+  highlightBg: string;
+}): { backgroundColor: string; outline?: string } {
+  const highlighted = opts.highlightBg !== "transparent";
+  return {
+    backgroundColor: highlighted
+      ? opts.highlightBg
+      : opts.selected
+        ? VERSE_SELECTION_WASH
+        : "transparent",
+    outline: opts.selected ? VERSE_SELECTION_OUTLINE : undefined,
+  };
+}
+
 export type SheetActionScope = "all" | "first";
 
 /**

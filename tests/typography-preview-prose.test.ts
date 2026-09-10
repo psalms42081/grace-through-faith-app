@@ -223,7 +223,7 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(prose, /width:\s*"100%"/);
     assert.doesNotMatch(prose, /flexDirection|display:\s*"flex"/);
     assert.match(prose, /backgroundColor:\s*bg/);
-    assert.match(prose, /IS_WEB \? undefined : \{ accessibilityRole: "button"/);
+    assert.match(prose, /IS_WEB \|\| useWordTokens \? undefined : \{ accessibilityRole: "button"/);
     assert.doesNotMatch(prose, /accessibilityRole="button"/);
   });
 

@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import {
   SHEET_ACTION_SCOPE,
   VERSE_RANGE_DASH,
+  VERSE_SELECTION_OUTLINE,
+  VERSE_SELECTION_WASH,
   buildHighlightSheetPayload,
   buildSelectionCopyText,
   collapseVerseRanges,
@@ -11,6 +13,7 @@ import {
   formatVerseRangeLabel,
   highlightIdsForVerses,
   toggleVerseSelection,
+  verseSurfaceStyle,
 } from "../lib/verse-selection";
 
 describe("toggleVerseSelection", () => {
@@ -146,17 +149,45 @@ describe("highlightIdsForVerses", () => {
   });
 });
 
+describe("verseSurfaceStyle", () => {
+  it("uses the ink wash when selected with no highlight, and keeps highlight under the outline", () => {
+    assert.deepEqual(verseSurfaceStyle({ selected: true, highlightBg: "transparent" }), {
+      backgroundColor: VERSE_SELECTION_WASH,
+      outline: VERSE_SELECTION_OUTLINE,
+    });
+    assert.deepEqual(verseSurfaceStyle({ selected: true, highlightBg: "#FFF17650" }), {
+      backgroundColor: "#FFF17650",
+      outline: VERSE_SELECTION_OUTLINE,
+    });
+    assert.deepEqual(verseSurfaceStyle({ selected: false, highlightBg: "#FFF17650" }), {
+      backgroundColor: "#FFF17650",
+      outline: undefined,
+    });
+  });
+});
+
 describe("reader wiring", () => {
   it("toggles selection by verse number and renders selectedVerses.has in prose", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
     const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
+    const bar = readFileSync(new URL("../components/reader/VerseSelectionBar.tsx", import.meta.url), "utf8");
     assert.match(reader, /toggleVerseSelection/);
     assert.match(reader, /buildHighlightSheetPayload/);
     assert.match(reader, /highlightIdsForVerses/);
     assert.match(reader, /selectedVerses=\{selectedVerseSet\}/);
+    assert.match(reader, /setSheetOpen\(next\.length > 0\)/);
     assert.match(reader, /setSelectedVerseNums\(\(prev\) => \(prev\.length === 0 \? \[item\.verse\] : prev\)\)/);
     assert.match(reader, /setSelectedVerseNums\(\[\]\);\s*setSheetOpen\(false\);/);
+    assert.match(reader, /VerseSelectionBar/);
+    assert.doesNotMatch(reader, /if \(sheetOpen\) dismissToolbar\(\)/);
+    assert.match(bar, /Highlight/);
+    assert.match(bar, /Bookmark/);
+    assert.match(bar, /Share/);
+    assert.match(bar, /Copy/);
+    assert.match(bar, /Done/);
+    assert.doesNotMatch(bar, /absoluteFill/);
     assert.match(prose, /selectedVerses\.has\(v\.verse\)/);
-    assert.match(prose, /IS_WEB \? undefined : \{ accessibilityRole: "button"/);
+    assert.match(prose, /verseSurfaceStyle/);
+    assert.match(prose, /IS_WEB \|\| useWordTokens \? undefined : \{ accessibilityRole: "button"/);
   });
 });

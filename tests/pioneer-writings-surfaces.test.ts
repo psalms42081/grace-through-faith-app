@@ -108,4 +108,25 @@ describe("Pioneer writings surfaces stay source-only", () => {
     assert.match(reading, /A note from Informed Ministries/);
     assert.match(reading, /Read the whole book/);
   });
+
+  it("opens the shelf from Discover after Daily Devotionals and from the Bible menu", () => {
+    const discover = readFileSync(new URL("../app/discover-v2.tsx", import.meta.url), "utf8");
+    const bible = readFileSync(new URL("../app/book-picker.tsx", import.meta.url), "utf8");
+    assert.match(discover, /testID="discover-pioneer-writings"/);
+    assert.match(discover, /Pioneer Writings/);
+    assert.match(discover, /Adventist pioneers and Ellen White in their own words/);
+    assert.match(discover, /\/pioneer-shelf/);
+    const afterDevotionals = discover.match(
+      /Daily Devotionals[\s\S]*discover-pioneer-writings[\s\S]*Ways to Study/,
+    );
+    assert.ok(afterDevotionals, "Discover pioneer card should sit after Daily Devotionals and before Ways to Study");
+    assert.match(bible, /testID="bible-pioneer-writings"/);
+    assert.match(bible, /Pioneer Writings/);
+    assert.match(bible, /\/pioneer-shelf/);
+    const pioneerAt = bible.indexOf('testID="bible-pioneer-writings"');
+    const otAt = bible.indexOf("Old Testament");
+    const ntAt = bible.indexOf("New Testament");
+    assert.ok(pioneerAt > 0 && otAt > pioneerAt, "Bible pioneer row should sit above Old Testament / Genesis");
+    assert.ok(ntAt > otAt, "New Testament should remain below Old Testament");
+  });
 });

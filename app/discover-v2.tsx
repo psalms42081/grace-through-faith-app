@@ -616,6 +616,27 @@ export default function DiscoverV2Screen() {
               </View>
             )}
 
+            <View style={s.section}>
+              <Pressable
+                onPress={() => router.push("/pioneer-shelf" as any)}
+                style={({ pressed }) => [s.pioneerCard, { opacity: pressed ? 0.88 : 1 }]}
+                testID="discover-pioneer-writings"
+                accessibilityRole="button"
+                accessibilityLabel="Pioneer Writings. Adventist pioneers and Ellen White in their own words"
+              >
+                <View style={[s.studyIcon, { backgroundColor: "#FFF0D9" }]}>
+                  <Ionicons name="library-outline" size={18} color="#8A5A10" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.studyTitle}>Pioneer Writings</Text>
+                  <Text style={s.studySub}>
+                    Adventist pioneers and Ellen White in their own words
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={D.inkMuted} />
+              </Pressable>
+            </View>
+
             {/* ---- Ways to Study (§A.2.6) ---- */}
             <View style={s.section}>
               <Text style={s.sectionTitle}>Ways to Study</Text>
@@ -792,6 +813,11 @@ const s = StyleSheet.create({
   devoTitle: { fontFamily: F.interSemi, fontSize: 14.5, color: D.ink, lineHeight: 19 },
   devoMeta: { fontFamily: F.inter, fontSize: 12, color: D.inkMuted },
 
+  pioneerCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: D.card, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 16,
+    ...HV2.rowShadow,
+  },
   studyRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: D.card, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 13,

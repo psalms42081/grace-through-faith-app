@@ -161,6 +161,34 @@ export default function BookPickerScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
           showsVerticalScrollIndicator={false}
         >
+          <Pressable
+            onPress={() => router.push("/pioneer-shelf" as any)}
+            style={({ pressed }) => [
+              styles.pioneerRow,
+              {
+                backgroundColor: theme.backgroundCard,
+                borderColor: theme.borderLight,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+            testID="bible-pioneer-writings"
+            accessibilityRole="button"
+            accessibilityLabel="Pioneer Writings"
+          >
+            <View style={styles.pioneerIcon}>
+              <Ionicons name="library-outline" size={18} color={theme.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.pioneerTitle, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
+                Pioneer Writings
+              </Text>
+              <Text style={[styles.pioneerSub, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                Adventist pioneers and Ellen White in their own words
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+          </Pressable>
+
           <View style={styles.testamentSection}>
             <Text style={[styles.testamentLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
               Old Testament
@@ -298,6 +326,31 @@ const styles = StyleSheet.create({
   },
   bookChapters: {
     fontSize: 11,
+  },
+  pioneerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 28,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  pioneerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FFF0D9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pioneerTitle: {
+    fontSize: 15,
+  },
+  pioneerSub: {
+    fontSize: 12.5,
+    marginTop: 2,
   },
   modalOverlay: {
     flex: 1,

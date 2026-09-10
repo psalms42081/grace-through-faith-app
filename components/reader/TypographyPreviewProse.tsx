@@ -15,6 +15,7 @@ import {
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import { ReaderVerseWords } from "@/components/reader/ReaderVerseWords";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
+import { verseSurfaceStyle } from "@/lib/verse-selection";
 
 export interface PreviewVerse {
   id: string;
@@ -131,12 +132,15 @@ export function TypographyPreviewProse({
                   const isBookmarked =
                     bookmarkedVerseIds.has(v.id) ||
                     bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);
-                  const bg =
-                    isActive
-                      ? "rgba(31,26,18,0.06)"
-                      : highlightBg !== "transparent"
-                        ? highlightBg
-                        : "transparent";
+                  const surface = verseSurfaceStyle({ selected: isActive, highlightBg });
+                  const bg = surface.backgroundColor;
+                  const selectedRing = isActive
+                    ? {
+                        textDecorationLine: "underline" as const,
+                        textDecorationStyle: "dotted" as const,
+                        textDecorationColor: surface.outline,
+                      }
+                    : null;
                   const lines = v.text.split("\n");
                   const { firstWord, remainder } = splitLeadingWord(lines[0] ?? "");
                   const maps = mapsByVerseId?.get(v.id);
@@ -175,7 +179,7 @@ export function TypographyPreviewProse({
                       {...versePress}
                       suppressHighlighting={false}
                       selectable={false}
-                      style={[{ backgroundColor: bg }, webVerseStyle]}
+                      style={[{ backgroundColor: bg }, webVerseStyle, selectedRing]}
                       {...(IS_WEB || useWordTokens ? undefined : { accessibilityRole: "button" as const })}
                       accessibilityLabel={`Verse ${v.verse}`}
                     >
