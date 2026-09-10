@@ -29,6 +29,7 @@ import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useTutorial } from "@/contexts/TutorialContext";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
+import { WORD_STUDY_ATTRIBUTION } from "@/lib/word-study-attribution";
 
 type Tab = "word" | "context" | "voices" | "application";
 
@@ -3008,6 +3009,9 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                         </View>
                       );
                     })}
+                    <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 8 }}>
+                      {WORD_STUDY_ATTRIBUTION}
+                    </Text>
                   </>
                 )}
               </>

@@ -378,9 +378,13 @@ export const verseStrongMaps = pgTable(
     wordPosition: integer("word_position").notNull(),
     originalWord: text("original_word").notNull(),
     translatedWord: text("translated_word"),
+    source: varchar("source", { length: 16 }).notNull().default("legacy"),
+    isAiGenerated: boolean("is_ai_generated").notNull().default(false),
+    tokenIndex: integer("token_index"),
   },
   (table) => ({
     verseIdx: index("verse_strong_verse_idx").on(table.verseId),
+    verseSourceIdx: index("verse_strong_verse_source_idx").on(table.verseId, table.source),
   })
 );
 

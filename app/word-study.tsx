@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
+import { WORD_STUDY_ATTRIBUTION } from "@/lib/word-study-attribution";
 
 interface StrongEntry {
   id: string;
@@ -386,6 +387,11 @@ export default function WordStudyScreen() {
             </Modal>
           </>
         )}
+        <Text
+          style={[styles.attribution, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}
+        >
+          {WORD_STUDY_ATTRIBUTION}
+        </Text>
       </ScrollView>
     </View>
   );
@@ -528,4 +534,5 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   derivationText: { fontSize: 12, flex: 1, lineHeight: 18 },
+  attribution: { fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 8 },
 });

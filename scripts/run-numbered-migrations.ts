@@ -1,12 +1,20 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Client } from "pg";
 
 const MIGRATION_PATTERN = /^(\d{4})_.+\.sql$/;
-const ADOPTED_SCHEMA_MIGRATIONS = new Set([
+/** Already on live/pushed schemas — record, do not re-execute (0008 TRUNCATEs sda_church). */
+export const ADOPTED_SCHEMA_MIGRATIONS = new Set([
   "0000_sharp_slyde.sql",
   "0003_remove_hologram_and_scholarly_persona.sql",
+  "0008_rebuild_sda_church.sql",
+  "0009_bible_small_groups.sql",
+  "0010_bible_small_group_live_session.sql",
+  "0011_odb_posts.sql",
+  "0012_pioneer_chapters.sql",
+  "0013_pioneer_readings.sql",
 ]);
 const LEDGER_TABLE = "app_sql_migration";
 const LOCK_NAME = "grace-through-faith:numbered-sql-migrations:v1";
@@ -312,7 +320,13 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error("Numbered SQL migration runner failed:", error);
-  process.exit(1);
-});
+const isDirectRun =
+  process.argv[1] != null &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error("Numbered SQL migration runner failed:", error);
+    process.exit(1);
+  });
+}

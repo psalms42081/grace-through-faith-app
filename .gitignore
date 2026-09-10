@@ -41,5 +41,8 @@ yarn-error.*
 
 .env
 
+# STEP Bible source dumps (CC BY 4.0 — download via scripts/ingest-step-strongs.ts)
+data/step-bible/
+
 # Attached assets (screenshots shared during development)
 attached_assets/

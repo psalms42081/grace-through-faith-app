@@ -14,12 +14,21 @@
  */
 
 import { strict as assert } from "node:assert";
-import { describe, it, beforeEach } from "node:test";
-import { ScriptureError } from "../services/scripture-service";
+import { describe, it } from "node:test";
 import {
+  shouldGenerateAiStrongMap,
   strongMapCacheHash,
-  STRONG_MAP_CACHE_VERSION,
-} from "../routes/strongs";
+} from "../../lib/strong-map-policy";
+
+class ScriptureError extends Error {
+  code: string;
+  statusCode: number;
+  constructor(code: string, message: string, statusCode: number) {
+    super(message);
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +112,7 @@ async function simulateStrongGenerate(opts: {
   resolveReferenceImpl: (params: { reference: string; translation: string }) => Promise<any>;
   cacheHitImpl: () => Promise<boolean>;
   generateAiImpl: (text: string) => Promise<any[]>;
+  taggedMapImpl?: () => Promise<any[]>;
 }): Promise<{ status: number; body: any }> {
   const { verseId: clientVerseId, bookName, chapter, verse, translation } = opts.reqBody as any;
   const clientVerseText = opts.reqBody.verseText; // should be ignored
@@ -148,6 +158,20 @@ async function simulateStrongGenerate(opts: {
       return { status: 400, body: { error: "verseId is required for provider-served (non-DB) verses", code: "VERSE_ID_REQUIRED" } };
     }
     effectiveVerseId = String(clientVerseId);
+  }
+
+  // KJV: tagged STEP maps only. Never consult the AI cache or the model.
+  if (!shouldGenerateAiStrongMap(String(translation))) {
+    const tagged = opts.taggedMapImpl ? await opts.taggedMapImpl() : [];
+    return {
+      status: 200,
+      body: {
+        results: tagged,
+        fromTagged: true,
+        canonicalTextUsed: canonicalText,
+        clientVerseTextIgnored: clientVerseText !== canonicalText,
+      },
+    };
   }
 
   // Step 3: cache check (after resolution, not before).
@@ -291,6 +315,7 @@ describe("strong generate: verseId mismatch rejected (cache-poisoning prevention
   });
 
   it("accepts when client verseId matches the resolved canonical verseId", async () => {
+    let aiCalled = false;
     const result = await simulateStrongGenerate({
       reqBody: {
         verseReference: "John 3:16",
@@ -304,10 +329,16 @@ describe("strong generate: verseId mismatch rejected (cache-poisoning prevention
         reference: { startVerse: 16 },
       }),
       cacheHitImpl: async () => false,
-      generateAiImpl: async (text) => [{ strongId: "G2316", lemma: "θεός", definition: "God", transliteration: "theos" }],
+      generateAiImpl: async () => {
+        aiCalled = true;
+        return [];
+      },
+      taggedMapImpl: async () => [{ map: { strongId: "G2316" }, entry: { id: "G2316" } }],
     });
 
     assert.equal(result.status, 200);
+    assert.equal(aiCalled, false);
+    assert.equal((result.body as any).fromTagged, true);
     assert.ok(Array.isArray((result.body as any).results));
   });
 
@@ -325,10 +356,13 @@ describe("strong generate: verseId mismatch rejected (cache-poisoning prevention
         reference: { startVerse: 16 },
       }),
       cacheHitImpl: async () => false,
-      generateAiImpl: async () => [],
+      generateAiImpl: async () => {
+        throw new Error("AI must not run for KJV");
+      },
     });
 
     assert.equal(result.status, 200);
+    assert.equal((result.body as any).fromTagged, true);
   });
 });
 
@@ -340,7 +374,7 @@ describe("strong generate: client verseText is ignored", () => {
     const result = await simulateStrongGenerate({
       reqBody: {
         verseReference: "Psalm 23:1",
-        translation: "KJV",
+        translation: "NLT",
         verseId: "db-ps-23-1",
         // Client injects different text — must be ignored.
         verseText: "INJECTED CLIENT VERSE TEXT",
@@ -403,13 +437,43 @@ describe("strong generate: provider failure surfaces explicitly", () => {
   });
 });
 
+describe("strong generate: KJV never calls AI", () => {
+  it("returns tagged maps and skips cache + model", async () => {
+    let cacheChecked = false;
+    let aiCalled = false;
+    const result = await simulateStrongGenerate({
+      reqBody: { verseReference: "John 3:16", translation: "KJV", verseId: "canonical-id" },
+      resolveReferenceImpl: async () => ({
+        book: { name: "John" },
+        chapter: 3,
+        verses: [{ verse: 16, text: "For God so loved the world", id: "canonical-id" }],
+        reference: { startVerse: 16 },
+      }),
+      cacheHitImpl: async () => {
+        cacheChecked = true;
+        return true;
+      },
+      generateAiImpl: async () => {
+        aiCalled = true;
+        return [];
+      },
+      taggedMapImpl: async () => [{ map: { strongId: "G26" } }],
+    });
+    assert.equal(result.status, 200);
+    assert.equal(cacheChecked, false);
+    assert.equal(aiCalled, false);
+    assert.equal((result.body as any).fromTagged, true);
+    assert.equal((result.body as any).results[0].map.strongId, "G26");
+  });
+});
+
 describe("strong generate: cache lookup after resolution", () => {
   it("serves cache hit only after canonical resolution succeeds", async () => {
     let resolutionCalled = false;
     let cacheChecked = false;
 
     const result = await simulateStrongGenerate({
-      reqBody: { verseReference: "John 3:16", translation: "KJV", verseId: "canonical-id" },
+      reqBody: { verseReference: "John 3:16", translation: "NLT", verseId: "canonical-id" },
       resolveReferenceImpl: async () => {
         resolutionCalled = true;
         return {

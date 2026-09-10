@@ -4,13 +4,21 @@ import { aiGenerationLimiter } from "../middleware/rate-limit";
 import { getErrorStatusCode } from "../services/ai-semaphore";
 import { strongEntries, verseStrongMaps, bibleVerses, searchCache } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
-import * as crypto from "crypto";
 import { generateStrongWordStudy } from "../services/ai-engine";
 import {
   resolveReference,
   ScriptureError,
-  parseReference,
 } from "../services/scripture-service";
+import {
+  AI_STRONG_SOURCE,
+  STEP_STRONG_SOURCE,
+  STRONG_MAP_CACHE_VERSION,
+  isKjvTranslation,
+  shouldGenerateAiStrongMap,
+  strongMapCacheHash,
+} from "../../lib/strong-map-policy";
+
+export { STRONG_MAP_CACHE_VERSION, strongMapCacheHash };
 
 const router = Router();
 
@@ -21,8 +29,6 @@ const router = Router();
 // mappings can only be served for a canonical DB verse whose stored translation
 // matches the request, and are never relabeled or reused across translations or
 // provider verse IDs.
-export const STRONG_MAP_CACHE_VERSION = "strong-map-canon-v3";
-
 const STRONG_MAP_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function normalizeTranslation(value: unknown): string {
@@ -36,11 +42,6 @@ function normalizeTranslation(value: unknown): string {
  * cross-translation reuse can occur, and provider/synthetic verse IDs get their
  * own distinct entry.
  */
-export function strongMapCacheHash(translation: string, verseId: string): string {
-  const hashInput = [STRONG_MAP_CACHE_VERSION, translation, verseId].join("::");
-  return crypto.createHash("sha256").update(hashInput).digest("hex");
-}
-
 /**
  * A DB-backed verse ID is one that exists as a `bible_verse` row AND whose
  * stored translation matches the requested translation. Only such verses may
@@ -64,6 +65,32 @@ export function canPersistVerseStrongMaps(
 ): boolean {
   if (!dbVerseTranslation) return false;
   return normalizeTranslation(dbVerseTranslation) === normalizeTranslation(requestedTranslation);
+}
+
+async function loadVerseStrongMaps(verseId: string) {
+  const maps = await db
+    .select({
+      map: verseStrongMaps,
+      entry: strongEntries,
+    })
+    .from(verseStrongMaps)
+    .leftJoin(strongEntries, eq(verseStrongMaps.strongId, strongEntries.id))
+    .where(eq(verseStrongMaps.verseId, verseId))
+    .orderBy(verseStrongMaps.wordPosition);
+
+  const seen = new Set<string>();
+  return maps.filter((row) => {
+    const key = `${row.map.strongId}-${row.map.wordPosition}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function taggedMapsOnly<T extends { map: { source?: string | null; isAiGenerated?: boolean | null } }>(
+  rows: T[],
+): T[] {
+  return rows.filter((row) => row.map.source === STEP_STRONG_SOURCE && row.map.isAiGenerated !== true);
 }
 
 /**
@@ -103,21 +130,6 @@ router.get("/api/strong/search", async (req, res) => {
   }
 });
 
-router.get("/api/strong/:id", async (req, res) => {
-  try {
-    const [entry] = await db
-      .select()
-      .from(strongEntries)
-      .where(eq(strongEntries.id, String(req.params.id)))
-      .limit(1);
-    if (!entry) return res.status(404).json({ error: "Strong's entry not found" });
-    return res.json(entry);
-  } catch (err) {
-    console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
-  }
-});
-
 router.get("/api/strong/verse/:verseId", async (req, res) => {
   try {
     const verseId = String(req.params.verseId);
@@ -126,8 +138,13 @@ router.get("/api/strong/verse/:verseId", async (req, res) => {
       return res.status(400).json({ error: "translation is required" });
     }
 
-    // 1) Cache is authoritative: a versioned translation+verseId entry wins and
-    //    guarantees stale legacy mappings are invalidated by the new version.
+    const dbVerseTranslation = await resolveDbVerseTranslation(verseId);
+    if (isKjvTranslation(translation) && canPersistVerseStrongMaps(translation, dbVerseTranslation)) {
+      const tagged = taggedMapsOnly(await loadVerseStrongMaps(verseId));
+      return res.json(tagged);
+    }
+
+    // AI cache is only for non-KJV fallbacks. Never let it mask tagged KJV maps.
     const cacheHash = strongMapCacheHash(translation, verseId);
     const cached = await db
       .select({ results: searchCache.results })
@@ -139,33 +156,26 @@ router.get("/api/strong/verse/:verseId", async (req, res) => {
       return res.json(cached[0].results ?? []);
     }
 
-    // 2) Legacy fallback: only for a canonical DB verse whose stored translation
-    //    matches the requested translation. Never relabel or reuse legacy rows
-    //    across translations or provider verse IDs.
-    const dbVerseTranslation = await resolveDbVerseTranslation(verseId);
     if (!canPersistVerseStrongMaps(translation, dbVerseTranslation)) {
       return res.json([]);
     }
 
-    const maps = await db
-      .select({
-        map: verseStrongMaps,
-        entry: strongEntries,
-      })
-      .from(verseStrongMaps)
-      .leftJoin(strongEntries, eq(verseStrongMaps.strongId, strongEntries.id))
-      .where(eq(verseStrongMaps.verseId, verseId))
-      .orderBy(verseStrongMaps.wordPosition);
+    return res.json(await loadVerseStrongMaps(verseId));
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
 
-    const seen = new Set<string>();
-    const unique = maps.filter((row) => {
-      const key = `${row.map.strongId}-${row.map.wordPosition}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    return res.json(unique);
+router.get("/api/strong/:id", async (req, res) => {
+  try {
+    const [entry] = await db
+      .select()
+      .from(strongEntries)
+      .where(eq(strongEntries.id, String(req.params.id)))
+      .limit(1);
+    if (!entry) return res.status(404).json({ error: "Strong's entry not found" });
+    return res.json(entry);
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
@@ -259,9 +269,17 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
       });
     }
 
-    // Cache is authoritative and keyed on cache version + translation + verseId
-    // so provider/synthetic verses each get a distinct entry and stale legacy
-    // mappings are invalidated by the new version.
+    const dbVerseTranslation = await resolveDbVerseTranslation(effectiveVerseId);
+
+    // KJV uses ingested STEP maps only. Never call the model and never serve
+    // a leftover AI cache for a KJV verse.
+    if (!shouldGenerateAiStrongMap(translation)) {
+      if (canPersistVerseStrongMaps(translation, dbVerseTranslation)) {
+        return res.json(taggedMapsOnly(await loadVerseStrongMaps(effectiveVerseId)));
+      }
+      return res.json([]);
+    }
+
     const cacheHash = strongMapCacheHash(translation, effectiveVerseId);
     const cached = await db
       .select({ results: searchCache.results })
@@ -273,10 +291,6 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
       return res.json(cached[0].results ?? []);
     }
 
-    // A DB-backed verse is one that exists in bible_verse AND whose stored
-    // translation matches the request. Only then may we persist verseStrongMaps
-    // (whose FK targets bible_verse.id) — provider/synthetic IDs are cache-only.
-    const dbVerseTranslation = await resolveDbVerseTranslation(effectiveVerseId);
     const persistMaps = canPersistVerseStrongMaps(translation, dbVerseTranslation);
 
     // ── 4. Generate word study using canonical (server-resolved) text ─────────
@@ -336,6 +350,8 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
           wordPosition: position,
           originalWord: w.originalWord || w.lemma || "",
           translatedWord: w.translatedWord || null,
+          source: AI_STRONG_SOURCE,
+          isAiGenerated: true,
         }).returning();
         mapEntry = inserted;
       } else {
@@ -347,6 +363,8 @@ router.post("/api/strong/generate", aiGenerationLimiter, async (req, res) => {
           wordPosition: position,
           originalWord: w.originalWord || w.lemma || "",
           translatedWord: w.translatedWord || null,
+          source: AI_STRONG_SOURCE,
+          isAiGenerated: true,
         };
       }
 
