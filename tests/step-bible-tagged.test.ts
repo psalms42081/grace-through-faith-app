@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import {
   cleanEnglishGloss,
   extractRootStrongIds,
+  extractTagntMorph,
   extractTagntStrongId,
+  extractTahotMorphForStrong,
+  englishGlossForRoot,
   isStepAffixStrongId,
   kjvVerseKeysFromNestedJson,
   normalizeStrongId,
@@ -119,9 +122,10 @@ describe("TAHOT / TAGNT line parse", () => {
     const tokens = parseTahotLine(line);
     assert.equal(tokens.length, 1);
     assert.equal(tokens[0].strongId, "H7225");
-    assert.equal(tokens[0].translatedWord, "beginning");
+    assert.equal(tokens[0].translatedWord, "in beginning");
     assert.equal(tokens[0].bookName, "Genesis");
     assert.equal(tokens[0].tokenIndex, 1);
+    assert.equal(tokens[0].morph, "Ncfsa");
     assert.deepEqual(extractRootStrongIds("H9003/{H7225G}"), ["H7225"]);
   });
 
@@ -139,7 +143,30 @@ describe("TAHOT / TAGNT line parse", () => {
     assert.equal(tokens[0].translatedWord, "The book");
     assert.equal(tokens[0].originalWord, "Βίβλος");
     assert.equal(tokens[0].language, "gr");
+    assert.equal(tokens[0].morph, "N-NSF");
+    assert.equal(extractTagntMorph("G0976=N-NSF"), "N-NSF");
+    assert.equal(extractTahotMorphForStrong("HR/Ncfsa", "H9003/{H7225G}", "H7225"), "Ncfsa");
     assert.equal(extractTagntStrongId("G2424G=N-GSM-P"), "G2424");
+  });
+
+  it("keeps the preposition English with the host root", () => {
+    const forever = parseTahotLine(
+      "Gen.3.22#28=L\tלְ/עֹלָֽם\tle./'o.Lam\tfor/ ever\tH9005/{H5769G}\tHR/Ncmsa\t\t\tH5769G",
+    );
+    assert.equal(forever[0]?.strongId, "H5769");
+    assert.equal(forever[0]?.translatedWord, "for ever");
+    const lieDown = parseTahotLine(
+      "Psa.23.2#03=L\tיַרְבִּיצֵ֑נִי\tyar.bi.Tze.ni\the makes lie down/ me\t{H7257}/H9030\tHVhi3ms/Sp1cs\t\t\tH7257",
+    );
+    assert.equal(lieDown[0]?.strongId, "H7257");
+    assert.equal(lieDown[0]?.translatedWord, "he makes lie down");
+    const said = parseTahotLine(
+      "Gen.1.3#03=L\tוַיֹּ֥אמֶר\tvai.Yo.mer\tand/ he said\tH9001/{H559G}\tHC/Vqw3ms\t\t\tH559G",
+    );
+    assert.equal(said[0]?.translatedWord, "he said");
+    assert.equal(englishGlossForRoot("for/ ever", "H9005/{H5769G}", "H5769"), "for ever");
+    assert.equal(englishGlossForRoot("in/ beginning", "H9003/{H7225G}", "H7225"), "in beginning");
+    assert.equal(englishGlossForRoot("and/ he said", "H9001/{H559G}", "H559"), "he said");
   });
 
   it("drops TAGNT words that are not in the KJV/TR", () => {

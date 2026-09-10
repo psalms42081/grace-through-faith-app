@@ -98,6 +98,36 @@ describe("alignMapsToSurface", () => {
     assert.equal(aligned.find((t) => t.surface === "shepherd")?.mapIndex, 1);
     assert.equal(aligned.find((t) => t.surface === "want")?.mapIndex, 2);
   });
+
+  it("collapses KJV 'for ever' onto the H5769 gloss ever", () => {
+    const aligned = alignMapsToSurface(
+      "and take also of the tree of life, and eat, and live for ever:",
+      [{ translatedWord: "ever" }],
+    );
+    const phrase = aligned.find((t) => t.mapIndex === 0);
+    assert.ok(phrase);
+    assert.match(phrase!.surface.toLowerCase(), /for ever/);
+  });
+
+  it("collapses 'for ever' even when another map already tagged for", () => {
+    const aligned = alignMapsToSurface(
+      "and take also of the tree of life, and eat, and live for ever:",
+      [{ translatedWord: "live" }, { translatedWord: "for" }, { translatedWord: "for ever" }],
+    );
+    const phrase = aligned.find((t) => t.mapIndex === 2);
+    assert.ok(phrase);
+    assert.match(phrase!.surface.toLowerCase(), /for ever/);
+  });
+
+  it("lights Psalm 23:2 lie down from the STEP host gloss", () => {
+    const text =
+      "He maketh me to lie down in green pastures: he leadeth me beside the still waters.";
+    const aligned = alignMapsToSurface(text, [{ translatedWord: "he makes lie down" }]);
+    const phrase = aligned.find((t) => t.mapIndex === 0);
+    assert.ok(phrase);
+    assert.match(phrase!.surface.toLowerCase(), /lie down/);
+    assert.match(phrase!.surface.toLowerCase(), /maketh/);
+  });
 });
 
 describe("reader word-study chrome", () => {
@@ -122,5 +152,13 @@ describe("reader word-study chrome", () => {
     assert.doesNotMatch(reader, /params: \{ tab: "word", strong:/);
     assert.match(strongs, /\/api\/strong\/:id\/uses/);
     assert.match(strongs, /\/api\/strong\/search/);
+  });
+
+  it("passes book, chapter, and verse into the word sheet", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(reader, /bookName: bookName/);
+    assert.match(reader, /chapter: chapterNum/);
+    assert.match(reader, /verse: verseNum/);
+    assert.match(reader, /verseText:/);
   });
 });

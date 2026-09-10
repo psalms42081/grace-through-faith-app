@@ -141,6 +141,8 @@ router.get("/api/strong/:id/uses", async (req, res) => {
     }
     const limit = Math.min(Math.max(Number(req.query.limit) || 80, 1), 200);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const bookIdRaw = Number(req.query.bookId);
+    const bookId = Number.isFinite(bookIdRaw) && bookIdRaw > 0 ? bookIdRaw : null;
 
     const counted = await db.execute(sql`
       SELECT COUNT(DISTINCT verse_id)::int AS n
@@ -150,6 +152,40 @@ router.get("/api/strong/:id/uses", async (req, res) => {
     `);
     const total = Number((counted as any).rows?.[0]?.n ?? (counted as any)[0]?.n ?? 0);
 
+    const filtered = bookId
+      ? await db.execute(sql`
+          SELECT COUNT(DISTINCT v.id)::int AS n
+            FROM verse_strong_map m
+            JOIN bible_verse v ON v.id = m.verse_id
+           WHERE m.source = ${STEP_STRONG_SOURCE}
+             AND regexp_replace(upper(m.strong_id), '^([HG])0+', '\\1') = ${normalized}
+             AND v.book_id = ${bookId}
+        `)
+      : counted;
+    const filteredTotal = Number((filtered as any).rows?.[0]?.n ?? (filtered as any)[0]?.n ?? total);
+
+    const booksRows = await db.execute(sql`
+      SELECT v.book_id AS "bookId",
+             b.name AS "bookName",
+             COUNT(DISTINCT v.id)::int AS count
+        FROM verse_strong_map m
+        JOIN bible_verse v ON v.id = m.verse_id
+        JOIN bible_book b ON b.id = v.book_id
+       WHERE m.source = ${STEP_STRONG_SOURCE}
+         AND regexp_replace(upper(m.strong_id), '^([HG])0+', '\\1') = ${normalized}
+       GROUP BY v.book_id, b.name
+       ORDER BY v.book_id
+    `);
+    const books = ((booksRows as any).rows ?? booksRows) as {
+      bookId: number;
+      bookName: string;
+      count: number;
+    }[];
+
+    const bookFilter = bookId
+      ? sql`AND v.book_id = ${bookId}`
+      : sql``;
+
     const rows = await db.execute(sql`
       SELECT v.id AS "verseId",
              v.book_id AS "bookId",
@@ -157,12 +193,14 @@ router.get("/api/strong/:id/uses", async (req, res) => {
              v.verse,
              v.text,
              b.name AS "bookName",
-             b.abbreviation
+             b.abbreviation,
+             array_agg(m.translated_word ORDER BY m.word_position) AS "translatedWords"
         FROM verse_strong_map m
         JOIN bible_verse v ON v.id = m.verse_id
         JOIN bible_book b ON b.id = v.book_id
        WHERE m.source = ${STEP_STRONG_SOURCE}
          AND regexp_replace(upper(m.strong_id), '^([HG])0+', '\\1') = ${normalized}
+         ${bookFilter}
        GROUP BY v.id, v.book_id, v.chapter, v.verse, v.text, b.name, b.abbreviation
        ORDER BY v.book_id, v.chapter, v.verse
        LIMIT ${limit}
@@ -176,13 +214,17 @@ router.get("/api/strong/:id/uses", async (req, res) => {
       text: string;
       bookName: string;
       abbreviation: string | null;
+      translatedWords: Array<string | null>;
     }[];
 
     return res.json({
       strongId: normalized,
       total,
+      filteredTotal,
       limit,
       offset,
+      bookId,
+      books,
       uses,
     });
   } catch (err) {

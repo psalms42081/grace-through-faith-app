@@ -1251,11 +1251,26 @@ export default function VerseReaderScreen() {
     });
   }, [kjvWordStudy, showStripToast]);
 
-  const handleWordActivate = useCallback((surface: string, mapping: ReaderStrongMap) => {
+  const handleWordActivate = useCallback((
+    surface: string,
+    mapping: ReaderStrongMap,
+    verseNum?: number,
+    verseText?: string,
+  ) => {
     Haptics.selectionAsync();
     setSheetOpen(false);
-    setWordStudyTarget({ surface, mapping });
-  }, []);
+    const fromVerse = typeof verseNum === "number"
+      ? verses.find((item) => item.verse === verseNum)?.text
+      : undefined;
+    setWordStudyTarget({
+      surface,
+      mapping,
+      bookName: bookName ?? "",
+      chapter: chapterNum,
+      verse: verseNum,
+      verseText: verseText || fromVerse,
+    });
+  }, [bookName, chapterNum, verses]);
 
   const firstVerseId = verses[0]?.id;
   const chapterBookmarked = firstVerseId
@@ -1691,7 +1706,7 @@ export default function VerseReaderScreen() {
                     mapsByVerseId={kjvWordStudy ? mapsByVerseId : undefined}
                     onWordActivate={
                       kjvWordStudy
-                        ? (_verse, surface, mapping) => handleWordActivate(surface, mapping)
+                        ? (verse, surface, mapping) => handleWordActivate(surface, mapping, verse.verse, verse.text)
                         : undefined
                     }
                   />
@@ -1902,7 +1917,14 @@ export default function VerseReaderScreen() {
                 onCopy={handleSelectionCopy}
                 onShare={handleSelectionShare}
                 onDismiss={dismissToolbar}
-                onWordActivate={(surface, mapping) => handleWordActivate(surface, mapping)}
+                onWordActivate={(surface, mapping) =>
+                  handleWordActivate(
+                    surface,
+                    mapping,
+                    selectedVerseObjs[0]?.verse,
+                    selectedVerseObjs[0]?.text,
+                  )
+                }
                 onOpenDeepDive={() =>
                   router.push({
                     pathname: "/(tabs)/study",

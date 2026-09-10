@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -15,8 +15,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { PathB } from "@/constants/colors";
 import { formatStrongId } from "@/lib/reader-word-study";
 import {
+  buildConcordanceSnippet,
   concordanceHeading,
   formatUseReference,
+  type ConcordanceBookCount,
+  type ConcordanceSnippet,
   type StrongConcordanceUse,
 } from "@/lib/strong-concordance";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
@@ -33,12 +36,29 @@ type LexiconHit = {
 type UsesResponse = {
   strongId: string;
   total: number;
+  filteredTotal?: number;
   limit: number;
   offset: number;
+  bookId?: number | null;
+  books?: ConcordanceBookCount[];
   uses: StrongConcordanceUse[];
 };
 
 const PAGE = 80;
+
+function ConcordanceSnippetText({ snippet }: { snippet: ConcordanceSnippet }) {
+  return (
+    <Text style={s.snippet}>
+      {snippet.leadingEllipsis ? "…" : null}
+      {snippet.parts.map((part, index) => (
+        <Text key={`${index}-${part.bold ? "b" : "n"}`} style={part.bold ? s.snippetBold : undefined}>
+          {part.text}
+        </Text>
+      ))}
+      {snippet.trailingEllipsis ? "…" : null}
+    </Text>
+  );
+}
 
 export default function StrongConcordanceScreen() {
   const { strong, lemma: lemmaParam } = useLocalSearchParams<{
@@ -49,6 +69,7 @@ export default function StrongConcordanceScreen() {
   const { translation } = useTranslation();
   const strongId = formatStrongId(typeof strong === "string" ? strong : "");
   const [visibleCount, setVisibleCount] = useState(PAGE);
+  const [bookId, setBookId] = useState<number | null>(null);
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const searchQuery = useQuery<LexiconHit[]>({
@@ -57,27 +78,33 @@ export default function StrongConcordanceScreen() {
   });
 
   const entry = searchQuery.data?.[0];
-  const heading = concordanceHeading(entry?.id || strongId, entry?.lemma || lemmaParam);
+
+  const usesKey = bookId
+    ? `/api/strong/${encodeURIComponent(strongId)}/uses?limit=${visibleCount}&offset=0&bookId=${bookId}`
+    : `/api/strong/${encodeURIComponent(strongId)}/uses?limit=${visibleCount}&offset=0`;
 
   const usesQuery = useQuery<UsesResponse>({
-    queryKey: [`/api/strong/${encodeURIComponent(strongId)}/uses?limit=${visibleCount}&offset=0`],
+    queryKey: [usesKey],
     enabled: strongId.length >= 2,
   });
 
   const uses = usesQuery.data?.uses ?? [];
   const total = usesQuery.data?.total ?? 0;
-  const canLoadMore = uses.length < total;
-
-  const subtitle = useMemo(() => {
-    if (!total) return "KJV occurrences";
-    return `${total} uses in the KJV`;
-  }, [total]);
+  const filteredTotal = usesQuery.data?.filteredTotal ?? total;
+  const books = usesQuery.data?.books ?? [];
+  const canLoadMore = uses.length < filteredTotal;
+  const heading = concordanceHeading(
+    entry?.id || strongId,
+    entry?.lemma || lemmaParam,
+    entry?.transliteration,
+    total || undefined,
+  );
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: heading,
+          title: formatStrongId(entry?.id || strongId) || "Concordance",
           headerStyle: { backgroundColor: PathB.surface },
           headerTintColor: PathB.ink,
         }}
@@ -90,12 +117,36 @@ export default function StrongConcordanceScreen() {
         <Text style={s.heading} testID="strong-concordance-heading">
           {heading}
         </Text>
-        {entry?.transliteration ? (
-          <Text style={s.translit}>{entry.transliteration}</Text>
-        ) : null}
-        <Text style={s.meta}>{subtitle}</Text>
         {entry?.definition ? (
           <Text style={s.definition}>{entry.definition}</Text>
+        ) : null}
+
+        {books.length > 0 ? (
+          <View style={s.bookRow} testID="strong-concordance-books">
+            {books.map((book, index) => {
+              const selected = bookId === book.bookId;
+              return (
+                <View key={book.bookId} style={s.bookChipWrap}>
+                  {index > 0 ? <Text style={s.bookDot}> · </Text> : null}
+                  <Pressable
+                    onPress={() => {
+                      setVisibleCount(PAGE);
+                      setBookId((current) => (current === book.bookId ? null : book.bookId));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${book.bookName} ${book.count}`}
+                    testID={`strong-concordance-book-${book.bookId}`}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.65 : 1 }]}
+                  >
+                    <Text style={[s.bookChip, selected && s.bookChipOn]}>
+                      {book.bookName} {book.count}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
         ) : null}
 
         {searchQuery.isLoading || usesQuery.isLoading ? (
@@ -104,6 +155,7 @@ export default function StrongConcordanceScreen() {
 
         {uses.map((row) => {
           const ref = formatUseReference(row.bookName, row.chapter, row.verse);
+          const snippet = buildConcordanceSnippet(row.text, row.translatedWords ?? []);
           return (
             <Pressable
               key={`${row.verseId}-${row.verse}`}
@@ -117,9 +169,7 @@ export default function StrongConcordanceScreen() {
             >
               <View style={{ flex: 1 }}>
                 <Text style={s.ref}>{ref}</Text>
-                <Text style={s.snippet} numberOfLines={3}>
-                  {row.text}
-                </Text>
+                <ConcordanceSnippetText snippet={snippet} />
               </View>
               <Ionicons name="chevron-forward" size={16} color="#6B6660" />
             </Pressable>
@@ -150,28 +200,41 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: 20, paddingTop: 8, gap: 10 },
   heading: {
     fontFamily: "Lora_700Bold",
-    fontSize: 24,
+    fontSize: 22,
+    lineHeight: 30,
     color: PathB.ink,
-  },
-  translit: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "#6B6660",
-    marginTop: -4,
-  },
-  meta: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
-    color: "#6B6660",
   },
   definition: {
     fontFamily: "Lora_400Regular",
     fontSize: 16,
     lineHeight: 24,
     color: PathB.ink,
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  bookRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  bookChipWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  bookDot: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#6B6660",
+  },
+  bookChip: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    lineHeight: 20,
+    color: PathB.coral,
+  },
+  bookChipOn: {
+    textDecorationLine: "underline",
+    color: PathB.ink,
   },
   row: {
     flexDirection: "row",
@@ -189,6 +252,12 @@ const s = StyleSheet.create({
   },
   snippet: {
     fontFamily: "Lora_400Regular",
+    fontSize: 15,
+    lineHeight: 22,
+    color: PathB.ink,
+  },
+  snippetBold: {
+    fontFamily: "Lora_700Bold",
     fontSize: 15,
     lineHeight: 22,
     color: PathB.ink,

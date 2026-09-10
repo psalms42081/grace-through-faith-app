@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -10,12 +10,33 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { formatStrongId, type ReaderStrongMap } from "@/lib/reader-word-study";
+import { expandStepMorph } from "@/lib/step-morph";
+import {
+  lexiconFullDefinition,
+  lexiconShortMeaning,
+  wordStudyEnglishPhrase,
+  wordStudyPlainSentence,
+} from "@/lib/word-study-copy";
 import { READER_WORD_STUDY_FOOTER } from "@/lib/word-study-attribution";
 
 export type WordStudySheetTarget = {
   surface: string;
   mapping: ReaderStrongMap;
+  bookName?: string;
+  chapter?: number;
+  verse?: number;
+  verseText?: string;
   useCount?: number;
+};
+
+type LexiconPayload = {
+  kjvUseCount?: number;
+  definition?: string;
+  extendedDefinition?: string | null;
+  derivation?: string | null;
+  lemma?: string;
+  transliteration?: string | null;
+  language?: string;
 };
 
 export function WordStudySheet({
@@ -27,20 +48,63 @@ export function WordStudySheet({
   onClose: () => void;
   onSeeUses: (strongId: string, lemma?: string) => void;
 }) {
+  const [showMore, setShowMore] = useState(false);
   const mapping = target?.mapping;
   const entry = mapping?.entry;
   const displayId = formatStrongId(mapping?.map.strongId || entry?.id || "");
-  const { data: lexicon } = useQuery<{ kjvUseCount?: number }>({
+  const { data: lexicon } = useQuery<LexiconPayload>({
     queryKey: [`/api/strong/${encodeURIComponent(mapping?.map.strongId || displayId)}`],
     enabled: !!target && !!(mapping?.map.strongId || displayId),
   });
-  const original = entry?.lemma || mapping?.map.originalWord || "";
-  const definition = entry?.definition?.trim() || "";
+
+  useEffect(() => {
+    setShowMore(false);
+  }, [target?.surface, mapping?.map.strongId, target?.verse]);
+
+  const original = entry?.lemma || mapping?.map.originalWord || lexicon?.lemma || "";
+  const transliteration = entry?.transliteration || lexicon?.transliteration || "";
+  const language = entry?.language || lexicon?.language || "";
+  const definition = entry?.definition || lexicon?.definition || "";
+  const extended = entry?.extendedDefinition || lexicon?.extendedDefinition || "";
+  const derivation = (entry?.derivation || lexicon?.derivation || "").trim();
+  const morphLine = expandStepMorph(mapping?.map.morph, language);
+  const fullDefinition = lexiconFullDefinition(definition, extended);
+  const shortMeaning = lexiconShortMeaning(definition, entry?.kjvUsage);
   const useCount = typeof lexicon?.kjvUseCount === "number" ? lexicon.kjvUseCount : undefined;
   const useLabel =
     typeof useCount === "number"
       ? `See all ${useCount} uses in the KJV`
       : "See all uses in the KJV";
+  const englishPhrase = target
+    ? wordStudyEnglishPhrase({
+        surface: target.surface,
+        verseText: target.verseText,
+        translatedWord: mapping?.map.translatedWord,
+        kjvUsage: entry?.kjvUsage,
+      })
+    : "";
+  const plainSentence = target
+    ? wordStudyPlainSentence({
+        bookName: target.bookName,
+        chapter: target.chapter,
+        verse: target.verse,
+        language,
+        lemma: original,
+        transliteration,
+        surface: englishPhrase,
+      })
+    : "";
+
+  const usesLink = target ? (
+    <Pressable
+      onPress={() => onSeeUses(displayId || mapping?.map.strongId || "", original)}
+      accessibilityRole="link"
+      accessibilityLabel={useLabel}
+      testID="reader-word-study-uses"
+    >
+      <Text style={s.link}>{useLabel}</Text>
+    </Pressable>
+  ) : null;
 
   return (
     <Modal
@@ -59,44 +123,61 @@ export function WordStudySheet({
             contentContainerStyle={s.body}
           >
             <Text style={s.english} testID="reader-word-study-english">
-              {target.surface}
+              {englishPhrase}
             </Text>
-            {original ? (
-              <Text style={s.original} accessibilityLanguage={entry?.language === "he" ? "he" : "el"}>
-                {original}
+            {plainSentence ? (
+              <Text style={s.plain} testID="reader-word-study-plain">
+                {plainSentence}
               </Text>
             ) : null}
-            {entry?.transliteration || entry?.pronunciation ? (
-              <Text style={s.translit}>
-                {[entry?.transliteration, entry?.pronunciation].filter(Boolean).join(" · ")}
+            {shortMeaning ? (
+              <Text style={s.meaning} testID="reader-word-study-meaning">
+                {shortMeaning}
               </Text>
             ) : null}
-            {displayId ? (
-              <View style={s.chip}>
-                <Text style={s.chipText}>{displayId}</Text>
-              </View>
-            ) : null}
-            {definition ? (
-              <Text style={s.definition}>{definition}</Text>
-            ) : (
-              <Text style={s.definitionMuted}>No lexicon definition for this number yet.</Text>
-            )}
-            {entry?.kjvUsage ? (
-              <View style={s.usageBlock}>
-                <Text style={s.usageLabel}>KJV usage</Text>
-                <Text style={s.usage}>{entry.kjvUsage.replace(/^:--/, "").trim()}</Text>
-              </View>
-            ) : null}
+
             <Pressable
-              onPress={() =>
-                onSeeUses(displayId || mapping?.map.strongId || "", original)
-              }
-              accessibilityRole="link"
-              accessibilityLabel={useLabel}
-              testID="reader-word-study-uses"
+              onPress={() => setShowMore((open) => !open)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showMore }}
+              testID="reader-word-study-more"
             >
-              <Text style={s.link}>{useLabel}</Text>
+              <Text style={s.moreToggle}>{showMore ? "Show less" : "Show more"}</Text>
             </Pressable>
+
+            {showMore ? (
+              <View style={s.moreBlock} testID="reader-word-study-details">
+                {displayId ? (
+                  <View style={s.chip}>
+                    <Text style={s.chipText}>{displayId}</Text>
+                  </View>
+                ) : null}
+                {morphLine ? (
+                  <Text style={s.morph} testID="reader-word-study-morph">
+                    {morphLine}
+                  </Text>
+                ) : null}
+                {fullDefinition ? (
+                  <Text style={s.definition}>{fullDefinition}</Text>
+                ) : (
+                  <Text style={s.definitionMuted}>No lexicon definition for this number yet.</Text>
+                )}
+                {derivation ? (
+                  <Text style={s.derivation} testID="reader-word-study-derivation">
+                    {derivation}
+                  </Text>
+                ) : null}
+                {entry?.kjvUsage ? (
+                  <View style={s.usageBlock}>
+                    <Text style={s.usageLabel}>KJV usage</Text>
+                    <Text style={s.usage}>{entry.kjvUsage.replace(/^:--/, "").trim()}</Text>
+                  </View>
+                ) : null}
+                {usesLink}
+              </View>
+            ) : (
+              usesLink
+            )}
             <Text style={s.footer}>{READER_WORD_STUDY_FOOTER}</Text>
           </ScrollView>
         </View>
@@ -136,16 +217,26 @@ const s = StyleSheet.create({
     fontSize: 22,
     color: PathB.ink,
   },
-  original: {
+  plain: {
     fontFamily: "Lora_400Regular",
-    fontSize: 28,
-    lineHeight: 36,
+    fontSize: 16,
+    lineHeight: 24,
     color: PathB.ink,
   },
-  translit: {
-    fontFamily: "Inter_400Regular",
+  meaning: {
+    fontFamily: "Lora_400Regular",
+    fontSize: 16,
+    lineHeight: 24,
+    color: PathB.ink,
+  },
+  moreToggle: {
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: "#6B6660",
+    paddingVertical: 2,
+  },
+  moreBlock: {
+    gap: 10,
   },
   chip: {
     alignSelf: "flex-start",
@@ -160,6 +251,13 @@ const s = StyleSheet.create({
     color: PathB.catBible,
     letterSpacing: 0.3,
   },
+  morph: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#6B6660",
+    marginTop: -4,
+  },
   definition: {
     fontFamily: "Lora_400Regular",
     fontSize: 16,
@@ -170,6 +268,12 @@ const s = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     lineHeight: 22,
+    color: "#6B6660",
+  },
+  derivation: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 19,
     color: "#6B6660",
   },
   usageBlock: {

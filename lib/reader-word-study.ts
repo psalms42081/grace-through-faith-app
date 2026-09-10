@@ -15,6 +15,7 @@ export type ReaderStrongMap = {
     wordPosition: number;
     originalWord: string;
     translatedWord: string | null;
+    morph?: string | null;
   };
   entry: {
     id: string;
@@ -23,7 +24,9 @@ export type ReaderStrongMap = {
     transliteration: string | null;
     pronunciation: string | null;
     definition: string;
+    extendedDefinition?: string | null;
     kjvUsage: string | null;
+    derivation?: string | null;
   } | null;
 };
 
@@ -186,7 +189,15 @@ function usagePhrases(usage: string): string[][] {
 
 function glossPhrase(translatedWord: string): string[] {
   const words = [...translatedWord.matchAll(/[A-Za-z']+/g)].map((m) => m[0]);
-  return trimPhraseStops(words);
+  const next = [...words];
+  while (
+    next.length > 1 &&
+    isAlignStopWord(next[next.length - 1]!) &&
+    !isPronounWord(next[next.length - 1]!)
+  ) {
+    next.pop();
+  }
+  return next;
 }
 
 function uniquePhrases(phrases: string[][]): string[][] {
@@ -205,7 +216,11 @@ function uniquePhrases(phrases: string[][]): string[][] {
 function glossPhrasesFor(item: AlignableMap): string[][] {
   const gloss = item.translatedWord ?? item.map?.translatedWord ?? "";
   const fromGloss = glossPhrase(gloss);
-  return uniquePhrases(fromGloss.length ? [fromGloss] : []);
+  const extras: string[][] = [];
+  const joined = fromGloss.map((word) => normalizeAlignWord(word)).join("");
+  if (joined === "ever" || joined === "forever") extras.push(["for", "ever"]);
+  if (joined === "evermore") extras.push(["ever", "more"]);
+  return uniquePhrases(fromGloss.length ? [fromGloss, ...extras] : extras);
 }
 
 function usagePhrasesFor(item: AlignableMap): string[][] {
@@ -326,14 +341,53 @@ export function alignMapsToSurface(text: string, maps: AlignableMap[]): AlignedW
 
   maps.forEach((item, mapIndex) => {
     if (glossLooksLikePronounOnly(item)) return;
+    const phrases = glossPhrasesFor(item);
+    if (!phrases.some((phrase) => phrase.length > 1)) return;
+    applyPhrases(tokens, wordIndexes, mapIndex, phrases);
+  });
+  maps.forEach((item, mapIndex) => {
+    if (glossLooksLikePronounOnly(item)) return;
     applyPhrases(tokens, wordIndexes, mapIndex, glossPhrasesFor(item));
   });
   maps.forEach((item, mapIndex) => {
     if (glossLooksLikeParticle(item)) return;
     applyPhrases(tokens, wordIndexes, mapIndex, usagePhrasesFor(item));
   });
+  attachLeadingGlossStops(tokens, maps);
 
   return collapseAlignedPhrases(tokens);
+}
+
+/**
+ * Pull leading stop words from this map's STEP gloss onto the tagged span
+ * (`for ever`, `he makes lie down`) even if another map already claimed them.
+ */
+function attachLeadingGlossStops(tokens: AlignedWordToken[], maps: AlignableMap[]): void {
+  maps.forEach((item, mapIndex) => {
+    const phrase = glossPhrasesFor(item)[0];
+    if (!phrase || phrase.length < 2) return;
+    const leadingStops: string[] = [];
+    for (const word of phrase) {
+      if (isAlignStopWord(word) && !isPronounWord(word)) leadingStops.push(word);
+      else break;
+    }
+    if (leadingStops.length === 0) return;
+    const firstHit = tokens.findIndex((token) => token.kind === "word" && token.mapIndex === mapIndex);
+    if (firstHit < 0) return;
+    let cursor = firstHit;
+    for (let i = leadingStops.length - 1; i >= 0; i--) {
+      let prev = cursor - 1;
+      while (prev >= 0 && tokens[prev]?.kind === "sep") prev -= 1;
+      const lead = tokens[prev];
+      if (lead?.kind !== "word" || !wordsSimilar(lead.surface, leadingStops[i]!)) break;
+      if (lead.mapIndex === mapIndex) {
+        cursor = prev;
+        continue;
+      }
+      lead.mapIndex = mapIndex;
+      cursor = prev;
+    }
+  });
 }
 
 export type WordStudyChip = {

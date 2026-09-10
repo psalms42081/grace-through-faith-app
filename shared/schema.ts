@@ -381,6 +381,7 @@ export const verseStrongMaps = pgTable(
     source: varchar("source", { length: 16 }).notNull().default("legacy"),
     isAiGenerated: boolean("is_ai_generated").notNull().default(false),
     tokenIndex: integer("token_index"),
+    morph: text("morph"),
   },
   (table) => ({
     verseIdx: index("verse_strong_verse_idx").on(table.verseId),

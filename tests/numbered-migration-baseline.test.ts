@@ -23,6 +23,7 @@ const MUST_STILL_APPLY = [
   "0006_egw_chapters.sql",
   "0007_users_sda_church_id.sql",
   "0014_verse_strong_map_source.sql",
+  "0015_verse_strong_map_morph.sql",
 ];
 
 describe("ADOPTED_SCHEMA_MIGRATIONS", () => {

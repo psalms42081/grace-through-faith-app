@@ -172,6 +172,7 @@ async function ingestToDb(tokens: StepTaggedToken[]) {
       source: string;
       isAiGenerated: boolean;
       tokenIndex: number;
+      morph: string | null;
     }> = [];
     const stubs = new Map<string, { id: string; language: "he" | "gr"; lemma: string; definition: string }>();
     const positionByVerse = new Map<string, number>();
@@ -204,6 +205,7 @@ async function ingestToDb(tokens: StepTaggedToken[]) {
         source: STEP_STRONG_SOURCE,
         isAiGenerated: false,
         tokenIndex: token.tokenIndex,
+        morph: token.morph,
       });
     }
 
@@ -235,11 +237,53 @@ async function ingestToDb(tokens: StepTaggedToken[]) {
       WHERE source = ${STEP_STRONG_SOURCE}
     `);
     const mappedN = Number((mapped as any).rows?.[0]?.n ?? (mapped as any)[0]?.n ?? 0);
+    const morphStats = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE morph IS NOT NULL AND btrim(morph) <> '')::int AS with_morph,
+        COUNT(*) FILTER (WHERE strong_id ILIKE 'H%')::int AS hebrew,
+        COUNT(*) FILTER (WHERE strong_id ILIKE 'H%' AND morph IS NOT NULL AND btrim(morph) <> '')::int AS hebrew_morph,
+        COUNT(*) FILTER (WHERE strong_id ILIKE 'G%')::int AS greek,
+        COUNT(*) FILTER (WHERE strong_id ILIKE 'G%' AND morph IS NOT NULL AND btrim(morph) <> '')::int AS greek_morph
+      FROM verse_strong_map
+      WHERE source = ${STEP_STRONG_SOURCE}
+    `);
+    const stats = ((morphStats as any).rows?.[0] ?? (morphStats as any)[0] ?? {}) as {
+      total?: number;
+      with_morph?: number;
+      hebrew?: number;
+      hebrew_morph?: number;
+      greek?: number;
+      greek_morph?: number;
+    };
+    const pct = (part: number, whole: number) =>
+      whole ? `${((part / whole) * 100).toFixed(1)}%` : "n/a";
     console.log(`  inserted ${rows.length} STEP maps across ${mappedN} verses`);
+    console.log(
+      `  morph coverage: ${stats.with_morph ?? 0}/${stats.total ?? 0} (${pct(Number(stats.with_morph ?? 0), Number(stats.total ?? 0))})`,
+    );
+    console.log(
+      `    Hebrew: ${stats.hebrew_morph ?? 0}/${stats.hebrew ?? 0} (${pct(Number(stats.hebrew_morph ?? 0), Number(stats.hebrew ?? 0))})`,
+    );
+    console.log(
+      `    Greek:  ${stats.greek_morph ?? 0}/${stats.greek ?? 0} (${pct(Number(stats.greek_morph ?? 0), Number(stats.greek ?? 0))})`,
+    );
     if (unmatchedVerses > 0) {
       console.log(`  STEP tokens with no KJV verse row: ${unmatchedVerses}`);
     }
-    return { inserted: rows.length, skipped: false as const, mappedVerses: mappedN };
+    return {
+      inserted: rows.length,
+      skipped: false as const,
+      mappedVerses: mappedN,
+      morph: {
+        total: Number(stats.total ?? 0),
+        withMorph: Number(stats.with_morph ?? 0),
+        hebrew: Number(stats.hebrew ?? 0),
+        hebrewMorph: Number(stats.hebrew_morph ?? 0),
+        greek: Number(stats.greek ?? 0),
+        greekMorph: Number(stats.greek_morph ?? 0),
+      },
+    };
   } finally {
     await pool.end();
   }

@@ -94,6 +94,7 @@ export interface StepTaggedToken {
   originalWord: string;
   translatedWord: string;
   language: "he" | "gr";
+  morph: string | null;
 }
 
 export interface VerseKey {
@@ -215,6 +216,39 @@ export function extractTagntStrongId(dStrongField: string): string | null {
   return normalized;
 }
 
+/** Robinson morph after `=` in TAGNT dStrong (`G0976=N-NSF` → `N-NSF`). */
+export function extractTagntMorph(dStrongField: string): string | null {
+  const eq = dStrongField.indexOf("=");
+  if (eq < 0) return null;
+  const morph = dStrongField.slice(eq + 1).trim();
+  return morph || null;
+}
+
+/**
+ * TAHOT morph column is slash-aligned with dStrongs (`HR/Ncfsa` with `H9003/{H7225G}`).
+ * Return the segment that belongs to this (already-normalized) root Strong's id.
+ */
+export function extractTahotMorphForStrong(
+  morphField: string,
+  dStrongs: string,
+  strongId: string,
+): string | null {
+  const morph = morphField.trim();
+  if (!morph) return null;
+  const morphParts = morph.split("/").map((part) => part.trim()).filter(Boolean);
+  if (morphParts.length <= 1) return morphParts[0] ?? morph;
+  const strongParts = dStrongs.split("/");
+  for (let i = 0; i < strongParts.length; i++) {
+    const ids = [...(strongParts[i] ?? "").matchAll(/[HG]\d+[A-Za-z]?/gi)]
+      .map((match) => normalizeStrongId(match[0]))
+      .filter((id): id is string => !!id);
+    if (ids.includes(strongId)) {
+      return (morphParts[i] ?? morphParts[morphParts.length - 1] ?? morph) || null;
+    }
+  }
+  return morphParts[morphParts.length - 1] ?? morph;
+}
+
 export function cleanEnglishGloss(raw: string): string {
   const withoutAngles = raw.replace(/<[^>]*>/g, " ");
   const withoutBrackets = withoutAngles.replace(/\[|\]/g, "");
@@ -250,6 +284,83 @@ export function cleanEnglishGloss(raw: string): string {
   return root.replace(/\s+/g, " ").trim();
 }
 
+/** Vav-conjunction prefixes are separate English words; inseparable prepositions ride with the host. */
+const STEP_CONJUNCTION_AFFIX = new Set(["H9001", "H9002"]);
+
+const GLOSS_PRONOUN_SUFFIX = new Set([
+  "me",
+  "my",
+  "him",
+  "his",
+  "her",
+  "them",
+  "their",
+  "you",
+  "your",
+  "us",
+  "our",
+  "i",
+  "we",
+  "it",
+  "its",
+  "thee",
+  "thou",
+  "thy",
+  "ye",
+]);
+
+function strongIdsInSegment(segment: string): string[] {
+  return [...segment.matchAll(/[HG]\d+[A-Za-z]?/gi)]
+    .map((match) => normalizeStrongId(match[0]))
+    .filter((id): id is string => !!id);
+}
+
+function glossSegments(raw: string): string[] {
+  const withoutAngles = raw.replace(/<[^>]*>/g, " ");
+  const withoutBrackets = withoutAngles.replace(/\[|\]/g, "");
+  return withoutBrackets
+    .split("/")
+    .map((part) => part.replace(/[\\׃:.]+$/g, "").trim())
+    .filter(Boolean);
+}
+
+/**
+ * English span for a TAHOT root: keep skipped preposition prefixes
+ * (`for/ ever` + H9005/{H5769} → "for ever") but drop vav-conjunctions
+ * (`and/ he said`) and pronoun suffixes (`he makes lie down/ me`).
+ */
+export function englishGlossForRoot(
+  englishCol: string,
+  dStrongs: string,
+  strongId: string,
+): string {
+  const glossParts = glossSegments(englishCol);
+  const strongParts = dStrongs.split("/");
+  if (glossParts.length === 0) return "";
+  if (strongParts.length <= 1 || glossParts.length === 1) {
+    return cleanEnglishGloss(englishCol);
+  }
+
+  let rootIndex = strongParts.findIndex((part) => strongIdsInSegment(part).includes(strongId));
+  if (rootIndex < 0) rootIndex = Math.min(glossParts.length, strongParts.length) - 1;
+  rootIndex = Math.max(0, Math.min(rootIndex, glossParts.length - 1));
+
+  let start = rootIndex;
+  while (start > 0) {
+    const prevIds = strongIdsInSegment(strongParts[start - 1] ?? "");
+    const allAffix = prevIds.length > 0 && prevIds.every((id) => isStepAffixStrongId(id));
+    const conjunction = prevIds.some((id) => STEP_CONJUNCTION_AFFIX.has(id));
+    if (!allAffix || conjunction) break;
+    start -= 1;
+  }
+
+  const span = glossParts.slice(start, rootIndex + 1);
+  while (span.length > 1 && GLOSS_PRONOUN_SUFFIX.has(span[span.length - 1]!.toLowerCase())) {
+    span.pop();
+  }
+  return span.join(" ").replace(/^(is|was|are)\s+/i, "").replace(/\s+/g, " ").trim();
+}
+
 export function surfaceOriginalWord(raw: string, language: "he" | "gr"): string {
   const noPunct = raw.split("\\")[0] ?? raw;
   if (language === "gr") {
@@ -270,9 +381,12 @@ export function parseTahotLine(line: string): StepTaggedToken[] {
   const strongIds = extractRootStrongIds(cols[4] ?? "");
   if (strongIds.length === 0) return [];
 
-  const gloss = cleanEnglishGloss(cols[3] ?? "");
+  const englishCol = cols[3] ?? "";
+  const dStrongs = cols[4] ?? "";
   const original = surfaceOriginalWord(cols[1] ?? "", "he");
-  if (!gloss && !original) return [];
+  const glossFor = (strongId: string) =>
+    englishGlossForRoot(englishCol, dStrongs, strongId) || cleanEnglishGloss(englishCol);
+  if (!englishCol && !original) return [];
 
   return strongIds
     .filter((id) => id !== "H853")
@@ -283,8 +397,9 @@ export function parseTahotLine(line: string): StepTaggedToken[] {
       tokenIndex: ref.tokenIndex,
       strongId,
       originalWord: original,
-      translatedWord: gloss,
+      translatedWord: glossFor(strongId),
       language: "he" as const,
+      morph: extractTahotMorphForStrong(cols[5] ?? "", dStrongs, strongId),
     }));
 }
 
@@ -311,6 +426,7 @@ export function parseTagntLine(line: string): StepTaggedToken[] {
     originalWord: original,
     translatedWord: gloss,
     language: "gr",
+    morph: extractTagntMorph(cols[3] ?? ""),
   }];
 }
 
