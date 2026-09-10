@@ -210,6 +210,27 @@ export default function RegisterScreen() {
               <Text style={s.primaryBtnText}>{t("auth.createAccount")}</Text>
             )}
           </Pressable>
+          <Text style={s.legalText} testID="register-legal-agree">
+            {"By creating an account you agree to the "}
+            <Text
+              style={s.legalLink}
+              onPress={() => router.push("/terms" as any)}
+              accessibilityRole="link"
+              accessibilityLabel="Terms of Use"
+            >
+              Terms of Use
+            </Text>
+            {" and "}
+            <Text
+              style={s.legalLink}
+              onPress={() => router.push("/privacy" as any)}
+              accessibilityRole="link"
+              accessibilityLabel="Privacy Policy"
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
         </View>
 
         <View style={s.footer}>
@@ -342,4 +363,17 @@ const s = StyleSheet.create({
   },
   footerText: { color: HV2.inkMutedText, fontSize: 14, fontFamily: "Inter_400Regular" },
   linkText: { color: PathB.ink, fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  legalText: {
+    marginTop: 16,
+    fontSize: 13,
+    lineHeight: 20,
+    color: HV2.inkMutedText,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
+  legalLink: {
+    color: PathB.ink,
+    fontFamily: "Inter_600SemiBold",
+    textDecorationLine: "underline",
+  },
 });

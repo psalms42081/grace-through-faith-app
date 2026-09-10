@@ -94,6 +94,8 @@ describe("Home share-app card", () => {
     assert.match(profile, /shareInformedMinistries/);
     assert.match(profile, /profile-share-app/);
     assert.match(profile, /profile-about-section/);
+    assert.match(profile, /Terms of Use/);
+    assert.match(profile, /Privacy Policy/);
     assert.doesNotMatch(profile, /persistHomeShareDismissedAt|HOME_SHARE_DISMISS|showShareCard/);
   });
 });

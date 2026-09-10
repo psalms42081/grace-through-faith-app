@@ -400,7 +400,7 @@ export default function SettingsScreen() {
         {renderRow("lock-closed-outline", "Privacy Policy", {
           onPress: () => router.push("/privacy" as any),
         })}
-        {renderRow("document-text-outline", "Terms of Service", {
+        {renderRow("document-text-outline", "Terms of Use", {
           onPress: () => router.push("/terms" as any),
           isLast: true,
         })}

@@ -204,6 +204,8 @@ function RootLayoutNav() {
       <Stack.Screen name="connect-media" options={{ headerShown: false }} />
       <Stack.Screen name="biblical-sabbaths" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="terms" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy" options={{ headerShown: false }} />
       <Stack.Screen name="conference-portal" options={{ headerShown: false }} />
     </Stack>
   );

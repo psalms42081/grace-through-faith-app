@@ -40,8 +40,12 @@ describe("concordance and verse-sheet reader hop", () => {
 
   it("scrolls to the verse and holds the selection wash for two seconds", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    const anchor = readFileSync(new URL("../lib/reader-verse-anchor.ts", import.meta.url), "utf8");
     assert.match(reader, /NAV_VERSE_WASH_HOLD_MS = 2000/);
     assert.match(reader, /scrollDomToVerse/);
+    assert.match(anchor, /querySelectorAll/);
+    assert.match(anchor, /data-verse/);
+    assert.match(anchor, /reverse\(\)\.find/);
     assert.match(reader, /VERSE_SELECTION_WASH/);
     assert.match(reader, /isScriptureOverlay/);
     assert.match(reader, /router\.back\(\)/);

@@ -253,6 +253,13 @@ function configureExpoAndLanding(app: express.Application) {
     res.status(200).send(privacyHtml);
   });
 
+  const termsPath = path.resolve(process.cwd(), "server", "templates", "terms.html");
+  const termsHtml = fs.readFileSync(termsPath, "utf-8");
+  app.get("/terms", (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.status(200).send(termsHtml);
+  });
+
   const robotsTxt = fs.readFileSync(path.resolve(process.cwd(), "server", "templates", "robots.txt"), "utf-8");
   app.get("/robots.txt", (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "text/plain; charset=utf-8");

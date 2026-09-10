@@ -729,6 +729,22 @@ function ProfileScreenInner() {
               });
             }}
             testID="profile-share-app"
+            style={{ marginBottom: 6 }}
+          />
+          <ListItem
+            icon="document-text-outline"
+            iconColor={C.inkMuted}
+            title="Terms of Use"
+            onPress={() => router.push("/terms" as any)}
+            testID="profile-terms-of-use"
+            style={{ marginBottom: 6 }}
+          />
+          <ListItem
+            icon="lock-closed-outline"
+            iconColor={C.inkMuted}
+            title="Privacy Policy"
+            onPress={() => router.push("/privacy" as any)}
+            testID="profile-privacy-policy"
           />
         </View>
       )}
