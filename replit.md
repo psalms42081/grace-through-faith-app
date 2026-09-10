@@ -1,7 +1,7 @@
-# Grace through Faith — SDA Spiritual Formation App
+# Grace through Faith — Independent Spiritual Formation App for Adventist Believers
 
 ## Overview
-Grace through Faith is a mobile-first Seventh-day Adventist spiritual formation app designed as the definitive SDA hub for structured identity formation, Bible study, prophecy, and daily spiritual disciplines. It aims to foster mature discipleship within the SDA framework, providing a comprehensive and engaging platform for spiritual growth through an immersive "4-Layer Study Model" powered by AI, offline functionality, a Kids Club, devotional plans, and prayer journaling. The project's ambition is to create a market-leading app for spiritual formation within the SDA community, offering unparalleled depth and engagement.
+Grace through Faith is a mobile-first independent spiritual formation app for Adventist believers, designed for structured identity formation, Bible study, prophecy, and daily spiritual disciplines. It aims to foster mature discipleship, providing a comprehensive and engaging platform for spiritual growth through an immersive "4-Layer Study Model" powered by AI, offline functionality, a Kids Club, devotional plans, and prayer journaling. The project's ambition is to create a market-leading independent spiritual formation app for Adventist believers, offering unparalleled depth and engagement.
 
 ## User Preferences
 - **YouVersion is the permanent UX and navigation blueprint for GTF.** All design decisions — tab structure, reading plans, Bible reader, daily habits, discovery, profile — are benchmarked against YouVersion as the gold standard. This is not a one-time reference; it applies to every screen, every redesign, and every new feature.

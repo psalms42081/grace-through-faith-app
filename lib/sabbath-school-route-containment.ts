@@ -1,5 +1,7 @@
-import { router, useSegments } from "expo-router";
+import { router, usePathname, useSegments } from "expo-router";
 import { useEffect, useRef } from "react";
+
+export const SABBATH_SCHOOL_READING_OVERLAY = "/ss-reading";
 
 // Use the public path for tab-owned screens when navigating. Including the
 // hidden route group in a router target lets Expo render the right screen, but
@@ -54,21 +56,23 @@ export function useSabbathSchoolTabContainment(
   ready = true,
 ): boolean {
   const segments = useSegments();
+  const pathname = usePathname();
+  const isReadingOverlay = pathname === SABBATH_SCHOOL_READING_OVERLAY;
   // Tabs keep previously visited screens mounted. Remember how this screen
   // itself was mounted so an unrelated root modal (such as Sign In) cannot
   // make a background Sabbath School screen replace the modal route.
   const isTabContainedRef = useRef(segments[0] === "(tabs)");
-  const isTabContained = isTabContainedRef.current;
+  const isTabContained = isTabContainedRef.current && !isReadingOverlay;
   const paramsKey = JSON.stringify(params ?? {});
 
   useEffect(() => {
-    if (!isTabContained && ready) {
+    if (!isTabContained && ready && !isReadingOverlay) {
       router.replace({
         pathname: sabbathSchoolPublicPath(screen),
         params: JSON.parse(paramsKey),
       } as any);
     }
-  }, [isTabContained, paramsKey, ready, screen]);
+  }, [isTabContained, isReadingOverlay, paramsKey, ready, screen]);
 
   return isTabContained;
 }

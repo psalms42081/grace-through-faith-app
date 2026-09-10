@@ -162,8 +162,9 @@ const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
  * server `KJV_STRUCTURE_VERSION` / `apibible-structure-v5`. The `-shelf-v1`
  * suffix drops the pre-birth-order `/api/pioneers/shelf` payload (SQL
  * `ORDER BY author` = first-name: Jones, Waggoner, White, …).
+ * `-shelf-v2` drops the pre-Andrews shelf payload.
  */
-export const QUERY_PERSIST_BUSTER = "structure-v5-shelf-v1";
+export const QUERY_PERSIST_BUSTER = "structure-v5-shelf-v2";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -197,6 +198,7 @@ const OLD_CACHE_KEYS = [
   "grace-through-faith-cache-v11-structure-v3",
   "grace-through-faith-cache-v11-structure-v4",
   "grace-through-faith-cache-v11-structure-v5",
+  "grace-through-faith-cache-v11-structure-v5-shelf-v1",
 ];
 let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 

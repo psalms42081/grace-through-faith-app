@@ -56,6 +56,7 @@ describe("displayPioneerChapterTitle", () => {
 const SHELF_SLUGS = [
   "joseph-bates",
   "james-white",
+  "jn-andrews",
   "john-loughborough",
   "uriah-smith",
   "stephen-haskell",
@@ -72,6 +73,7 @@ describe("pioneer shelf author order", () => {
       { slug: "john-loughborough", name: "John Norton Loughborough" },
       { slug: "joseph-bates", name: "Joseph Bates" },
       { slug: "stephen-haskell", name: "Stephen Nelson Haskell" },
+      { slug: "jn-andrews", name: "John Nevins Andrews" },
       { slug: "uriah-smith", name: "Uriah Smith" },
     ];
     assert.deepEqual(
@@ -103,6 +105,7 @@ describe("pioneer shelf author order", () => {
       [
         ["joseph-bates", 1792],
         ["james-white", 1821],
+        ["jn-andrews", 1829],
         ["john-loughborough", 1832],
         ["uriah-smith", 1832],
         ["stephen-haskell", 1833],
@@ -125,8 +128,9 @@ describe("pioneer shelf author order", () => {
 
   it("drops the persisted first-name shelf payload", () => {
     const qc = readFileSync(new URL("../lib/query-client.ts", import.meta.url), "utf8");
-    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v5-shelf-v1"/);
+    assert.match(qc, /QUERY_PERSIST_BUSTER = "structure-v5-shelf-v2"/);
     assert.match(qc, /"grace-through-faith-cache-v11-structure-v5"/);
+    assert.match(qc, /"grace-through-faith-cache-v11-structure-v5-shelf-v1"/);
   });
 });
 

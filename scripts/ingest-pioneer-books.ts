@@ -4,6 +4,7 @@
  *   npx tsx scripts/ingest-pioneer-books.ts
  *   npx tsx scripts/ingest-pioneer-books.ts --dry-run
  *   npx tsx scripts/ingest-pioneer-books.ts --dry-run --rebuild
+ *   npx tsx scripts/ingest-pioneer-books.ts --only=history-of-the-sabbath
  *
  * Reads server/data/pioneer-source/manifest.json. If an EPUB is missing, downloads
  * the official egwwritings.org json-v4 zip (the site Download control — pioneer
@@ -120,13 +121,26 @@ function titleMatchesExclude(title: string, excludes: string[]): boolean {
   });
 }
 
+function isPartBanner(title: string): boolean {
+  return /^part\b/i.test(title.trim());
+}
+
 function isChapterEntry(entry: TocEntry): boolean {
   const title = entry.title.trim();
-  if (!title) return false;
+  if (!title || isPartBanner(title)) return false;
+  if (/^(chapter|appendix|preface|index)\b/i.test(title)) return true;
   if (entry.level === 1) return true;
   if (entry.level === 2 && /^\d+\s*[-–—.]/.test(title)) return true;
-  if (entry.level === 2 && /^(chapter|appendix)\b/i.test(title)) return true;
   return false;
+}
+
+function precedingPartStart(toc: TocEntry[], chapterStart: number, floor: number): number {
+  let from = chapterStart;
+  for (let i = chapterStart - 1; i >= floor; i--) {
+    if (isPartBanner(toc[i]?.title || "")) from = i;
+    else break;
+  }
+  return from;
 }
 
 const CRC_TABLE = (() => {
@@ -444,6 +458,38 @@ function hasJsonFile(files: Map<string, Buffer>, paraId: string): boolean {
   return false;
 }
 
+function headingText(para: JsonPara): string {
+  const type = (para.element_type || "").toLowerCase();
+  if (!/^h[1-6]$/.test(type)) return "";
+  return stripTags(typeof para.content === "string" ? para.content : "");
+}
+
+function extractChapterSlice(
+  paras: JsonPara[],
+  title: string,
+  nextTitle: string,
+): string[] {
+  const norm = normalizeTitle(title);
+  const nextNorm = nextTitle ? normalizeTitle(nextTitle) : "";
+  let start = 0;
+  for (let i = 0; i < paras.length; i++) {
+    if (normalizeTitle(headingText(paras[i])) === norm) {
+      start = i;
+      break;
+    }
+  }
+  let end = paras.length;
+  if (nextNorm) {
+    for (let i = start + 1; i < paras.length; i++) {
+      if (normalizeTitle(headingText(paras[i])) === nextNorm) {
+        end = i;
+        break;
+      }
+    }
+  }
+  return extractParagraphHtml(paras.slice(start, end), title);
+}
+
 function extractParagraphHtml(paras: JsonPara[], chapterTitle: string): string[] {
   const out: string[] = [];
   for (const para of paras) {
@@ -478,11 +524,7 @@ function chaptersFromJsonV4(
 
   const chapterIdx: number[] = [];
   toc.forEach((entry, i) => {
-    if (
-      isChapterEntry(entry) &&
-      entry.title?.trim() &&
-      hasJsonFile(zip, entry.para_id)
-    ) {
+    if (isChapterEntry(entry) && entry.title?.trim()) {
       chapterIdx.push(i);
     }
   });
@@ -497,14 +539,30 @@ function chaptersFromJsonV4(
 
   const chapters: { title: string; paragraphsHtml: string[] }[] = [];
   for (let n = 0; n < chapterIdx.length; n++) {
-    const start = chapterIdx[n];
-    const end = n + 1 < chapterIdx.length ? chapterIdx[n + 1] : toc.length;
-    const title = toc[start].title.trim();
-    const html: string[] = [];
+    const heading = chapterIdx[n];
+    const nextHeading = n + 1 < chapterIdx.length ? chapterIdx[n + 1] : toc.length;
+    const floor = n === 0 ? 0 : chapterIdx[n - 1] + 1;
+    const start = precedingPartStart(toc, heading, floor);
+    const end =
+      n + 1 < chapterIdx.length
+        ? precedingPartStart(toc, nextHeading, heading + 1)
+        : toc.length;
+    const title = toc[heading].title.trim();
+    const nextTitle =
+      n + 1 < chapterIdx.length ? toc[chapterIdx[n + 1]].title.trim() : "";
+    const seen = new Set<string>();
+    const paras: JsonPara[] = [];
     for (let i = start; i < end; i++) {
-      const entry = toc[i];
-      const paras = loadJsonParas(zip, entry.para_id);
-      html.push(...extractParagraphHtml(paras, title));
+      for (const para of loadJsonParas(zip, toc[i].para_id)) {
+        const id = typeof para.para_id === "string" ? para.para_id : `${i}-${paras.length}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        paras.push(para);
+      }
+    }
+    let html = extractChapterSlice(paras, title, nextTitle);
+    if (!html.length && hasJsonFile(zip, toc[heading].para_id)) {
+      html = extractParagraphHtml(loadJsonParas(zip, toc[heading].para_id), title);
     }
     chapters.push({ title, paragraphsHtml: html });
   }
@@ -701,11 +759,18 @@ async function ingest() {
   loadEnvFile();
   const dryRun = process.argv.includes("--dry-run");
   const rebuild = process.argv.includes("--rebuild");
+  const onlySlug = process.argv.find((arg) => arg.startsWith("--only="))?.slice("--only=".length);
   const manifest = loadManifest();
   const userAgent = manifest.userAgent || UA;
+  const books = onlySlug
+    ? manifest.books.filter((spec) => spec.book_slug === onlySlug)
+    : manifest.books;
+  if (onlySlug && !books.length) {
+    throw new Error(`No manifest book with slug ${onlySlug}`);
+  }
 
   const bySlug = new Map<string, IngestedPioneerChapter[]>();
-  for (const spec of manifest.books) {
+  for (const spec of books) {
     if (bySlug.size > 0) await new Promise((resolve) => setTimeout(resolve, 750));
     const epubPath = await ensureEpub(spec, userAgent, rebuild);
     const buf = await readFile(epubPath);
@@ -733,7 +798,7 @@ async function ingest() {
   }
 
   console.log("\n[pioneer-ingest] Chapter counts");
-  for (const spec of manifest.books) {
+  for (const spec of books) {
     const chapters = bySlug.get(spec.book_slug) ?? [];
     const paras = chapters.reduce((n, ch) => n + ch.paragraphs.length, 0);
     console.log(`  ${spec.book}: ${chapters.length} chapters / ${paras} paragraphs`);

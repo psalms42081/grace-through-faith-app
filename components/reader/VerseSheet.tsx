@@ -20,7 +20,7 @@ import {
   wordStudyChipsForVerse,
   type ReaderStrongMap,
 } from "@/lib/reader-word-study";
-import { buildSabbathSchoolTabRoute } from "@/lib/sabbath-school-route-containment";
+import { SABBATH_SCHOOL_READING_OVERLAY } from "@/lib/sabbath-school-route-containment";
 import {
   VERSE_SHEET_ATTRIBUTION,
   VERSE_SHEET_COLLAPSED_HEIGHT,
@@ -448,11 +448,13 @@ export function VerseSheet({
                   <Pressable
                     key={`${row.hrefKind}-${row.id}`}
                     onPress={() =>
-                      router.push(
-                        `/pioneer-chapter?id=${encodeURIComponent(row.id)}${
-                          row.hrefKind === "egw" ? "&kind=egw" : ""
-                        }` as any,
-                      )
+                      router.push({
+                        pathname: "/pioneer-chapter",
+                        params: {
+                          id: row.id,
+                          ...(row.hrefKind === "egw" ? { kind: "egw" } : {}),
+                        },
+                      } as any)
                     }
                     style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
                   >
@@ -470,13 +472,14 @@ export function VerseSheet({
               <CollapsibleSection title="Sabbath School" testID="reader-verse-sheet-ss">
                 <Pressable
                   onPress={() =>
-                    router.push(
-                      buildSabbathSchoolTabRoute("sabbath-school-day", {
-                        lessonNumber: sabbathSchool.lessonNumber,
-                        dayNumber: sabbathSchool.dayNumber,
+                    router.push({
+                      pathname: SABBATH_SCHOOL_READING_OVERLAY,
+                      params: {
+                        lessonNumber: String(sabbathSchool.lessonNumber),
+                        dayNumber: String(sabbathSchool.dayNumber),
                         quarterCode: sabbathSchool.quarterCode,
-                      }) as any,
-                    )
+                      },
+                    } as any)
                   }
                   style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
                 >

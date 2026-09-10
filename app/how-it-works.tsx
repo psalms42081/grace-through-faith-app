@@ -93,7 +93,7 @@ export default function HowItWorksScreen() {
           </View>
           <Text style={[st.approachTitle, { color: theme.text }]}>Our Mission</Text>
           <Text style={[st.approachBody, { color: theme.textSecondary }]}>
-            Grounded in Seventh-day Adventist teaching, this app supports your spiritual growth alongside your local church{"\u2014"}through structured Bible study, Adventist doctrine, prophecy, and daily spiritual disciplines. It is designed to strengthen, not replace, your church life. Everything is Scripture-first and faithful to the historic positions of the Adventist Church.
+            Informed Ministries is an independent spiritual formation app for Adventist believers. It supports your spiritual growth alongside your local church{"\u2014"}through structured Bible study, Adventist doctrine, prophecy, and daily spiritual disciplines. It is designed to strengthen, not replace, your church life. Everything is Scripture-first and faithful to the historic positions of the Adventist Church.
           </Text>
         </View>
 

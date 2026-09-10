@@ -11,7 +11,7 @@
 ## 1. Project Overview
 
 - **App Name:** Grace Through Faith (GTF)
-- **Mission:** SDA spiritual formation and teen evangelism mobile app
+- **Mission:** An independent spiritual formation app for Adventist believers, with teen evangelism
 - **Domain:** gracethroughfaith.app
 - **Admin Email:** joehuber0881@gmail.com
 - **Stack:** React Native / Expo, Express/TypeScript, PostgreSQL/Drizzle ORM

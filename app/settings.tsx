@@ -410,7 +410,7 @@ export default function SettingsScreen() {
           onPress: handleClearCache,
         })}
         {renderRow("information-circle-outline", "About Informed Ministries", {
-          onPress: () => showToast("Informed Ministries — Spiritual Formation for Adventists", "info"),
+          onPress: () => showToast("Informed Ministries — an independent spiritual formation app for Adventist believers", "info"),
         })}
         {renderRow("code-slash-outline", "App Version", {
           rightText: "1.0.0",

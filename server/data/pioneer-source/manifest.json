@@ -99,6 +99,23 @@
       "source_url": "https://m.egwwritings.org/en/book/1124/info",
       "json_v4_url": "https://media4.egwwritings.org/json-v4/1124-2222f58e873d4e6edccd8c4054d67645.zip",
       "exclude_titles": []
+    },
+    {
+      "author": "John Nevins Andrews",
+      "author_slug": "jn-andrews",
+      "book": "History of the Sabbath and First Day of the Week",
+      "book_slug": "history-of-the-sabbath",
+      "year": 1873,
+      "book_id": 1008,
+      "code": "HSFD",
+      "epub": "en_HSFD.epub",
+      "source_url": "https://m.egwwritings.org/en/book/1008/info",
+      "json_v4_url": "https://media4.egwwritings.org/json-v4/1008-36889d285bff5adbd4708e0f8875481f.zip",
+      "exclude_titles": [
+        "Index of Authors Quoted",
+        "Index of Scriptures",
+        "Index of Subjects"
+      ]
     }
   ]
 }

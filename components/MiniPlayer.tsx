@@ -12,7 +12,9 @@ export default function MiniPlayer() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
 
-  const isOnChapterReader = pathname.startsWith("/read/") && pathname.split("/").length >= 4;
+  const isOnChapterReader =
+    pathname === "/scripture" ||
+    (pathname.startsWith("/read/") && pathname.split("/").length >= 4);
 
   if (!isActive || !sessionInfo || isOnChapterReader) return null;
 

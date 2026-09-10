@@ -131,6 +131,8 @@ function RootLayoutNav() {
       <Stack.Screen name="book-picker" options={{ headerShown: false }} />
       <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
       <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
+      <Stack.Screen name="scripture" options={{ headerShown: true, title: "" }} />
+      <Stack.Screen name="ss-reading" options={{ headerShown: false }} />
       <Stack.Screen name="read-legacy/[bookId]/[chapter]" options={{ headerShown: false }} />
       <Stack.Screen
         name="verse-actions"

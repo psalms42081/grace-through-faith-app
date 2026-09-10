@@ -14,11 +14,12 @@ export type PioneerAuthorMeta = {
 export const PIONEER_AUTHORS: PioneerAuthorMeta[] = [
   { slug: "joseph-bates", name: "Joseph Bates", dates: "1792-1872", birthYear: 1792, deathYear: 1872, shelfOrder: 0 },
   { slug: "james-white", name: "James Springer White", dates: "1821-1881", birthYear: 1821, deathYear: 1881, shelfOrder: 1 },
-  { slug: "john-loughborough", name: "John Norton Loughborough", dates: "1832-1924", birthYear: 1832, deathYear: 1924, shelfOrder: 2 },
-  { slug: "uriah-smith", name: "Uriah Smith", dates: "1832-1903", birthYear: 1832, deathYear: 1903, shelfOrder: 3 },
-  { slug: "stephen-haskell", name: "Stephen Nelson Haskell", dates: "1833-1922", birthYear: 1833, deathYear: 1922, shelfOrder: 4 },
-  { slug: "at-jones", name: "Alonzo Trevier Jones", dates: "1850-1923", birthYear: 1850, deathYear: 1923, shelfOrder: 5 },
-  { slug: "ej-waggoner", name: "Ellet Joseph Waggoner", dates: "1855-1916", birthYear: 1855, deathYear: 1916, shelfOrder: 6 },
+  { slug: "jn-andrews", name: "John Nevins Andrews", dates: "1829-1883", birthYear: 1829, deathYear: 1883, shelfOrder: 2 },
+  { slug: "john-loughborough", name: "John Norton Loughborough", dates: "1832-1924", birthYear: 1832, deathYear: 1924, shelfOrder: 3 },
+  { slug: "uriah-smith", name: "Uriah Smith", dates: "1832-1903", birthYear: 1832, deathYear: 1903, shelfOrder: 4 },
+  { slug: "stephen-haskell", name: "Stephen Nelson Haskell", dates: "1833-1922", birthYear: 1833, deathYear: 1922, shelfOrder: 5 },
+  { slug: "at-jones", name: "Alonzo Trevier Jones", dates: "1850-1923", birthYear: 1850, deathYear: 1923, shelfOrder: 6 },
+  { slug: "ej-waggoner", name: "Ellet Joseph Waggoner", dates: "1855-1916", birthYear: 1855, deathYear: 1916, shelfOrder: 7 },
 ];
 
 export const PIONEER_SHELF_SLUGS = PIONEER_AUTHORS.map((author) => author.slug);

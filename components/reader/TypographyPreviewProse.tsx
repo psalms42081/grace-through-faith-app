@@ -175,6 +175,7 @@ export function TypographyPreviewProse({
                       style={[{ backgroundColor: bg }, webVerseStyle]}
                       {...(IS_WEB || useWordTokens ? undefined : { accessibilityRole: "button" as const })}
                       accessibilityLabel={`Verse ${v.verse}`}
+                      {...(IS_WEB ? { dataSet: { verse: String(v.verse) } } : undefined)}
                     >
                       <Text
                         pointerEvents={wordStudyMode ? "none" : "auto"}

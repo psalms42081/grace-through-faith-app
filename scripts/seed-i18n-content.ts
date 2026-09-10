@@ -44,7 +44,7 @@ async function translateBatch(
     messages: [
       {
         role: "system",
-        content: `You are a professional translator for a Seventh-day Adventist spiritual formation app. Translate the following English texts to ${langName} (${lang}). Preserve theological accuracy, reverent tone, and Bible references (e.g. "Genesis 1:1"). Return ONLY a valid JSON object with the same keys and translated values. No markdown fences, no explanation.`,
+        content: `You are a professional translator for an independent spiritual formation app for Adventist believers. Translate the following English texts to ${langName} (${lang}). Preserve theological accuracy, reverent tone, and Bible references (e.g. "Genesis 1:1"). Return ONLY a valid JSON object with the same keys and translated values. No markdown fences, no explanation.`,
       },
       { role: "user", content: prompt },
     ],

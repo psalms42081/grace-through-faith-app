@@ -1,5 +1,7 @@
 import { router } from "expo-router";
 
+export const SCRIPTURE_OVERLAY_PATH = "/scripture";
+
 export interface ScriptureRef {
   ref: string;
   bookId: number;
@@ -11,15 +13,36 @@ export function parseVerseFromRef(ref: string): string | undefined {
   return match ? match[1] : undefined;
 }
 
+export function scriptureOverlayHref(opts: {
+  bookId: number | string;
+  chapter: number | string;
+  verse?: number | string;
+  translation?: string;
+}): { pathname: "/scripture"; params: Record<string, string> } {
+  const params: Record<string, string> = {
+    bookId: String(opts.bookId),
+    chapter: String(opts.chapter),
+  };
+  if (opts.verse !== undefined && String(opts.verse).length > 0) {
+    params.verse = String(opts.verse);
+  }
+  if (opts.translation) {
+    params.translation = opts.translation;
+  }
+  return { pathname: SCRIPTURE_OVERLAY_PATH, params };
+}
+
+/** Push the reader on the root stack so the source screen (concordance / EGW / SS) stays mounted. */
 export function navigateToScripture(scripture: ScriptureRef, translation?: string): void {
   const verse = parseVerseFromRef(scripture.ref);
-  let url = verse
-    ? `/read/${scripture.bookId}/${scripture.chapter}?verse=${verse}`
-    : `/read/${scripture.bookId}/${scripture.chapter}`;
-  if (translation) {
-    url += (url.includes("?") ? "&" : "?") + `translation=${encodeURIComponent(translation)}`;
-  }
-  router.push(url as any);
+  router.push(
+    scriptureOverlayHref({
+      bookId: scripture.bookId,
+      chapter: scripture.chapter,
+      verse,
+      translation,
+    }) as any,
+  );
 }
 
 export function navigateToScriptureByParts(
@@ -28,11 +51,12 @@ export function navigateToScriptureByParts(
   verse?: number | string,
   translation?: string
 ): void {
-  let url = verse
-    ? `/read/${bookId}/${chapter}?verse=${verse}`
-    : `/read/${bookId}/${chapter}`;
-  if (translation) {
-    url += (url.includes("?") ? "&" : "?") + `translation=${encodeURIComponent(translation)}`;
-  }
-  router.push(url as any);
+  router.push(
+    scriptureOverlayHref({
+      bookId,
+      chapter,
+      verse,
+      translation,
+    }) as any,
+  );
 }

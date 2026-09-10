@@ -31,6 +31,10 @@ import {
   type SabbathSchoolSound,
 } from "@/lib/sabbath-school-audio";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
+import { ScriptureLinkedText } from "@/components/reader/ScriptureLinkedText";
+import { navigateToScriptureByParts } from "@/lib/scripture-nav";
+import { parseScriptureReference } from "@/lib/scripture-reference";
+import { useTranslation } from "@/context/TranslationContext";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { buildStudyTutorRoute } from "@/lib/sabbath-school-tutor";
 import {
@@ -117,6 +121,7 @@ function MarkdownRenderer({
   content: string;
   theme: any;
 }) {
+  const { translation } = useTranslation();
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
   let blockquote: string[] = [];
@@ -133,7 +138,7 @@ function MarkdownRenderer({
           style={[styles.blockquote, { borderLeftColor: theme.accent }]}
         >
           <Text style={[styles.blockquoteText, { color: theme.text }]}>
-            {formatInlineText(text, theme)}
+            {formatInlineText(text, theme, translation)}
           </Text>
         </View>
       );
@@ -192,7 +197,7 @@ function MarkdownRenderer({
       if (cleaned) {
         elements.push(
           <Text key={i} style={[styles.mdParagraph, { color: theme.textSecondary }]}>
-            {formatInlineText(cleaned, theme)}
+            {formatInlineText(cleaned, theme, translation)}
           </Text>
         );
       }
@@ -203,41 +208,64 @@ function MarkdownRenderer({
   return <View style={styles.mdContainer}>{elements}</View>;
 }
 
-function formatInlineText(text: string, theme: any): React.ReactNode[] {
+function formatInlineText(text: string, theme: any, translation?: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   // Normalize *italic* to _italic_ so both common styles render.
   let remaining = text.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1_$2_");
   let key = 0;
 
+  const pushPlain = (chunk: string) => {
+    if (!chunk) return;
+    parts.push(<ScriptureLinkedText key={key++} text={chunk} />);
+  };
+
   while (remaining.length > 0) {
+    const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
     const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
     const italicMatch = remaining.match(/_(.+?)_/);
-    const firstMatch =
-      boldMatch && italicMatch
-        ? (boldMatch.index || 0) <= (italicMatch.index || 0)
-          ? boldMatch
-          : italicMatch
-        : boldMatch || italicMatch;
+    const candidates = [linkMatch, boldMatch, italicMatch].filter(
+      (item): item is RegExpMatchArray => !!item && item.index !== undefined,
+    );
+    const firstMatch = candidates.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))[0];
 
     if (!firstMatch || firstMatch.index === undefined) {
-      parts.push(remaining);
+      pushPlain(remaining);
       break;
     }
 
     if (firstMatch.index > 0) {
-      parts.push(remaining.substring(0, firstMatch.index));
+      pushPlain(remaining.substring(0, firstMatch.index));
     }
 
-    if (firstMatch === boldMatch) {
+    if (firstMatch === linkMatch) {
+      const label = firstMatch[1];
+      const parsed = parseScriptureReference(label);
+      parts.push(
+        parsed ? (
+          <Text
+            key={key++}
+            onPress={() =>
+              navigateToScriptureByParts(parsed.bookId, parsed.chapter, parsed.verse, translation)
+            }
+            accessibilityRole="link"
+            style={{ color: theme.accent, textDecorationLine: "underline" }}
+          >
+            {label}
+          </Text>
+        ) : (
+          <ScriptureLinkedText key={key++} text={label} />
+        ),
+      );
+    } else if (firstMatch === boldMatch) {
       parts.push(
         <Text key={key++} style={{ fontFamily: "Inter_700Bold" }}>
-          {firstMatch[1]}
+          <ScriptureLinkedText text={firstMatch[1]} />
         </Text>
       );
     } else {
       parts.push(
         <Text key={key++} style={{ fontStyle: "italic" }}>
-          {firstMatch[1]}
+          <ScriptureLinkedText text={firstMatch[1]} />
         </Text>
       );
     }

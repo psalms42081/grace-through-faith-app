@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { ScriptureLinkedText } from "@/components/reader/ScriptureLinkedText";
 import { D2, F } from "./tokens";
 
 export function PioneerProse({
@@ -13,7 +14,7 @@ export function PioneerProse({
     <View style={s.bodyWrap} testID={testID}>
       {paragraphs.map((paragraph, index) => (
         <Text key={`${index}-${paragraph.slice(0, 24)}`} style={s.body}>
-          {paragraph}
+          <ScriptureLinkedText text={paragraph} style={s.body} />
         </Text>
       ))}
     </View>

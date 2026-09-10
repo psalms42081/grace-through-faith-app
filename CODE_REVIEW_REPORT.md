@@ -1,6 +1,6 @@
 # Grace by Faith — Full Code Review Report
 **Date:** March 21, 2026
-**Scope:** Complete end-to-end review of the Grace by Faith SDA hub application
+**Scope:** Complete end-to-end review of the Grace by Faith independent spiritual formation app for Adventist believers
 
 ---
 

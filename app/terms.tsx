@@ -64,7 +64,7 @@ export default function TermsScreen() {
 
         <Section title="2. Use of the App" theme={theme}>
           <P theme={theme}>
-            Informed Ministries is a faith-based spiritual formation platform designed to support Bible study, prayer, devotional growth, and community connection within the Seventh-day Adventist tradition. You agree to use the App in a manner consistent with its purpose and in accordance with these terms.
+            Informed Ministries is an independent spiritual formation app for Adventist believers, designed to support Bible study, prayer, devotional growth, and community connection. You agree to use the App in a manner consistent with its purpose and in accordance with these terms.
           </P>
           <P theme={theme}>You agree not to:</P>
           <BulletList theme={theme} items={[

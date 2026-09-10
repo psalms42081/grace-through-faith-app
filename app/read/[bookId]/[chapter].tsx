@@ -13,7 +13,7 @@ import {
   Dimensions,
   PanResponder,
 } from "react-native";
-import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments } from "expo-router";
+import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -51,7 +51,10 @@ import {
   bookmarkIdsForVerses,
   toggleVerseSelection,
   verseSurfaceStyle,
+  VERSE_SELECTION_WASH,
 } from "@/lib/verse-selection";
+import { scriptureOverlayHref } from "@/lib/scripture-nav";
+import { scrollDomToVerse } from "@/lib/reader-verse-anchor";
 import { VERSE_SHEET_HIGHLIGHTS, type VerseSheetHighlightKey } from "@/lib/verse-sheet";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
@@ -663,16 +666,25 @@ const sheetStyles = StyleSheet.create({
   noteSaveText: { fontSize: 14, color: "#fff", fontFamily: "Inter_600SemiBold" },
 });
 
+const NAV_VERSE_WASH_HOLD_MS = 2000;
+const NAV_VERSE_WASH_FADE_MS = 400;
+
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
+  const pathname = usePathname();
   const isTabReader = isBibleTabSegments(segments);
+  const isScriptureOverlay = pathname === "/scripture";
   const canPopStack = useCanPopNestedStack();
   useHardwareBackToHomeWhenAtStackRoot(isTabReader, canPopStack);
   const handleReaderBack = useCallback(() => {
+    if (isScriptureOverlay) {
+      router.back();
+      return;
+    }
     goBibleReaderBack(router, canPopStack, isTabReader);
-  }, [canPopStack, isTabReader]);
+  }, [canPopStack, isScriptureOverlay, isTabReader]);
   const { theme } = useTheme();
   const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
   const { userId, isAuthenticated } = useAuth();
@@ -701,9 +713,17 @@ export default function VerseReaderScreen() {
   const userOverrodeTranslation = useRef(false);
   const readerBasePath = isTabReader ? "/(tabs)/read" : "/read";
   const readerRoute = useCallback(
-    (targetChapter: number) =>
-      `${readerBasePath}/${bookId}/${targetChapter}?translation=${encodeURIComponent(translation)}` as any,
-    [bookId, readerBasePath, translation],
+    (targetChapter: number) => {
+      if (isScriptureOverlay) {
+        return scriptureOverlayHref({
+          bookId: String(bookId),
+          chapter: targetChapter,
+          translation,
+        }) as any;
+      }
+      return `${readerBasePath}/${bookId}/${targetChapter}?translation=${encodeURIComponent(translation)}` as any;
+    },
+    [bookId, isScriptureOverlay, readerBasePath, translation],
   );
 
   useEffect(() => {
@@ -886,48 +906,6 @@ export default function VerseReaderScreen() {
     AsyncStorage.setItem(VERSE_TAP_HINT_KEY, "1");
   }, []);
 
-  useEffect(() => {
-    if (!verseParam) return;
-    const vNum = parseInt(verseParam, 10);
-    if (isNaN(vNum)) return;
-
-    setHighlightedFromNav(vNum);
-    setNavHighlightAlpha(0.35);
-
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    let mounted = true;
-
-    const fadeStart = setTimeout(() => {
-      if (!mounted) return;
-      const steps = 10;
-      let step = 0;
-      intervalId = setInterval(() => {
-        step++;
-        if (!mounted) {
-          if (intervalId) clearInterval(intervalId);
-          return;
-        }
-        setNavHighlightAlpha(0.35 * (1 - step / steps));
-        if (step >= steps) {
-          if (intervalId) clearInterval(intervalId);
-          setHighlightedFromNav(null);
-        }
-      }, 100);
-    }, 500);
-
-    const scrollTimer = setTimeout(() => {
-      if (!mounted || !scrollViewRef.current) return;
-      const estimatedOffset = Math.max(0, (vNum - 1) * 36);
-      scrollViewRef.current.scrollTo({ y: estimatedOffset, animated: true });
-    }, 300);
-
-    return () => {
-      mounted = false;
-      clearTimeout(fadeStart);
-      clearTimeout(scrollTimer);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [verseParam]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1001,6 +979,57 @@ export default function VerseReaderScreen() {
   const canGoNext = chapterNum < totalChapters;
 
   const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
+
+  useEffect(() => {
+    if (!verseParam) return;
+    const vNum = parseInt(verseParam, 10);
+    if (isNaN(vNum) || verses.length === 0) return;
+
+    setHighlightedFromNav(vNum);
+    setNavHighlightAlpha(1);
+
+    let mounted = true;
+    let fadeInterval: ReturnType<typeof setInterval> | null = null;
+    let scrollRetry: ReturnType<typeof setTimeout> | null = null;
+    let tries = 0;
+
+    const tryScroll = () => {
+      if (!mounted) return;
+      if (scrollDomToVerse(vNum)) return;
+      tries += 1;
+      if (tries < 16) {
+        scrollRetry = setTimeout(tryScroll, 120);
+      }
+    };
+    const scrollStart = setTimeout(tryScroll, 80);
+
+    const fadeStart = setTimeout(() => {
+      if (!mounted) return;
+      const steps = 8;
+      let step = 0;
+      fadeInterval = setInterval(() => {
+        step += 1;
+        if (!mounted) {
+          if (fadeInterval) clearInterval(fadeInterval);
+          return;
+        }
+        setNavHighlightAlpha(1 - step / steps);
+        if (step >= steps) {
+          if (fadeInterval) clearInterval(fadeInterval);
+          setHighlightedFromNav(null);
+        }
+      }, NAV_VERSE_WASH_FADE_MS / steps);
+    }, NAV_VERSE_WASH_HOLD_MS);
+
+    return () => {
+      mounted = false;
+      clearTimeout(scrollStart);
+      if (scrollRetry) clearTimeout(scrollRetry);
+      clearTimeout(fadeStart);
+      if (fadeInterval) clearInterval(fadeInterval);
+    };
+  }, [verseParam, verses.length]);
+
   const kjvWordStudy = isKjvTranslation(translation);
   const strongMapQueries = useQueries({
     queries: verses.map((verse) => ({
@@ -1376,7 +1405,8 @@ export default function VerseReaderScreen() {
 
   const getHighlightBg = useCallback((verseId: string, verseNum: number, index: number): string => {
     if (highlightedFromNav === verseNum) {
-      return `rgba(255, 241, 118, ${navHighlightAlpha})`;
+      if (navHighlightAlpha >= 1) return VERSE_SELECTION_WASH;
+      return `rgba(31,26,18,${0.1 * Math.max(0, navHighlightAlpha)})`;
     }
     if (index === audio.speakingVerseIndex) {
       return "rgba(255, 241, 118, 0.28)";

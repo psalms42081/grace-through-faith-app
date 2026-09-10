@@ -1,6 +1,9 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { F } from "@/components/home-v2/theme";
+import { useTranslation } from "@/context/TranslationContext";
+import { navigateToScriptureByParts } from "@/lib/scripture-nav";
+import { parseScriptureReference } from "@/lib/scripture-reference";
 import type { MemoryText } from "@/lib/sabbath-school-memory-text";
 
 interface MemoryVerseCardProps {
@@ -12,12 +15,39 @@ interface MemoryVerseCardProps {
  * The single ceremonial presentation for Adventech's Sabbath School Memory Text.
  */
 export function MemoryVerseCard({ memoryText, testID }: MemoryVerseCardProps) {
-  return (
-    <View style={styles.card} testID={testID}>
+  const { translation } = useTranslation();
+  const parsed = memoryText.reference
+    ? parseScriptureReference(memoryText.reference)
+    : null;
+
+  const body = (
+    <>
       <Text style={styles.label}>MEMORY VERSE</Text>
       <Text style={styles.verse}>{memoryText.verse}</Text>
       {memoryText.reference && <Text style={styles.reference}>{memoryText.reference}</Text>}
-    </View>
+    </>
+  );
+
+  if (!parsed) {
+    return (
+      <View style={styles.card} testID={testID}>
+        {body}
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      style={styles.card}
+      testID={testID}
+      accessibilityRole="link"
+      accessibilityLabel={memoryText.reference || "Memory verse"}
+      onPress={() =>
+        navigateToScriptureByParts(parsed.bookId, parsed.chapter, parsed.verse, translation)
+      }
+    >
+      {body}
+    </Pressable>
   );
 }
 
