@@ -1,17 +1,17 @@
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, type TextStyle } from "react-native";
 import { splitDivineNameRuns } from "@/lib/divine-name";
 
 /** Inline verse body: LORD in small caps when the font supports it. */
-export function VerseTextRuns({ text }: { text: string }) {
+export function VerseTextRuns({ text, style }: { text: string; style?: TextStyle }) {
   return (
     <>
       {splitDivineNameRuns(text).map((run, index) =>
         run.isDivineName ? (
-          <Text key={`nd-${index}`} pointerEvents="none" style={s.divineName}>
+          <Text key={`nd-${index}`} pointerEvents="none" style={[s.divineName, style]}>
             {run.text}
           </Text>
         ) : (
-          <Text key={`t-${index}`} pointerEvents="none">
+          <Text key={`t-${index}`} pointerEvents="none" style={style}>
             {run.text}
           </Text>
         )

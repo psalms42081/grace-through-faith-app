@@ -17,6 +17,7 @@ import {
   shouldGenerateAiStrongMap,
   strongMapCacheHash,
 } from "../../lib/strong-map-policy";
+import { normalizeStrongId } from "../../lib/step-bible-tagged";
 
 export { STRONG_MAP_CACHE_VERSION, strongMapCacheHash };
 
@@ -112,9 +113,11 @@ router.get("/api/strong/search", async (req, res) => {
       return res.json([]);
     }
     const searchTerm = `%${String(q).trim().toLowerCase()}%`;
-    const conditions = [
-      sql`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`,
-    ];
+    const normalizedQuery = normalizeStrongId(String(q));
+    const idMatch = normalizedQuery
+      ? sql`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm} OR regexp_replace(upper(${strongEntries.id}), '^([HG])0+', '\\1') = ${normalizedQuery})`
+      : sql`(LOWER(${strongEntries.definition}) LIKE ${searchTerm} OR LOWER(${strongEntries.lemma}) LIKE ${searchTerm} OR LOWER(${strongEntries.transliteration}) LIKE ${searchTerm} OR LOWER(${strongEntries.kjvUsage}) LIKE ${searchTerm} OR LOWER(${strongEntries.id}) LIKE ${searchTerm})`;
+    const conditions = [idMatch];
     if (language && (language === "he" || language === "gr")) {
       conditions.push(eq(strongEntries.language, String(language)));
     }
@@ -169,13 +172,36 @@ router.get("/api/strong/verse/:verseId", async (req, res) => {
 
 router.get("/api/strong/:id", async (req, res) => {
   try {
-    const [entry] = await db
+    const rawId = String(req.params.id);
+    const normalized = normalizeStrongId(rawId);
+    const [exact] = await db
       .select()
       .from(strongEntries)
-      .where(eq(strongEntries.id, String(req.params.id)))
+      .where(eq(strongEntries.id, rawId))
       .limit(1);
+    let entry = exact ?? null;
+    if (!entry && normalized) {
+      const alt = await db.execute(sql`
+        SELECT *
+          FROM strong_entry
+         WHERE regexp_replace(upper(id), '^([HG])0+', '\\1') = ${normalized}
+         ORDER BY length(id) ASC
+         LIMIT 1
+      `);
+      entry = ((alt as any).rows?.[0] ?? null) as typeof exact | null;
+    }
     if (!entry) return res.status(404).json({ error: "Strong's entry not found" });
-    return res.json(entry);
+    let kjvUseCount = 0;
+    if (normalized) {
+      const counted = await db.execute(sql`
+        SELECT COUNT(DISTINCT verse_id)::int AS n
+          FROM verse_strong_map
+         WHERE source = ${STEP_STRONG_SOURCE}
+           AND regexp_replace(upper(strong_id), '^([HG])0+', '\\1') = ${normalized}
+      `);
+      kjvUseCount = Number((counted as any).rows?.[0]?.n ?? (counted as any)[0]?.n ?? 0);
+    }
+    return res.json({ ...entry, kjvUseCount });
   } catch (err) {
     console.error(err);
     return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });

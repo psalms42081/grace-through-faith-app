@@ -3,6 +3,7 @@ import { strongEntries } from "../shared/schema";
 import { sql } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
+import { normalizeStrongId } from "../lib/step-bible-tagged";
 
 interface StrongEntryData {
   id: string;
@@ -46,13 +47,18 @@ function parseGreekXml(xmlContent: string): StrongEntryData[] {
     const lemma = greekMatch?.[1] || "";
     const translit = greekMatch?.[2] || null;
     const pronunciation = pronMatch?.[1] || null;
-    const definition = defMatch ? stripXmlTags(defMatch[1]) : "";
-    const derivation = derivMatch ? stripXmlTags(derivMatch[1]) : null;
     const kjvUsage = kjvMatch ? stripXmlTags(kjvMatch[1]) : null;
+    const definition = defMatch
+      ? stripXmlTags(defMatch[1])
+      : derivMatch
+        ? stripXmlTags(derivMatch[1])
+        : (kjvUsage || "");
+    const derivation = derivMatch ? stripXmlTags(derivMatch[1]) : null;
 
+    const id = normalizeStrongId(`G${num}`) || `G${num}`;
     if (lemma && definition) {
       entries.push({
-        id: `G${num}`,
+        id,
         language: "gr",
         lemma,
         transliteration: translit,
@@ -69,6 +75,9 @@ function parseGreekXml(xmlContent: string): StrongEntryData[] {
 }
 
 function parseHebrewXml(xmlContent: string): StrongEntryData[] {
+  if (xmlContent.includes('div type="entry"')) {
+    return parseHebrewOsis(xmlContent);
+  }
   const entries: StrongEntryData[] = [];
   const entryRegex = /<entry id="(H\d+)">([\s\S]*?)<\/entry>/g;
   let match;
@@ -118,14 +127,63 @@ function parseHebrewXml(xmlContent: string): StrongEntryData[] {
   return entries;
 }
 
+function parseHebrewOsis(xmlContent: string): StrongEntryData[] {
+  const entries: StrongEntryData[] = [];
+  const entryRegex = /<div type="entry" n="\d+">([\s\S]*?)<\/div>/g;
+  let match;
+  while ((match = entryRegex.exec(xmlContent)) !== null) {
+    const content = match[1];
+    const idMatch = content.match(/\bID="(H\d+)"/);
+    const wMatch = content.match(/<w\b([^>]*)>([^<]*)<\/w>/);
+    if (!idMatch || !wMatch) continue;
+    const attrs = wMatch[1];
+    const lemma = wMatch[2]?.trim() || "";
+    const transliteration = attrs.match(/\bxlit="([^"]*)"/)?.[1] ?? null;
+    const pronunciation = attrs.match(/\bPOS="([^"]*)"/)?.[1] ?? null;
+    const langRaw = attrs.match(/\bxml:lang="([^"]*)"/)?.[1] ?? "heb";
+    const explanation = content.match(/<note type="explanation">([\s\S]*?)<\/note>/);
+    const translation = content.match(/<note type="translation">([\s\S]*?)<\/note>/);
+    const exegesis = content.match(/<note type="exegesis">([\s\S]*?)<\/note>/);
+    const items = [...content.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+      .map((item) => stripXmlTags(item[1]))
+      .filter(Boolean);
+    const definition =
+      (explanation ? stripXmlTags(explanation[1]) : "")
+      || items.slice(0, 4).join("; ")
+      || (translation ? stripXmlTags(translation[1]) : "");
+    const kjvUsage = translation ? stripXmlTags(translation[1]) : null;
+    if (!lemma || !definition) continue;
+    entries.push({
+      id: idMatch[1],
+      language: langRaw.startsWith("arc") ? "he" : "he",
+      lemma,
+      transliteration,
+      pronunciation,
+      definition,
+      extendedDefinition: exegesis ? stripXmlTags(exegesis[1]) : null,
+      kjvUsage,
+      derivation: exegesis ? stripXmlTags(exegesis[1]) : null,
+    });
+  }
+  return entries;
+}
+
+function resolveXmlPath(filename: string): string | null {
+  const candidates = [
+    path.join(process.cwd(), "data", filename),
+    path.join("/tmp", filename),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
 async function main() {
   console.log("Loading Strong's Concordance data...");
 
-  const greekPath = "/tmp/strongsgreek.xml";
-  const hebrewPath = "/tmp/strongshebrew.xml";
+  const greekPath = resolveXmlPath("strongsgreek.xml");
+  const hebrewPath = resolveXmlPath("strongshebrew.xml");
 
-  if (!fs.existsSync(greekPath) || !fs.existsSync(hebrewPath)) {
-    console.error("XML files not found in /tmp/. Please download them first.");
+  if (!greekPath || !hebrewPath) {
+    console.error("XML files not found in data/ or /tmp/. Need strongsgreek.xml and strongshebrew.xml.");
     process.exit(1);
   }
 
@@ -175,6 +233,25 @@ async function main() {
 
   const count = await db.execute(sql`SELECT COUNT(*) as total FROM strong_entry`);
   console.log(`\nDone! Total Strong's entries in database: ${(count as any).rows?.[0]?.total ?? "unknown"}`);
+
+  const aliasFill = await db.execute(sql`
+    UPDATE strong_entry AS dest
+       SET lemma = src.lemma,
+           transliteration = COALESCE(src.transliteration, dest.transliteration),
+           pronunciation = COALESCE(src.pronunciation, dest.pronunciation),
+           definition = src.definition,
+           extended_definition = COALESCE(src.extended_definition, dest.extended_definition),
+           kjv_usage = COALESCE(src.kjv_usage, dest.kjv_usage),
+           derivation = COALESCE(src.derivation, dest.derivation)
+      FROM strong_entry AS src
+     WHERE dest.id <> src.id
+       AND dest.kjv_usage IS NULL
+       AND src.kjv_usage IS NOT NULL
+       AND regexp_replace(upper(dest.id), '^([HG])0+', '\\1')
+         = regexp_replace(upper(src.id), '^([HG])0+', '\\1')
+  `);
+  console.log(`Filled padded/stub aliases: ${(aliasFill as any).rowCount ?? 0}`);
+
   
   const langCount = await db.execute(sql`SELECT language, COUNT(*) as cnt FROM strong_entry GROUP BY language`);
   console.log("By language:", JSON.stringify((langCount as any).rows));

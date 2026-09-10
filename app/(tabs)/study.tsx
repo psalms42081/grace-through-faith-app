@@ -1988,6 +1988,7 @@ export default function StudyScreen() {
     verseText?: string;
     bookName?: string;
     showIntro?: string;
+    strong?: string;
     _t?: string;
   }>();
   const [activeTab, setActiveTabRaw] = useState<Tab>("word");
@@ -2701,7 +2702,7 @@ export default function StudyScreen() {
         showsVerticalScrollIndicator={false}
       >
         {canTrack && <LayerCoachBanner activeTab={activeTab} theme={theme} />}
-        {activeTab === "word" && <WordStudyTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} isDeepSession={deepSession.active} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
+        {activeTab === "word" && <WordStudyTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} initialVerse={params.verse} initialVerseId={params.verseId} initialVerseText={params.verseText} initialStrong={params.strong} isDeepSession={deepSession.active} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
         {activeTab === "context" && <ContextTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
         {activeTab === "voices" && <HistoricVoicesTab theme={theme} commentators={COMMENTATORS} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
         {activeTab === "application" && <ApplicationTab theme={theme} sharedBook={sharedBook} sharedChapter={sharedChapter} onBookChange={handleSharedBookChange} onChapterChange={handleSharedChapterChange} allBooks={allBooks} verseStart={dsVs} verseEnd={dsVe} />}
@@ -2743,18 +2744,24 @@ interface BibleBook {
   chapterCount: number;
 }
 
-function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, initialVerse, initialVerseId, initialVerseText, isDeepSession, allBooks, verseStart, verseEnd }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; isDeepSession?: boolean; allBooks?: BibleBook[]; verseStart?: number | null; verseEnd?: number | null }) {
-  const [studyMode, setStudyMode] = useState<"verse" | "concordance">("verse");
+function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterChange, initialVerse, initialVerseId, initialVerseText, initialStrong, isDeepSession, allBooks, verseStart, verseEnd }: { theme: typeof Colors.light; sharedBook: BibleBook | null; sharedChapter: number | null; onBookChange: (b: BibleBook | null) => void; onChapterChange: (c: number | null) => void; initialVerse?: string; initialVerseId?: string; initialVerseText?: string; initialStrong?: string; isDeepSession?: boolean; allBooks?: BibleBook[]; verseStart?: number | null; verseEnd?: number | null }) {
+  const [studyMode, setStudyMode] = useState<"verse" | "concordance">(initialStrong ? "concordance" : "verse");
   const [lexicalExpanded, setLexicalExpanded] = useState(false);
   const selectedBook = sharedBook;
   const selectedChapter = sharedChapter;
   const setSelectedBook = onBookChange;
   const setSelectedChapter = onChapterChange;
   const [selectedVerse, setSelectedVerse] = useState<number | null>(initialVerse ? parseInt(initialVerse) : null);
-  const [concordanceSearch, setConcordanceSearch] = useState("");
+  const [concordanceSearch, setConcordanceSearch] = useState(initialStrong ?? "");
   const [concordanceLang, setConcordanceLang] = useState<"all" | "he" | "gr">("all");
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const { translation } = useAppTranslation();
+
+  useEffect(() => {
+    if (!initialStrong) return;
+    setStudyMode("concordance");
+    setConcordanceSearch(initialStrong);
+  }, [initialStrong]);
 
   const books = allBooks;
 

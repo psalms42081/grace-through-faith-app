@@ -13,6 +13,8 @@ import {
   type VersePointerEvent,
 } from "@/lib/verse-web-long-press";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
+import { ReaderVerseWords } from "@/components/reader/ReaderVerseWords";
+import type { ReaderStrongMap } from "@/lib/reader-word-study";
 
 export interface PreviewVerse {
   id: string;
@@ -54,6 +56,9 @@ export function TypographyPreviewProse({
   bookmarkedVerseIds,
   bookId,
   chapterNum,
+  wordStudyMode = false,
+  mapsByVerseId,
+  onWordActivate,
 }: {
   verses: PreviewVerse[];
   headingsByVerse: Map<number, ReaderHeading[]>;
@@ -66,6 +71,9 @@ export function TypographyPreviewProse({
   bookmarkedVerseIds: Set<string>;
   bookId: string;
   chapterNum: number;
+  wordStudyMode?: boolean;
+  mapsByVerseId?: Map<string, ReaderStrongMap[]>;
+  onWordActivate?: (verse: PreviewVerse, surface: string, mapping: ReaderStrongMap) => void;
 }) {
   const groups = groupVersesByParagraphStarts(verses, paragraphStarts);
   const indexById = useMemo(() => {
@@ -131,61 +139,85 @@ export function TypographyPreviewProse({
                         : "transparent";
                   const lines = v.text.split("\n");
                   const { firstWord, remainder } = splitLeadingWord(lines[0] ?? "");
+                  const maps = mapsByVerseId?.get(v.id);
+                  const useWordTokens = Array.isArray(maps) && !!onWordActivate;
+                  const versePress = useWordTokens
+                    ? undefined
+                    : {
+                        onPress: () => {
+                          if (IS_WEB && webLongPress.consumeSuppressedClick()) return;
+                          onVerseTap(v);
+                        },
+                        ...(IS_WEB
+                          ? {
+                              onPointerDown: (event: VersePointerEvent) => {
+                                const { x, y } = pointerCoords(event);
+                                webLongPress.start(v.id, x, y);
+                              },
+                              onPointerMove: (event: VersePointerEvent) => {
+                                const { x, y } = pointerCoords(event);
+                                webLongPress.move(x, y);
+                              },
+                              onPointerUp: () => webLongPress.cancel(),
+                              onPointerCancel: () => webLongPress.cancel(),
+                              onContextMenu: (event: { preventDefault?: () => void }) => {
+                                event.preventDefault?.();
+                              },
+                            }
+                          : {
+                              onLongPress: () => onVerseLongPress(v),
+                              delayLongPress: 400,
+                            }),
+                      };
                   return (
                     <Text
                       key={v.id}
-                      onPress={() => {
-                        if (IS_WEB && webLongPress.consumeSuppressedClick()) return;
-                        onVerseTap(v);
-                      }}
-                      {...(IS_WEB
-                        ? {
-                            onPointerDown: (event: VersePointerEvent) => {
-                              const { x, y } = pointerCoords(event);
-                              webLongPress.start(v.id, x, y);
-                            },
-                            onPointerMove: (event: VersePointerEvent) => {
-                              const { x, y } = pointerCoords(event);
-                              webLongPress.move(x, y);
-                            },
-                            onPointerUp: () => webLongPress.cancel(),
-                            onPointerCancel: () => webLongPress.cancel(),
-                            onContextMenu: (event: { preventDefault?: () => void }) => {
-                              event.preventDefault?.();
-                            },
-                          }
-                        : {
-                            onLongPress: () => onVerseLongPress(v),
-                            delayLongPress: 400,
-                          })}
+                      {...versePress}
                       suppressHighlighting={false}
                       selectable={false}
                       style={[{ backgroundColor: bg }, webVerseStyle]}
-                      {...(IS_WEB ? undefined : { accessibilityRole: "button" as const })}
+                      {...(IS_WEB || useWordTokens ? undefined : { accessibilityRole: "button" as const })}
                       accessibilityLabel={`Verse ${v.verse}`}
                     >
                       <Text
-                        pointerEvents="none"
+                        pointerEvents={wordStudyMode ? "none" : "auto"}
+                        onPress={wordStudyMode ? undefined : () => onVerseTap(v)}
                         style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine }]}
                       >
                         {v.verse}
                       </Text>
                       {"\u00a0"}
-                      <VerseTextRuns text={firstWord} />
-                      <VerseTextRuns text={remainder} />
-                      {lines.slice(1).map((line, lineIndex) =>
-                        line.length === 0 ? (
-                          "\n"
-                        ) : (
-                          <Text
-                            key={`${v.id}-ln${lineIndex + 1}`}
-                            pointerEvents="none"
-                            style={s.poetryContinue}
-                          >
-                            {"\n\u2003"}
-                            <VerseTextRuns text={line} />
-                          </Text>
-                        ),
+                      {useWordTokens ? (
+                        <ReaderVerseWords
+                          verseId={v.id}
+                          verseNum={v.verse}
+                          text={v.text}
+                          maps={maps}
+                          wordStudyMode={wordStudyMode}
+                          indicateTagged={wordStudyMode}
+                          onVerseTap={() => onVerseTap(v)}
+                          onVerseLongPress={() => onVerseLongPress(v)}
+                          onWordActivate={(surface, mapping) => onWordActivate(v, surface, mapping)}
+                        />
+                      ) : (
+                        <>
+                          <VerseTextRuns text={firstWord} />
+                          <VerseTextRuns text={remainder} />
+                          {lines.slice(1).map((line, lineIndex) =>
+                            line.length === 0 ? (
+                              "\n"
+                            ) : (
+                              <Text
+                                key={`${v.id}-ln${lineIndex + 1}`}
+                                pointerEvents="none"
+                                style={s.poetryContinue}
+                              >
+                                {"\n\u2003"}
+                                <VerseTextRuns text={line} />
+                              </Text>
+                            ),
+                          )}
+                        </>
                       )}
                       {isBookmarked ? (
                         <Text pointerEvents="none" style={s.bookmarkMark}>

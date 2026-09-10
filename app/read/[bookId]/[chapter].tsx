@@ -17,10 +17,11 @@ import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Languages } from "lucide-react-native";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,7 +29,10 @@ import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
+import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
+import type { ReaderStrongMap } from "@/lib/reader-word-study";
+import { isKjvTranslation } from "@/lib/strong-map-policy";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -792,6 +796,8 @@ export default function VerseReaderScreen() {
 
   const [selectedVerseNums, setSelectedVerseNums] = useState<number[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [wordStudyMode, setWordStudyMode] = useState(false);
+  const [wordStudyTarget, setWordStudyTarget] = useState<WordStudySheetTarget | null>(null);
   const verseInteractedAt = useRef(0);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -802,6 +808,7 @@ export default function VerseReaderScreen() {
   useEffect(() => {
     setSelectedVerseNums([]);
     setSheetOpen(false);
+    setWordStudyTarget(null);
   }, [bookId, chapter]);
 
 
@@ -983,6 +990,22 @@ export default function VerseReaderScreen() {
   const canGoNext = chapterNum < totalChapters;
 
   const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
+  const kjvWordStudy = isKjvTranslation(translation);
+  const strongMapQueries = useQueries({
+    queries: verses.map((verse) => ({
+      queryKey: [`/api/strong/verse/${verse.id}?translation=KJV`],
+      enabled: kjvWordStudy && !!verse.id,
+    })),
+  });
+  const mapsByVerseId = useMemo(() => {
+    const map = new Map<string, ReaderStrongMap[]>();
+    if (!kjvWordStudy) return map;
+    verses.forEach((verse, index) => {
+      const rows = strongMapQueries[index]?.data;
+      if (Array.isArray(rows)) map.set(verse.id, rows as ReaderStrongMap[]);
+    });
+    return map;
+  }, [kjvWordStudy, verses, strongMapQueries]);
   const selectedVerseSet = useMemo(() => new Set(selectedVerseNums), [selectedVerseNums]);
   const selectedVerseObjs = useMemo(
     () => verses.filter((v) => selectedVerseSet.has(v.verse)).sort((a, b) => a.verse - b.verse),
@@ -1144,6 +1167,31 @@ export default function VerseReaderScreen() {
   }, []);
   useEffect(() => () => { if (stripToastTimer.current) clearTimeout(stripToastTimer.current); }, []);
 
+  useEffect(() => {
+    if (!kjvWordStudy && wordStudyMode) setWordStudyMode(false);
+  }, [kjvWordStudy, wordStudyMode]);
+
+  const toggleWordStudyMode = useCallback(() => {
+    if (!kjvWordStudy) {
+      showStripToast("Word study is available in the KJV");
+      return;
+    }
+    setWordStudyMode((on) => {
+      const next = !on;
+      if (next) {
+        setSelectedVerseNums([]);
+        setSheetOpen(false);
+      }
+      return next;
+    });
+  }, [kjvWordStudy, showStripToast]);
+
+  const handleWordActivate = useCallback((surface: string, mapping: ReaderStrongMap) => {
+    Haptics.selectionAsync();
+    setSheetOpen(false);
+    setWordStudyTarget({ surface, mapping });
+  }, []);
+
   const firstVerseId = verses[0]?.id;
   const chapterBookmarked = firstVerseId
     ? bookmarkedVerseIds.has(firstVerseId) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:1`)
@@ -1238,6 +1286,26 @@ export default function VerseReaderScreen() {
           ),
           headerRight: () => (
             <View style={styles.headerRow}>
+              <Pressable
+                testID="reader-word-study-toggle"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  kjvWordStudy
+                    ? wordStudyMode
+                      ? "Turn off Word Study"
+                      : "Turn on Word Study"
+                    : "Word study is available in the KJV"
+                }
+                hitSlop={12}
+                onPress={toggleWordStudyMode}
+                style={styles.headerIconBtn}
+              >
+                <Languages
+                  size={18}
+                  color={kjvWordStudy && wordStudyMode ? RV2_INK : RV2_INK_MUTED}
+                  strokeWidth={2}
+                />
+              </Pressable>
               <Pressable
                 testID="split-screen-toggle"
                 accessibilityLabel="Toggle split screen"
@@ -1412,7 +1480,9 @@ export default function VerseReaderScreen() {
                 >
                   <Ionicons name="hand-left-outline" size={14} color={RV2_INK_MUTED} />
                   <Text style={[styles.verseTapHintText, { color: RV2_INK_MUTED }]}>
-                    Tap a verse to select. Long press for actions.
+                    {wordStudyMode
+                      ? "Tap an underlined word for its Strong's entry."
+                      : "Tap a verse to select. Long press for actions."}
                   </Text>
                   <Ionicons name="close" size={12} color={RV2_INK_MUTED} />
                 </Pressable>
@@ -1432,6 +1502,13 @@ export default function VerseReaderScreen() {
                     bookmarkedVerseIds={bookmarkedVerseIds}
                     bookId={String(bookId)}
                     chapterNum={chapterNum}
+                    wordStudyMode={wordStudyMode}
+                    mapsByVerseId={kjvWordStudy ? mapsByVerseId : undefined}
+                    onWordActivate={
+                      kjvWordStudy
+                        ? (_verse, surface, mapping) => handleWordActivate(surface, mapping)
+                        : undefined
+                    }
                   />
                 ) : verses.map((v, i) => {
                   const isActive = selectedVerseSet.has(v.verse);
@@ -1621,7 +1698,7 @@ export default function VerseReaderScreen() {
             )}
             </View>
 
-            {sheetOpen && selectedVerseObjs.length > 0 && (
+            {sheetOpen && selectedVerseObjs.length > 0 && !wordStudyTarget && (
               <BottomSheetToolbar
                 verses={selectedVerseObjs}
                 highlightIds={selectedHighlightIds}
@@ -1639,7 +1716,7 @@ export default function VerseReaderScreen() {
 
             {/* New chrome: one floating play + chapter pill. Legacy keeps the A.3 strip. */}
             {useNewTypography ? (
-              !audio.isActive && !sheetOpen && (
+              !audio.isActive && !sheetOpen && !wordStudyTarget && (
                 <Animated.View
                   testID="reader-floating-chrome"
                   style={[
@@ -1880,6 +1957,17 @@ export default function VerseReaderScreen() {
         )}
 
       </View>
+      <WordStudySheet
+        target={wordStudyTarget}
+        onClose={() => setWordStudyTarget(null)}
+        onSeeUses={(strongId) => {
+          setWordStudyTarget(null);
+          router.push({
+            pathname: "/(tabs)/study",
+            params: { tab: "word", strong: strongId },
+          } as any);
+        }}
+      />
     </>
   );
 }
