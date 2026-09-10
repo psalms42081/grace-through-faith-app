@@ -25,7 +25,7 @@ export function WordStudySheet({
 }: {
   target: WordStudySheetTarget | null;
   onClose: () => void;
-  onSeeUses: (strongId: string) => void;
+  onSeeUses: (strongId: string, lemma?: string) => void;
 }) {
   const mapping = target?.mapping;
   const entry = mapping?.entry;
@@ -88,7 +88,9 @@ export function WordStudySheet({
               </View>
             ) : null}
             <Pressable
-              onPress={() => onSeeUses(displayId || mapping?.map.strongId || "")}
+              onPress={() =>
+                onSeeUses(displayId || mapping?.map.strongId || "", original)
+              }
               accessibilityRole="link"
               accessibilityLabel={useLabel}
               testID="reader-word-study-uses"

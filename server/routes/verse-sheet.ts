@@ -5,10 +5,12 @@ import {
   bibleBooks,
   commentaryEntries,
   commentators,
+  contextCards,
   egwChapters,
   pioneerChapters,
   sabbathSchoolDays,
 } from "../../shared/schema";
+import { hasBookOverviewContent } from "../../lib/book-overview";
 import { fetchWithTimeout } from "../services/api-client";
 import { getErrorStatusCode } from "../services/ai-semaphore";
 import { loadCurrentSabbathSchoolLesson } from "../services/sabbath-school-current";
@@ -129,7 +131,7 @@ router.get("/api/verse-sheet", async (req, res) => {
     const paragraphsCol = sql`(${egwChapters.paragraphs})::text`;
     const pioneerCol = sql`(${pioneerChapters.paragraphs})::text`;
 
-    const [commentatorsForVerse, egwRows, pioneerRows, ssCurrent] = await Promise.all([
+    const [commentatorsForVerse, egwRows, pioneerRows, ssCurrent, overviewRows] = await Promise.all([
       commentaryForVerse(bookId, chapter, verse),
       needles.length
         ? db
@@ -157,6 +159,10 @@ router.get("/api/verse-sheet", async (req, res) => {
             .limit(5)
         : Promise.resolve([]),
       loadCurrentSabbathSchoolLesson("adult").catch(() => null),
+      db
+        .select({ chapter: contextCards.chapter })
+        .from(contextCards)
+        .where(eq(contextCards.bookId, bookId)),
     ]);
 
     const ellenWhite = [
@@ -203,6 +209,7 @@ router.get("/api/verse-sheet", async (req, res) => {
       commentators: commentatorsForVerse,
       ellenWhite,
       sabbathSchool,
+      hasBookOverview: hasBookOverviewContent(overviewRows),
     });
   } catch (err) {
     console.error("[verse-sheet]", err);

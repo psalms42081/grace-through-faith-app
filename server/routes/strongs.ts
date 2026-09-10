@@ -133,6 +133,64 @@ router.get("/api/strong/search", async (req, res) => {
   }
 });
 
+router.get("/api/strong/:id/uses", async (req, res) => {
+  try {
+    const normalized = normalizeStrongId(String(req.params.id));
+    if (!normalized) {
+      return res.status(400).json({ error: "Invalid Strong's id" });
+    }
+    const limit = Math.min(Math.max(Number(req.query.limit) || 80, 1), 200);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+    const counted = await db.execute(sql`
+      SELECT COUNT(DISTINCT verse_id)::int AS n
+        FROM verse_strong_map
+       WHERE source = ${STEP_STRONG_SOURCE}
+         AND regexp_replace(upper(strong_id), '^([HG])0+', '\\1') = ${normalized}
+    `);
+    const total = Number((counted as any).rows?.[0]?.n ?? (counted as any)[0]?.n ?? 0);
+
+    const rows = await db.execute(sql`
+      SELECT v.id AS "verseId",
+             v.book_id AS "bookId",
+             v.chapter,
+             v.verse,
+             v.text,
+             b.name AS "bookName",
+             b.abbreviation
+        FROM verse_strong_map m
+        JOIN bible_verse v ON v.id = m.verse_id
+        JOIN bible_book b ON b.id = v.book_id
+       WHERE m.source = ${STEP_STRONG_SOURCE}
+         AND regexp_replace(upper(m.strong_id), '^([HG])0+', '\\1') = ${normalized}
+       GROUP BY v.id, v.book_id, v.chapter, v.verse, v.text, b.name, b.abbreviation
+       ORDER BY v.book_id, v.chapter, v.verse
+       LIMIT ${limit}
+      OFFSET ${offset}
+    `);
+    const uses = ((rows as any).rows ?? rows) as {
+      verseId: string;
+      bookId: number;
+      chapter: number;
+      verse: number;
+      text: string;
+      bookName: string;
+      abbreviation: string | null;
+    }[];
+
+    return res.json({
+      strongId: normalized,
+      total,
+      limit,
+      offset,
+      uses,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/strong/verse/:verseId", async (req, res) => {
   try {
     const verseId = String(req.params.verseId);

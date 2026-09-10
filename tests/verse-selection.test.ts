@@ -12,6 +12,7 @@ import {
   formatSelectionPreview,
   formatVerseRangeLabel,
   highlightIdsForVerses,
+  bookmarkIdsForVerses,
   toggleVerseSelection,
   verseSurfaceStyle,
 } from "../lib/verse-selection";
@@ -146,6 +147,21 @@ describe("highlightIdsForVerses", () => {
       14,
     );
     assert.deepEqual(ids.sort(), ["h-a", "h-b"]);
+  });
+});
+
+describe("bookmarkIdsForVerses", () => {
+  it("reuses the same verse matching as highlights", () => {
+    const ids = bookmarkIdsForVerses(
+      [
+        { id: "b-a", verseId: "kjv-19-23-1" },
+        { id: "b-skip", verseId: "other", bookId: 19, chapter: 23, verse: 2 },
+      ],
+      [{ id: "kjv-19-23-1", verse: 1 }],
+      19,
+      23,
+    );
+    assert.deepEqual(ids, ["b-a"]);
   });
 });
 

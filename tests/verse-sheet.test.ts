@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import { scriptureCiteNeedles, textCitesNeedles } from "../lib/scripture-cite";
+import { pickBookOverviewCards, hasBookOverviewContent } from "../lib/book-overview";
 import {
   firstThreeLines,
   formatSheetReference,
@@ -64,6 +65,27 @@ describe("wordStudyChipsForVerse", () => {
   });
 });
 
+describe("pickBookOverviewCards", () => {
+  it("prefers chapter-null cards, then chapter 1", () => {
+    assert.deepEqual(
+      pickBookOverviewCards([
+        { chapter: 23, title: "psalm 23" },
+        { chapter: 1, title: "intro" },
+      ]).map((c) => c.title),
+      ["intro"],
+    );
+    assert.deepEqual(
+      pickBookOverviewCards([
+        { chapter: null, title: "book" },
+        { chapter: 1, title: "intro" },
+      ]).map((c) => c.title),
+      ["book"],
+    );
+    assert.equal(hasBookOverviewContent([{ chapter: 23 }]), false);
+    assert.equal(hasBookOverviewContent([{ chapter: 1 }]), true);
+  });
+});
+
 describe("verse sheet wiring", () => {
   it("registers the verse-sheet route and EGW local chapter", () => {
     const routes = readFileSync(new URL("../server/routes.ts", import.meta.url), "utf8");
@@ -75,6 +97,39 @@ describe("verse sheet wiring", () => {
     assert.match(sheet, /Classic|matthew-henry/);
     assert.match(sheet, /ellenWhite/);
     assert.match(sheet, /sabbathSchool/);
+    assert.match(sheet, /hasBookOverview/);
     assert.match(colors, /key: "rose"/);
+  });
+
+  it("hides Book overview unless the API reports content, and opens passage-context overview", () => {
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    const passage = readFileSync(new URL("../app/passage-context.tsx", import.meta.url), "utf8");
+    assert.match(sheet, /contextQuery\.data\?\.hasBookOverview \?/);
+    assert.match(sheet, /fields=overview/);
+    assert.match(reader, /pathname: "\/passage-context"/);
+    assert.match(reader, /overview: "1"/);
+    assert.match(passage, /overviewFlag === "1"/);
+    assert.match(passage, /book-overview-screen/);
+    assert.doesNotMatch(reader, /onOpenBookOverview=\{\(\) =>\s*router\.push\(`\/read\/\$\{/);
+  });
+
+  it("marks the active highlight and offers a Remove swatch", () => {
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(sheet, /isActive \? onRemoveHighlight\(\) : onHighlight\(dot\.key\)/);
+    assert.match(sheet, /reader-verse-highlight-remove/);
+    assert.match(sheet, /dotActive/);
+    assert.match(reader, /handleRemoveHighlight/);
+    assert.match(reader, /showStripToast\("Highlight removed"\)/);
+  });
+
+  it("toasts Bookmarked and Sign in to save, and fills the bookmark icon", () => {
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(sheet, /bookmarked \? "bookmark" : "bookmark-outline"/);
+    assert.match(reader, /showStripToast\("Bookmarked"\)/);
+    assert.match(reader, /showStripToast\("Sign in to save"\)/);
+    assert.match(reader, /POST", "\/api\/bookmarks"/);
   });
 });

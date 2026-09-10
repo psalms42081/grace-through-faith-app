@@ -113,4 +113,14 @@ describe("reader word-study chrome", () => {
     assert.match(words, /textDecorationStyle: "dotted"/);
     assert.doesNotMatch(words, /rgba\(91, 107, 122/);
   });
+
+  it("routes See all uses to Strong's concordance, not Deep Dive", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    const strongs = readFileSync(new URL("../server/routes/strongs.ts", import.meta.url), "utf8");
+    assert.match(reader, /pathname: "\/strong-concordance"/);
+    assert.match(reader, /params:\s*\{\s*strong:/);
+    assert.doesNotMatch(reader, /params: \{ tab: "word", strong:/);
+    assert.match(strongs, /\/api\/strong\/:id\/uses/);
+    assert.match(strongs, /\/api\/strong\/search/);
+  });
 });

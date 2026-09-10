@@ -52,6 +52,7 @@ type VerseSheetContext = {
     lessonNumber: number;
     quarterCode: string;
   } | null;
+  hasBookOverview?: boolean;
 };
 
 type CrossRef = {
@@ -65,21 +66,24 @@ function SheetAction({
   icon,
   label,
   onPress,
+  active = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
+  active?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
       testID={`reader-verse-action-${label.toLowerCase()}`}
       style={({ pressed }) => [s.action, { opacity: pressed ? 0.55 : 1 }]}
     >
-      <Ionicons name={icon} size={20} color={INK} />
-      <Text style={s.actionLabel}>{label}</Text>
+      <Ionicons name={icon} size={20} color={active ? PathB.coral : INK} />
+      <Text style={[s.actionLabel, active ? s.actionLabelActive : null]}>{label}</Text>
     </Pressable>
   );
 }
@@ -121,6 +125,7 @@ export function VerseSheet({
   userId,
   isAuthenticated,
   onHighlight,
+  onRemoveHighlight,
   onBookmark,
   onCopy,
   onShare,
@@ -128,6 +133,9 @@ export function VerseSheet({
   onWordActivate,
   onOpenDeepDive,
   onOpenBookOverview,
+  activeColor,
+  bookmarked,
+  notice,
 }: {
   verses: { id: string; verse: number; text: string }[];
   bookName: string;
@@ -139,6 +147,7 @@ export function VerseSheet({
   userId: string | null;
   isAuthenticated: boolean;
   onHighlight: (color: VerseSheetHighlightKey) => void;
+  onRemoveHighlight: () => void;
   onBookmark: () => void;
   onCopy: () => void;
   onShare: () => void;
@@ -146,6 +155,9 @@ export function VerseSheet({
   onWordActivate: (surface: string, mapping: ReaderStrongMap) => void;
   onOpenDeepDive: () => void;
   onOpenBookOverview: () => void;
+  activeColor: VerseSheetHighlightKey | null;
+  bookmarked: boolean;
+  notice?: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showNote, setShowNote] = useState(false);
@@ -177,7 +189,7 @@ export function VerseSheet({
 
   const contextQuery = useQuery<VerseSheetContext>({
     queryKey: [
-      `/api/verse-sheet?bookId=${encodeURIComponent(bookId)}&chapter=${encodeURIComponent(chapter)}&verse=${encodeURIComponent(String(first?.verse ?? ""))}&bookName=${encodeURIComponent(bookName)}`,
+      `/api/verse-sheet?bookId=${encodeURIComponent(bookId)}&chapter=${encodeURIComponent(chapter)}&verse=${encodeURIComponent(String(first?.verse ?? ""))}&bookName=${encodeURIComponent(bookName)}&fields=overview`,
     ],
     enabled: expanded && !!first,
   });
@@ -266,21 +278,51 @@ export function VerseSheet({
           <Text style={s.ref} numberOfLines={1} testID="reader-verse-sheet-ref">
             {reference}
           </Text>
+          {notice ? (
+            <Text style={s.notice} testID="reader-verse-sheet-notice">
+              {notice}
+            </Text>
+          ) : null}
         </View>
 
         <View style={s.actions}>
           <View style={s.colorRow}>
-            {VERSE_SHEET_HIGHLIGHTS.map((dot) => (
-              <Pressable
-                key={dot.key}
-                onPress={() => onHighlight(dot.key)}
-                accessibilityLabel={`Highlight ${dot.label}`}
-                testID={`reader-verse-highlight-${dot.key}`}
-                style={({ pressed }) => [s.dot, { backgroundColor: dot.bg, opacity: pressed ? 0.65 : 1 }]}
-              />
-            ))}
+            {VERSE_SHEET_HIGHLIGHTS.map((dot) => {
+              const isActive = activeColor === dot.key;
+              return (
+                <Pressable
+                  key={dot.key}
+                  onPress={() => (isActive ? onRemoveHighlight() : onHighlight(dot.key))}
+                  accessibilityLabel={
+                    isActive ? `Remove ${dot.label} highlight` : `Highlight ${dot.label}`
+                  }
+                  testID={`reader-verse-highlight-${dot.key}`}
+                  style={({ pressed }) => [
+                    s.dot,
+                    {
+                      backgroundColor: dot.bg,
+                      opacity: pressed ? 0.65 : 1,
+                    },
+                    isActive ? s.dotActive : null,
+                  ]}
+                />
+              );
+            })}
+            <Pressable
+              onPress={onRemoveHighlight}
+              accessibilityLabel="Remove highlight"
+              testID="reader-verse-highlight-remove"
+              style={({ pressed }) => [s.removeDot, { opacity: pressed ? 0.65 : 1 }]}
+            >
+              <Ionicons name="close" size={11} color={INK} />
+            </Pressable>
           </View>
-          <SheetAction icon="bookmark-outline" label="Bookmark" onPress={onBookmark} />
+          <SheetAction
+            icon={bookmarked ? "bookmark" : "bookmark-outline"}
+            label="Bookmark"
+            onPress={onBookmark}
+            active={bookmarked}
+          />
           <SheetAction
             icon="create-outline"
             label="Note"
@@ -455,13 +497,16 @@ export function VerseSheet({
                 <Text style={s.linkTitle}>Deep Dive</Text>
                 <Ionicons name="chevron-forward" size={16} color={MUTED} />
               </Pressable>
-              <Pressable
-                onPress={onOpenBookOverview}
-                style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
-              >
-                <Text style={s.linkTitle}>Book overview</Text>
-                <Ionicons name="chevron-forward" size={16} color={MUTED} />
-              </Pressable>
+              {contextQuery.data?.hasBookOverview ? (
+                <Pressable
+                  onPress={onOpenBookOverview}
+                  testID="reader-verse-book-overview"
+                  style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
+                >
+                  <Text style={s.linkTitle}>Book overview</Text>
+                  <Ionicons name="chevron-forward" size={16} color={MUTED} />
+                </Pressable>
+              ) : null}
             </CollapsibleSection>
 
             <Text style={s.footer}>{VERSE_SHEET_ATTRIBUTION}</Text>
@@ -513,6 +558,15 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 8,
   },
+  notice: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: MUTED,
+    textAlign: "center",
+    paddingHorizontal: 16,
+    marginTop: -4,
+    marginBottom: 6,
+  },
   actions: {
     flexDirection: "row",
     flexWrap: "nowrap",
@@ -535,6 +589,20 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(31,26,18,0.12)",
   },
+  dotActive: {
+    borderWidth: 2,
+    borderColor: INK,
+  },
+  removeDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,26,18,0.28)",
+    backgroundColor: "#F1EBDD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   action: {
     flex: 1,
     minWidth: 0,
@@ -546,6 +614,10 @@ const s = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 11,
     color: INK,
+  },
+  actionLabelActive: {
+    color: PathB.coral,
+    fontFamily: "Inter_600SemiBold",
   },
   noteBox: {
     marginHorizontal: 16,

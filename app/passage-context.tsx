@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { pickBookOverviewCards } from "@/lib/book-overview";
 
 interface ContextCard {
   id: string;
@@ -31,33 +32,54 @@ interface ContextCard {
 
 
 export default function PassageContextScreen() {
-  const { bookId, chapter, bookName } = useLocalSearchParams<{
+  const { bookId, chapter, bookName, overview } = useLocalSearchParams<{
     bookId: string;
     chapter: string;
     bookName: string;
+    overview?: string;
   }>();
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const firstParam = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+  const overviewFlag = firstParam(overview);
+  const resolvedBookId = firstParam(bookId);
+  const resolvedChapter = firstParam(chapter);
+  const resolvedBookName = firstParam(bookName);
+  const isBookOverview = overviewFlag === "1" || (!!resolvedBookId && !resolvedChapter);
+  const contextUrl = isBookOverview
+    ? `/api/context?book=${resolvedBookId}`
+    : `/api/context?book=${resolvedBookId}&chapter=${resolvedChapter}`;
+
   const { data: contextCards, isLoading: ctxLoading } = useQuery<ContextCard[]>({
-    queryKey: [`/api/context?book=${bookId}&chapter=${chapter}`],
+    queryKey: [contextUrl],
+    enabled: !!resolvedBookId && (isBookOverview || !!resolvedChapter),
   });
 
-  const hasContext = (contextCards?.length ?? 0) > 0;
+  const displayCards = isBookOverview
+    ? pickBookOverviewCards(contextCards ?? [])
+    : (contextCards ?? []);
+  const hasContext = displayCards.length > 0;
   const isLoading = ctxLoading;
   const hasContent = hasContext;
+  const heroTitle = isBookOverview ? (resolvedBookName || "Book") : `${resolvedBookName} ${resolvedChapter}`;
+  const screenTitle = isBookOverview
+    ? `${resolvedBookName || "Book"} — Overview`
+    : `${resolvedBookName} ${resolvedChapter} — Study`;
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: `${bookName} ${chapter} — Study`,
+          title: screenTitle,
         }}
       />
       <ScrollView
         style={[styles.container, { backgroundColor: theme.background }]}
+        testID={isBookOverview ? "book-overview-screen" : "passage-context-screen"}
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 40 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -65,11 +87,11 @@ export default function PassageContextScreen() {
           <View style={[styles.heroBadge, { backgroundColor: "rgba(201,147,58,0.25)" }]}>
             <Ionicons name="layers-outline" size={14} color="#C9933A" />
             <Text style={[styles.heroBadgeText, { fontFamily: "Inter_600SemiBold" }]}>
-              Passage Study
+              {isBookOverview ? "Book Overview" : "Passage Study"}
             </Text>
           </View>
           <Text style={[styles.heroTitle, { fontFamily: "Lora_700Bold" }]}>
-            {bookName} {chapter}
+            {heroTitle}
           </Text>
           <Text style={[styles.heroSub, { fontFamily: "Inter_400Regular" }]}>
             Historical background & cultural context
@@ -98,7 +120,7 @@ export default function PassageContextScreen() {
             {hasContext && (
               <>
                 <SectionHeader icon="time-outline" label="Historical Context" theme={theme} />
-                {contextCards!.map((card) => (
+                {displayCards.map((card) => (
                   <ContextCardView key={card.id} card={card} theme={theme} />
                 ))}
               </>

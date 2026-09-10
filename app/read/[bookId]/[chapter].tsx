@@ -36,7 +36,6 @@ import { isKjvTranslation } from "@/lib/strong-map-policy";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
-  bibleTabBookPath,
   goBibleReaderBack,
   isBibleTabSegments,
   openBibleTabBooks,
@@ -49,9 +48,11 @@ import {
   buildHighlightSheetPayload,
   formatVerseRangeLabel,
   highlightIdsForVerses,
+  bookmarkIdsForVerses,
   toggleVerseSelection,
   verseSurfaceStyle,
 } from "@/lib/verse-selection";
+import { VERSE_SHEET_HIGHLIGHTS, type VerseSheetHighlightKey } from "@/lib/verse-sheet";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
@@ -803,6 +804,7 @@ export default function VerseReaderScreen() {
   const [localHighlightMap, setLocalHighlightMap] = useState<Map<string, HighlightColorKey>>(
     () => new Map(),
   );
+  const [bookmarkOverride, setBookmarkOverride] = useState<boolean | null>(null);
   const [wordStudyMode, setWordStudyMode] = useState(false);
   const [wordStudyTarget, setWordStudyTarget] = useState<WordStudySheetTarget | null>(null);
   const verseInteractedAt = useRef(0);
@@ -817,6 +819,7 @@ export default function VerseReaderScreen() {
     setSheetOpen(false);
     setWordStudyTarget(null);
     setLocalHighlightMap(new Map());
+    setBookmarkOverride(null);
   }, [bookId, chapter]);
 
 
@@ -1023,6 +1026,33 @@ export default function VerseReaderScreen() {
     () => highlightIdsForVerses(highlightsData ?? [], selectedVerseObjs, Number(bookId), chapterNum),
     [highlightsData, selectedVerseObjs, bookId, chapterNum],
   );
+  const selectedBookmarkIds = useMemo(
+    () => bookmarkIdsForVerses(bookmarksData ?? [], selectedVerseObjs, Number(bookId), chapterNum),
+    [bookmarksData, selectedVerseObjs, bookId, chapterNum],
+  );
+  const activeSheetColor = useMemo((): VerseSheetHighlightKey | null => {
+    const first = selectedVerseObjs[0];
+    if (!first) return null;
+    const raw =
+      localHighlightMap.get(first.id) ??
+      highlightColorMap.get(first.id) ??
+      highlightColorMap.get(`${bookId}:${chapterNum}:${first.verse}`);
+    if (!raw) return null;
+    if (raw === "orange" || raw === "pink") return "rose";
+    const mapped = (LEGACY_HIGHLIGHT_MAP[raw as HighlightColorKey] ?? raw) as string;
+    return VERSE_SHEET_HIGHLIGHTS.some((dot) => dot.key === mapped)
+      ? (mapped as VerseSheetHighlightKey)
+      : null;
+  }, [selectedVerseObjs, localHighlightMap, highlightColorMap, bookId, chapterNum]);
+  const selectionBookmarked = bookmarkOverride ?? (
+    selectedVerseObjs.length > 0 && selectedVerseObjs.every((v) =>
+      bookmarkedVerseIds.has(v.id) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`),
+    )
+  );
+
+  useEffect(() => {
+    setBookmarkOverride(null);
+  }, [selectedVerseNums.join(",")]);
   // Do not infer headings from KJV verse text. These maps are populated only
   // when the provider explicitly returned its own chapter structure.
   const providerHeadings = useMemo(() => {
@@ -1169,7 +1199,7 @@ export default function VerseReaderScreen() {
   const showStripToast = useCallback((msg: string) => {
     setStripToast(msg);
     if (stripToastTimer.current) clearTimeout(stripToastTimer.current);
-    stripToastTimer.current = setTimeout(() => setStripToast(null), 1600);
+    stripToastTimer.current = setTimeout(() => setStripToast(null), 2800);
   }, []);
   useEffect(() => () => { if (stripToastTimer.current) clearTimeout(stripToastTimer.current); }, []);
 
@@ -1217,8 +1247,42 @@ export default function VerseReaderScreen() {
     }
   }, [isAuthenticated, firstVerseId, userId, bookName, chapter, showStripToast]);
 
+  const handleRemoveHighlight = useCallback(async () => {
+    if (selectedVerseObjs.length === 0) { showStripToast("Tap a verse first"); return; }
+    if (!isAuthenticated || !userId) {
+      setLocalHighlightMap((prev) => {
+        const next = new Map(prev);
+        for (const v of selectedVerseObjs) next.delete(v.id);
+        return next;
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showStripToast("Highlight removed");
+      return;
+    }
+    try {
+      await Promise.all(
+        selectedHighlightIds.map((id) => apiRequest("DELETE", `/api/highlights/${id}`)),
+      );
+      setLocalHighlightMap((prev) => {
+        const next = new Map(prev);
+        for (const v of selectedVerseObjs) next.delete(v.id);
+        return next;
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showStripToast("Highlight removed");
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showStripToast("Failed to remove");
+    }
+  }, [selectedVerseObjs, isAuthenticated, userId, selectedHighlightIds, showStripToast]);
+
   const handleStripHighlight = useCallback(async (color: HighlightColorKey) => {
     if (selectedVerseObjs.length === 0) { showStripToast("Tap a verse first"); return; }
+    if (activeSheetColor === color) {
+      await handleRemoveHighlight();
+      return;
+    }
     if (!isAuthenticated || !userId) {
       setLocalHighlightMap((prev) => {
         const next = new Map(prev);
@@ -1230,9 +1294,19 @@ export default function VerseReaderScreen() {
       return;
     }
     try {
+      if (selectedHighlightIds.length > 0) {
+        await Promise.all(
+          selectedHighlightIds.map((id) => apiRequest("DELETE", `/api/highlights/${id}`)),
+        );
+      }
       await Promise.all(
         selectedVerseObjs.map((v) => apiRequest("POST", "/api/highlights", { userId, verseId: v.id, color })),
       );
+      setLocalHighlightMap((prev) => {
+        const next = new Map(prev);
+        for (const v of selectedVerseObjs) next.set(v.id, color);
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showStripToast("Highlighted");
@@ -1240,7 +1314,7 @@ export default function VerseReaderScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showStripToast("Failed to highlight");
     }
-  }, [selectedVerseObjs, isAuthenticated, userId, showStripToast]);
+  }, [selectedVerseObjs, isAuthenticated, userId, showStripToast, activeSheetColor, handleRemoveHighlight, selectedHighlightIds]);
 
   const selectionPayload = useMemo(
     () =>
@@ -1257,6 +1331,16 @@ export default function VerseReaderScreen() {
     if (!isAuthenticated) { showStripToast("Sign in to save"); return; }
     if (selectedVerseObjs.length === 0) return;
     try {
+      if (selectionBookmarked) {
+        await Promise.all(
+          selectedBookmarkIds.map((id) => apiRequest("DELETE", `/api/bookmarks/${id}`)),
+        );
+        queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setBookmarkOverride(false);
+        showStripToast("Bookmark removed");
+        return;
+      }
       await Promise.all(
         selectedVerseObjs.map((v) =>
           apiRequest("POST", "/api/bookmarks", {
@@ -1268,12 +1352,14 @@ export default function VerseReaderScreen() {
       );
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setBookmarkOverride(true);
       showStripToast("Bookmarked");
-    } catch {
+    } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showStripToast("Failed to save");
+      const message = err instanceof Error ? err.message : "";
+      showStripToast(/401|Authentication required/i.test(message) ? "Sign in to save" : "Failed to save");
     }
-  }, [isAuthenticated, selectedVerseObjs, userId, bookName, chapter, showStripToast]);
+  }, [isAuthenticated, selectedVerseObjs, userId, bookName, chapter, showStripToast, selectionBookmarked, selectedBookmarkIds]);
 
   const handleSelectionCopy = useCallback(async () => {
     await Clipboard.setStringAsync(selectionPayload.copyText);
@@ -1777,7 +1863,11 @@ export default function VerseReaderScreen() {
                 maps={mapsByVerseId.get(selectedVerseObjs[0]?.id ?? "") ?? []}
                 userId={userId}
                 isAuthenticated={isAuthenticated}
-                onHighlight={handleStripHighlight}
+                activeColor={activeSheetColor}
+                bookmarked={selectionBookmarked}
+                notice={stripToast}
+                onHighlight={(color) => void handleStripHighlight(color)}
+                onRemoveHighlight={() => void handleRemoveHighlight()}
                 onBookmark={handleSelectionBookmark}
                 onCopy={handleSelectionCopy}
                 onShare={handleSelectionShare}
@@ -1790,7 +1880,14 @@ export default function VerseReaderScreen() {
                   } as any)
                 }
                 onOpenBookOverview={() =>
-                  router.push((isTabReader ? bibleTabBookPath(bookId) : `/read/${bookId}`) as any)
+                  router.push({
+                    pathname: "/passage-context",
+                    params: {
+                      bookId: String(bookId),
+                      bookName: bookName ?? "",
+                      overview: "1",
+                    },
+                  } as any)
                 }
               />
             )}
@@ -1876,7 +1973,7 @@ export default function VerseReaderScreen() {
                     ))}
                   </Animated.View>
                 )}
-                {stripToast && (
+                {stripToast && !useNewTypography && (
                   <View style={[styles.stripToast, { bottom: bottomPad + 112 }]}>
                     <Text style={styles.stripToastText}>{stripToast}</Text>
                   </View>
@@ -2041,14 +2138,30 @@ export default function VerseReaderScreen() {
       <WordStudySheet
         target={wordStudyTarget}
         onClose={() => setWordStudyTarget(null)}
-        onSeeUses={(strongId) => {
+        onSeeUses={(strongId, lemma) => {
           setWordStudyTarget(null);
           router.push({
-            pathname: "/(tabs)/study",
-            params: { tab: "word", strong: strongId },
+            pathname: "/strong-concordance",
+            params: {
+              strong: strongId,
+              ...(lemma ? { lemma } : {}),
+            },
           } as any);
         }}
       />
+      {stripToast && useNewTypography ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.stripToastWrap,
+            { bottom: bottomPad + (sheetOpen ? VERSE_SHEET_COLLAPSED_HEIGHT + 16 : 88) },
+          ]}
+        >
+          <View style={styles.stripToast}>
+            <Text style={styles.stripToastText}>{stripToast}</Text>
+          </View>
+        </View>
+      ) : null}
     </>
   );
 }
@@ -2281,9 +2394,15 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     marginLeft: 2,
   },
-  stripToast: {
+  stripToastWrap: {
     position: "absolute",
-    alignSelf: "center",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 4000,
+    elevation: 40,
+  },
+  stripToast: {
     backgroundColor: "#1F1A12",
     borderRadius: 16,
     paddingHorizontal: 14,

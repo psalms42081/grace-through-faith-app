@@ -126,8 +126,8 @@ export function buildHighlightSheetPayload(opts: {
   };
 }
 
-export function highlightIdsForVerses(
-  highlights: readonly {
+export function annotationIdsForVerses(
+  rows: readonly {
     id: string;
     verseId: string;
     bookId?: number;
@@ -141,19 +141,49 @@ export function highlightIdsForVerses(
   const ids = new Set(verses.map((v) => v.id));
   const nums = new Set(verses.map((v) => v.verse));
   const matched = new Set<string>();
-  for (const h of highlights) {
-    if (ids.has(h.verseId)) {
-      matched.add(h.id);
+  for (const row of rows) {
+    if (ids.has(row.verseId)) {
+      matched.add(row.id);
       continue;
     }
     if (
-      h.bookId === bookId &&
-      h.chapter === chapter &&
-      h.verse != null &&
-      nums.has(h.verse)
+      row.bookId === bookId &&
+      row.chapter === chapter &&
+      row.verse != null &&
+      nums.has(row.verse)
     ) {
-      matched.add(h.id);
+      matched.add(row.id);
     }
   }
   return [...matched];
+}
+
+export function highlightIdsForVerses(
+  highlights: readonly {
+    id: string;
+    verseId: string;
+    bookId?: number;
+    chapter?: number;
+    verse?: number;
+  }[],
+  verses: readonly { id: string; verse: number }[],
+  bookId: number,
+  chapter: number,
+): string[] {
+  return annotationIdsForVerses(highlights, verses, bookId, chapter);
+}
+
+export function bookmarkIdsForVerses(
+  bookmarks: readonly {
+    id: string;
+    verseId: string;
+    bookId?: number;
+    chapter?: number;
+    verse?: number;
+  }[],
+  verses: readonly { id: string; verse: number }[],
+  bookId: number,
+  chapter: number,
+): string[] {
+  return annotationIdsForVerses(bookmarks, verses, bookId, chapter);
 }
