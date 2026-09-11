@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { pickBookOverviewCards } from "@/lib/book-overview";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 interface ContextCard {
   id: string;
@@ -119,6 +120,9 @@ export default function PassageContextScreen() {
           <>
             {hasContext && (
               <>
+                <View style={{ marginBottom: 8 }}>
+                  <AIGeneratedLabel />
+                </View>
                 <SectionHeader icon="time-outline" label="Historical Context" theme={theme} />
                 {displayCards.map((card) => (
                   <ContextCardView key={card.id} card={card} theme={theme} />

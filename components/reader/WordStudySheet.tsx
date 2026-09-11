@@ -9,7 +9,8 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
-import { formatStrongId, type ReaderStrongMap } from "@/lib/reader-word-study";
+import { formatStrongId, isAiWordStudyMap, type ReaderStrongMap } from "@/lib/reader-word-study";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { expandStepMorph } from "@/lib/step-morph";
 import {
   lexiconFullDefinition,
@@ -125,6 +126,11 @@ export function WordStudySheet({
             <Text style={s.english} testID="reader-word-study-english">
               {englishPhrase}
             </Text>
+            {mapping && isAiWordStudyMap(mapping.map) ? (
+              <View style={{ marginBottom: 8 }}>
+                <AIGeneratedLabel />
+              </View>
+            ) : null}
             {plainSentence ? (
               <Text style={s.plain} testID="reader-word-study-plain">
                 {plainSentence}

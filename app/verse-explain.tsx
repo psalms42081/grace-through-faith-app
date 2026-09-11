@@ -14,8 +14,9 @@ import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
-import { useAuth } from "@/contexts/AuthContext";
 import { BIBLE_PROJECT_YOUTUBE_IDS } from "@/data/curatedYoutubeVideos";
+import { useQuery } from "@tanstack/react-query";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 const GOLD = "#C9933A";
 
@@ -180,19 +181,25 @@ export default function VerseExplainScreen() {
       translation: string;
     }>();
 
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
 
   const reference = bookName && chapter && verse
     ? `${bookName} ${chapter}:${verse}`
     : "Selected Verse";
   const txLabel = translation || "KJV";
 
-  // AI explanations disabled — BibleProject videos are the primary resource
-  const aiExplanation = null;
-  const isExplaining = false;
-  const explainError = false;
+  const {
+    data: explainData,
+    isLoading: isExplaining,
+    isError: explainError,
+  } = useQuery<{ explanation?: string }>({
+    queryKey: [
+      `/api/ai/explain?bookName=${encodeURIComponent(bookName || "")}&chapter=${chapter}&verse=${verse}&translation=${encodeURIComponent(txLabel)}`,
+    ],
+    enabled: !!bookName && !!chapter && !!verse,
+  });
+  const aiExplanation = explainData?.explanation?.trim() || "";
 
   const bookVideos = useMemo(() => {
     if (!bookName) return [];
@@ -274,15 +281,30 @@ export default function VerseExplainScreen() {
             </View>
           </View>
 
+          {(isExplaining || explainError || aiExplanation) && (
           <View style={[styles.explanationCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={{ marginBottom: 10 }}>
+              <AIGeneratedLabel />
+            </View>
             <View style={styles.explanationHeader}>
               <Ionicons name="bulb" size={16} color={GOLD} />
               <Text style={[styles.sectionTitle, { color: GOLD }]}>About This Passage</Text>
             </View>
-            <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
-              Explore the videos below to understand the context and meaning of {bookName}. BibleProject creates short animated videos walking through every book of the Bible and its key themes.
-            </Text>
+            {isExplaining ? (
+              <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
+                Preparing an explanation of this verse…
+              </Text>
+            ) : explainError ? (
+              <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
+                An explanation could not be generated right now. The BibleProject videos below stay available.
+              </Text>
+            ) : (
+              <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
+                {aiExplanation}
+              </Text>
+            )}
           </View>
+          )}
 
           {allVideos.length > 0 && (
             <>

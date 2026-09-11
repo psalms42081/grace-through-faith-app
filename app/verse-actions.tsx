@@ -18,6 +18,7 @@ import { PathB } from "@/constants/colors";
 import { useTranslation } from "@/context/TranslationContext";
 import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 const TEAL = "#2A8B8B";
 
@@ -252,7 +253,11 @@ export default function VerseActionsSheet() {
               </Text>
             </View>
           ) : crossRefData?.crossReferences && crossRefData.crossReferences.length > 0 ? (
-            crossRefData.crossReferences.map((cr, i) => {
+            <>
+            <View style={{ marginBottom: 8 }}>
+              <AIGeneratedLabel />
+            </View>
+            {crossRefData.crossReferences.map((cr, i) => {
               // Prefer the backend-returned translation for this specific ref;
               // the active label is only a fallback for navigation and badge.
               const refTranslation = cr.translation || txLabel;
@@ -294,7 +299,8 @@ export default function VerseActionsSheet() {
                 </View>
               </Pressable>
               );
-            })
+            })}
+            </>
           ) : crossRefError ? (
             <View style={[styles.crossRefCard, { backgroundColor: cardBg, borderColor }]}>
               <Ionicons name="alert-circle-outline" size={18} color="#EF4444" style={{ marginBottom: 6 }} />

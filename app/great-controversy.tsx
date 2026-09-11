@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ScreenHeader from "@/components/ScreenHeader";
 import { apiRequest } from "@/lib/query-client";
 import { PathB } from "@/constants/colors";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
@@ -332,9 +333,8 @@ function NodeCard({
                   </Pressable>
                   {aiData && (
                     <View style={[styles.aiInsightBox, { backgroundColor: SWEEP_LIGHT.backgroundSecondary }]}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 }}>
-                        <Ionicons name="sparkles" size={10} color={PathB.ink} />
-                        <Text style={{ fontSize: 10, color: PathB.ink, fontFamily: "Inter_500Medium" }}>AI-assisted -- verify with Scripture</Text>
+                      <View style={{ marginBottom: 6 }}>
+                        <AIGeneratedLabel />
                       </View>
                       <Text style={[styles.aiInsightText, { color: theme.textSecondary }]}>
                         {aiData.narrative}

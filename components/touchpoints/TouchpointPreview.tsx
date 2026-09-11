@@ -17,6 +17,7 @@ import { apiRequest } from "@/lib/query-client";
 import { safeGoBack } from "@/lib/safe-back";
 import { useTranslation } from "@/context/TranslationContext";
 import { HV2, F } from "@/components/home-v2/theme";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import {
   TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
   type TouchpointGeneratedStudy,
@@ -205,6 +206,7 @@ export function TouchpointStudyPreview() {
   return <View testID="touchpoint-generated-study-container" accessibilityLabel="Generated guided Bible study" style={s.page}>
     <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}><PreviewHeader title={study.title || title || "Guided study"} onBack={back}/></View>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 44 }}>
+      <View style={{ marginBottom: 12 }}><AIGeneratedLabel /></View>
       <View style={[s.studyOpening, { backgroundColor: tint.wash, borderColor: tint.line }]}><Text style={[s.eyebrow, { color: tint.accent }]}>Guided study · {studyTranslation}</Text><Text style={s.introduction}>{study.introduction}</Text></View>
       {study.sections.map((section, index) => { const sectionTranslation = section.translation; const verified = section.resolved === true && typeof section.scriptureText === "string" && section.scriptureText.trim().length > 0; return <View key={`${section.heading}-${index}`} style={s.studySection}><Text style={s.sectionIndex}>{String(index + 1).padStart(2, "0")}</Text><Text style={s.studyHeading}>{section.heading}</Text><View style={[s.studyScripture, { borderLeftColor: tint.accent }]}><Text style={[s.reference, { color: tint.accent }]}>{section.scripture} <Text style={s.translation}>{sectionTranslation}</Text></Text><Text style={[s.verseText, !verified && s.unresolved]}>{verified ? section.scriptureText : `Scripture text for ${section.scripture} could not be verified in ${sectionTranslation}. Open your Bible to read it in your selected translation.`}</Text></View><Text style={s.teaching}>{section.teaching}</Text><View style={[s.reflection, { backgroundColor: tint.wash }]}><Text style={[s.reflectionLabel, { color: tint.accent }]}>For reflection</Text><Text style={s.reflectionText}>{section.reflection}</Text></View></View> })}
       <View style={[s.closing, { borderTopColor: tint.line }]}><Text style={[s.eyebrow, { color: tint.accent }]}>Closing thought</Text><Text style={s.conclusion}>{study.conclusion}</Text></View>

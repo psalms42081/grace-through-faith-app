@@ -235,7 +235,7 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     }
 
     const [plan] = await db
-      .select({ title: devotionalPlans.title })
+      .select({ title: devotionalPlans.title, isAiGenerated: devotionalPlans.isAiGenerated })
       .from(devotionalPlans)
       .where(eq(devotionalPlans.id, activeEnrollment[0].planId))
       .limit(1);
@@ -262,8 +262,9 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
       today: translatedDay,
       enrollment: {
         ...activeEnrollment[0],
-        plan: plan ? { title: translatedPlanTitle } : null,
+        plan: plan ? { title: translatedPlanTitle, isAiGenerated: plan.isAiGenerated === true } : null,
       },
+      isAiGenerated: plan?.isAiGenerated === true,
       completedCount: completedDays.length,
       totalDays: allDays.length,
       depth: depth || "standard",

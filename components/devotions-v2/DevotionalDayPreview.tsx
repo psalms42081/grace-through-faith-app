@@ -23,6 +23,7 @@ import LightDepthSelector from "./LightDepthSelector";
 import { D2, F } from "./tokens";
 import { EmptyState, ErrorState, Header, LoadingState, PrimaryButton } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 type Day = {
   id: string;
@@ -119,6 +120,9 @@ function Reflection({
           <Text style={s.responseLabel}>Your reflection</Text>
           <Text style={s.responseText}>{exchange.answer}</Text>
           <View style={s.response}>
+            <View style={{ marginBottom: 8 }}>
+              <AIGeneratedLabel />
+            </View>
             <Text style={s.responseLabel}>A reflection to carry</Text>
             <Text style={s.responseText}>{exchange.response}</Text>
           </View>

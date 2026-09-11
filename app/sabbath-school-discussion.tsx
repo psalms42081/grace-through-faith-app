@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/hooks/useTheme";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import {
   sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
@@ -167,6 +168,9 @@ export default function SabbathSchoolDiscussionScreen() {
 
         {data && (
           <>
+            <View style={{ marginBottom: 10 }}>
+              <AIGeneratedLabel />
+            </View>
             <View style={[styles.sourceBanner, { backgroundColor: "rgba(201, 147, 58, 0.08)", borderColor: "rgba(201, 147, 58, 0.2)" }]}>
               <Ionicons name="library-outline" size={14} color={theme.accent} />
               <Text style={[styles.sourceBannerText, { color: theme.textMuted }]}>

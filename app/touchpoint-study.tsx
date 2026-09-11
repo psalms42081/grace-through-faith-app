@@ -21,6 +21,7 @@ import {
   TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
   type TouchpointGeneratedStudy,
 } from "@shared/touchpoint-study";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 const TEAL = "#2A8B8B";
 
@@ -92,6 +93,9 @@ export default function TouchPointStudyScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPad + 40 }}
           showsVerticalScrollIndicator={false}
         >
+          <View style={{ marginBottom: 12 }}>
+            <AIGeneratedLabel />
+          </View>
           <Text style={[styles.introText, { color: theme.text }]}>
             {study.introduction}
           </Text>

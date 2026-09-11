@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { apiRequest } from "@/lib/query-client";
 import {
   formatStrongId,
@@ -433,7 +434,7 @@ export function VerseSheet({
                   <View key={`${row.ref}-${index}`} style={s.card}>
                     <View style={s.xrefHead}>
                       <Text style={s.cardTitle}>{row.ref}</Text>
-                      <Text style={s.aiLabel}>AI-generated</Text>
+                      <AIGeneratedLabel />
                     </View>
                     {row.text ? <Text style={s.cardBody}>{row.text}</Text> : null}
                     {row.connection ? <Text style={s.cardMeta}>{row.connection}</Text> : null}

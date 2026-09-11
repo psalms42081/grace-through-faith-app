@@ -19,6 +19,7 @@ import { safeGoBack } from "@/lib/safe-back";
 import { apiRequest } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
+import { AIAdventistNote } from "@/components/AIGeneratedLabel";
 
 const TEAL = "#2A8B8B";
 
@@ -248,6 +249,7 @@ export default function TouchPointTopicScreen() {
           <Text style={[styles.studyPromptQuestion, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
             Prepare a guided study on {topic.title}?
           </Text>
+          <AIAdventistNote />
           {studyMutation.isPending ? (
             <Text style={[styles.studyPromptResult, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
               Preparing your study…

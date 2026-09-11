@@ -30,6 +30,8 @@ import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { useTutorial } from "@/contexts/TutorialContext";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { WORD_STUDY_ATTRIBUTION } from "@/lib/word-study-attribution";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { isAiWordStudyMap } from "@/lib/reader-word-study";
 
 type Tab = "word" | "context" | "voices" | "application";
 
@@ -1009,6 +1011,7 @@ function DeepStudyIntro({
             <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 8 }} />
           ) : sections.length > 0 ? (
             <View style={{ gap: 6 }}>
+              <AIGeneratedLabel />
               {sections.map((sec, i) => (
                 <Pressable
                   key={i}
@@ -2959,6 +2962,11 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
 
                 {hasWords && (
                   <>
+                    {wordQuery.data?.some((wm) => isAiWordStudyMap(wm.map)) ? (
+                      <View style={{ marginBottom: 8 }}>
+                        <AIGeneratedLabel />
+                      </View>
+                    ) : null}
                     <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
                       Original Language Words
                     </Text>
@@ -3157,6 +3165,11 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
 
                 {hasWords && (
                   <>
+                    {wordQuery.data?.some((wm) => isAiWordStudyMap(wm.map)) ? (
+                      <View style={{ marginBottom: 8 }}>
+                        <AIGeneratedLabel />
+                      </View>
+                    ) : null}
                     <Text style={[styles.sectionLabel, { color: theme.textSecondary, fontFamily: "Inter_600SemiBold" }]}>
                       Original Language Words
                     </Text>
@@ -3660,6 +3673,11 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
             </View>
           )}
 
+          {hasCards && (
+            <View style={{ marginBottom: 8 }}>
+              <AIGeneratedLabel />
+            </View>
+          )}
           {hasCards && contextCards!.map((card) => (
             <View key={card.id} style={[styles.contextCard, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
               <Text style={[styles.contextTitle, { color: theme.text, fontFamily: "Lora_600SemiBold" }]}>
@@ -3871,6 +3889,15 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
         )}
       </View>
 
+      {isAiGenerated && (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 8, gap: 6 }}>
+          <AIGeneratedLabel />
+          <Text style={{ fontSize: 11, fontStyle: "italic" as const, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
+            Thematic summary based on {cr.commentator?.name}'s known theological emphases. Not a quotation from their published works.
+          </Text>
+        </View>
+      )}
+
       <View style={{ paddingHorizontal: 16, paddingBottom: hasMore && !expanded ? 0 : 16 }}>
         <Text style={{ fontSize: 15, lineHeight: 24, color: theme.text, fontFamily: "Lora_400Regular" }}>
           {lead}
@@ -3881,17 +3908,6 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginVertical: 12 }} />
           <ContextParagraphs text={rest} theme={theme} />
-        </View>
-      )}
-
-      {isAiGenerated && (
-        <View style={{ paddingHorizontal: 16, paddingBottom: hasMore ? 8 : 16, gap: 6 }}>
-          <Text style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase" as const, color: theme.textMuted, fontFamily: "Inter_600SemiBold" }}>
-            AI-generated summary
-          </Text>
-          <Text style={{ fontSize: 11, fontStyle: "italic" as const, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>
-            Thematic summary based on {cr.commentator?.name}'s known theological emphases. Not a quotation from their published works.
-          </Text>
         </View>
       )}
 
@@ -4046,11 +4062,7 @@ function HistoricVoicesTab({ theme, commentators, sharedBook, sharedChapter, onB
                   </Text>
                 </View>
                 {RETIRED_AI_VOICE_NAMES.has(c.name) ? (
-                  <View style={[styles.pdBadge, { backgroundColor: theme.backgroundSecondary }]}>
-                    <Text style={[styles.pdText, { color: theme.textMuted, fontFamily: "Inter_600SemiBold" }]}>
-                      AI-generated summary
-                    </Text>
-                  </View>
+                  <AIGeneratedLabel />
                 ) : c.isPublicDomain ? (
                   <View style={[styles.pdBadge, { backgroundColor: theme.success + "22" }]}>
                     <Text style={[styles.pdText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>

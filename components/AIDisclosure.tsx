@@ -72,16 +72,7 @@ export default function AIDisclosure({
   );
 }
 
-export function AIGeneratedLabel({ color }: { color?: string }) {
-  const { theme } = useTheme();
-  const c = color || theme.accent;
-  return (
-    <View style={[st.label, { borderColor: c + "30" }]}>
-      <Ionicons name="sparkles" size={10} color={c} />
-      <Text style={[st.labelText, { color: c, fontFamily: "Inter_500Medium" }]}>AI-assisted</Text>
-    </View>
-  );
-}
+export { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 export function HumanCuratedLabel() {
   const { theme } = useTheme();

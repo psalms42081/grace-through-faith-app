@@ -22,6 +22,7 @@ import { queryClient } from "@/lib/query-client";
 import Colors, { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { displayInitials } from "@/lib/user-initials";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 interface ChapterContext {
   locations: { name: string; modernName: string; latitude: number; longitude: number; significance: string; type: string }[];
@@ -120,9 +121,8 @@ export default function ContextPanel({
         <Text style={[contextStyles.panelTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
           Chapter Insights
         </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 3, position: "absolute", top: 18, right: 40 }}>
-          <Ionicons name="sparkles" size={9} color={HV2.inkMutedText} />
-          <Text style={{ fontSize: 9, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted</Text>
+        <View style={{ position: "absolute", top: 16, right: 40 }}>
+          <AIGeneratedLabel />
         </View>
         <Pressable
           onPress={() => setExpanded(false)}

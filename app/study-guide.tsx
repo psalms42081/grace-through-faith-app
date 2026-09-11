@@ -24,6 +24,7 @@ import { useProStatus } from "@/contexts/ProContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 import { useTranslation } from "@/context/TranslationContext";
+import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 interface Message {
   role: "user" | "assistant";
@@ -441,9 +442,8 @@ export default function StudyGuideScreen() {
               <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 8 }]}>
                 Walk through this passage step by step
               </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 12, backgroundColor: theme.accent + "10", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, alignSelf: "center" }}>
-                <Ionicons name="sparkles" size={11} color={theme.accent} />
-                <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted study aid -- always verify with Scripture</Text>
+              <View style={{ marginBottom: 12, alignSelf: "center" }}>
+                <AIGeneratedLabel />
               </View>
               {launchingPassage ? (
                 <View style={styles.loadingContainer}>
@@ -479,9 +479,8 @@ export default function StudyGuideScreen() {
                 <Text style={[styles.hubPromptDesc, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                   Choose a passage and walk through observation, meaning, and response.
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, backgroundColor: theme.accent + "10", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start" }}>
-                  <Ionicons name="sparkles" size={11} color={theme.accent} />
-                  <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: "Inter_400Regular" }}>AI-assisted study aid</Text>
+                <View style={{ marginTop: 6, alignSelf: "flex-start" }}>
+                  <AIGeneratedLabel />
                 </View>
               </View>
 
@@ -640,9 +639,12 @@ export default function StudyGuideScreen() {
         )}
         <View style={styles.messageContent}>
           {isAI && (
-            <Text style={[styles.messageRole, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
-              {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Pastoral"} Tutor
-            </Text>
+            <>
+              <AIGeneratedLabel />
+              <Text style={[styles.messageRole, { color: theme.accentDark, fontFamily: "Inter_600SemiBold" }]}>
+                {PERSONAS.find((p) => p.id === selectedPersona)?.label || "Pastoral"} Tutor
+              </Text>
+            </>
           )}
           {isAI ? (
             item.content.split(/\n\n+/).filter(Boolean).map((para, idx) => (
@@ -920,7 +922,8 @@ export default function StudyGuideScreen() {
                 </View>
               </View>
             ) : (
-              <View style={[styles.inputBar, { backgroundColor: theme.backgroundCard, paddingBottom: bottomPadding + 10 }]}>
+              <View style={[styles.inputBar, { backgroundColor: theme.backgroundCard, paddingBottom: bottomPadding + 10, flexDirection: "column", alignItems: "stretch" }]}>
+                <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
                 <TextInput
                   style={[styles.textInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
                   placeholder="Share your thoughts..."
@@ -944,6 +947,8 @@ export default function StudyGuideScreen() {
                 >
                   <Ionicons name="arrow-up" size={18} color={input.trim() ? "#fff" : theme.textMuted} />
                 </Pressable>
+                </View>
+                <AIAdventistNote />
               </View>
             )}
           </>

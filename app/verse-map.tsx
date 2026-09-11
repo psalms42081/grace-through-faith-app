@@ -23,6 +23,7 @@ import {
   VerseMapGenerationGate,
   refreshVerseMapAfterGeneration,
 } from "@/lib/verse-map-generation";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 interface StrongWord {
   map: { id: string; verseId: string; strongId: string; wordPosition: number; translatedWord: string };
@@ -433,6 +434,9 @@ export default function VerseMapScreen() {
               </View>
             )}
 
+            <View style={{ marginBottom: 8, paddingHorizontal: 20 }}>
+              <AIGeneratedLabel />
+            </View>
             <SectionHeader
               title="Cross-References"
               subtitle={`${crossRefs.length} related passages`}
@@ -534,6 +538,9 @@ export default function VerseMapScreen() {
                   </View>
                 ) : contextSnippet ? (
                   <View style={[styles.contextCard, { backgroundColor: theme.backgroundCard }]}>
+                    <View style={{ marginBottom: 8 }}>
+                      <AIGeneratedLabel />
+                    </View>
                     <Ionicons name="time-outline" size={18} color={theme.accent} style={{ marginBottom: 8 }} />
                     <Text style={[styles.contextText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
                       {contextSnippet}

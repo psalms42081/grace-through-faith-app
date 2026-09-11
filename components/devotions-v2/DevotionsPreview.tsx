@@ -80,6 +80,7 @@ import {
   isApprovedHumanDevotionalPlan,
   type DevotionalCatalogPlan,
 } from "@/lib/devotional-catalog";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 type Plan = {
   id: string;
@@ -90,6 +91,7 @@ type Plan = {
   durationDays: number;
   type: string;
   status: string;
+  isAiGenerated?: boolean | null;
 };
 type DevotionalPlan = DevotionalCatalogPlan;
 type UserPlan = {
@@ -243,6 +245,7 @@ export default function DevotionsPreview() {
     completedCount?: number;
     totalDays?: number;
     planComplete?: boolean;
+    isAiGenerated?: boolean;
   }>({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
   const detail = useQuery<Detail>({ queryKey: ["/api/plans", detailId], enabled: !!detailId });
   const seriesDetail = useQuery<DevotionalPlanDay[]>({
@@ -388,6 +391,11 @@ export default function DevotionsPreview() {
                 <Text style={s.meta}>
                   READING PLAN · DAY {first.currentDay} OF {first.planDurationDays}
                 </Text>
+                {firstDetail?.isAiGenerated ? (
+                  <View style={{ marginVertical: 4 }}>
+                    <AIGeneratedLabel />
+                  </View>
+                ) : null}
                 <Text style={s.cardTitle}>{first.planTitle}</Text>
                 <Text style={s.cardSub}>{readingRef}</Text>
               </View>
@@ -489,6 +497,11 @@ export default function DevotionsPreview() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.metaAmber}>CURRENT DEVOTIONAL DAY</Text>
+              {today.data.isAiGenerated ? (
+                <View style={{ marginVertical: 4 }}>
+                  <AIGeneratedLabel />
+                </View>
+              ) : null}
               <Text style={s.cardTitle}>{today.data.today.title}</Text>
               <Text style={s.cardSub}>
                 {today.data.today.passageLabel || "A reading for this moment"}
@@ -579,6 +592,11 @@ export default function DevotionsPreview() {
             >
               <SeriesRowDisc id={p.id} theme={p.theme} category={p.category} title={p.title} />
               <View style={{ flex: 1 }}>
+                {p.isAiGenerated ? (
+                  <View style={{ marginBottom: 4 }}>
+                    <AIGeneratedLabel />
+                  </View>
+                ) : null}
                 <Text style={s.cardTitle}>{p.title}</Text>
                 <Text style={s.cardSub}>
                   {formatSeriesRowThemeLabel(p.theme)} · {p.totalDays} days
@@ -675,6 +693,11 @@ export default function DevotionsPreview() {
                     />
                   )}
                 </View>
+                {p.isAiGenerated ? (
+                  <View style={{ marginBottom: 6 }}>
+                    <AIGeneratedLabel />
+                  </View>
+                ) : null}
                 <Text style={s.cardTitle} numberOfLines={2}>
                   {p.title}
                 </Text>
@@ -838,6 +861,11 @@ function PlanModal({
               <Text style={s.sheetEyebrow}>
                 {plan.category || "READING PLAN"} · {plan.durationDays} DAYS
               </Text>
+              {plan.isAiGenerated ? (
+                <View style={{ marginBottom: 8 }}>
+                  <AIGeneratedLabel />
+                </View>
+              ) : null}
               <Text style={s.sheetTitle}>{plan.title}</Text>
               <Text style={s.sheetBody}>{plan.description}</Text>
               <Text style={s.outlineLabel}>DAY-BY-DAY OUTLINE</Text>
@@ -928,6 +956,11 @@ function SeriesModal({
               <Text style={s.sheetEyebrow}>
                 DEVOTIONAL SERIES · {plan.totalDays} DAYS
               </Text>
+              {plan.isAiGenerated ? (
+                <View style={{ marginBottom: 8 }}>
+                  <AIGeneratedLabel />
+                </View>
+              ) : null}
               <Text style={s.sheetTitle}>{plan.title}</Text>
               <Text style={s.sheetBody}>{plan.description}</Text>
               <Text style={s.outlineLabel}>SERIES OUTLINE</Text>

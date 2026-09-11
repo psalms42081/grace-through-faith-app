@@ -21,6 +21,7 @@ import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 const RECENT_SEARCHES_KEY = "@grace_semantic_recent";
 
@@ -246,6 +247,7 @@ export default function SemanticSearchScreen() {
             </Pressable>
           )}
         </View>
+        <AIAdventistNote />
 
         {hasResults && (
           <View style={styles.tabBar}>
@@ -368,6 +370,9 @@ export default function SemanticSearchScreen() {
                   >
                     {item.text}
                   </Text>
+                  <View style={{ marginBottom: 8 }}>
+                    <AIGeneratedLabel />
+                  </View>
                   <Text
                     style={[styles.relevanceText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}
                   >

@@ -9,6 +9,13 @@ export type AlignedWordToken = VerseSurfaceToken & {
   mapIndex: number | null;
 };
 
+export function isAiWordStudyMap(map: {
+  source?: string | null;
+  isAiGenerated?: boolean | null;
+}): boolean {
+  return map.source === "ai" || map.isAiGenerated === true;
+}
+
 export type ReaderStrongMap = {
   map: {
     strongId: string;
@@ -16,6 +23,8 @@ export type ReaderStrongMap = {
     originalWord: string;
     translatedWord: string | null;
     morph?: string | null;
+    source?: string | null;
+    isAiGenerated?: boolean | null;
   };
   entry: {
     id: string;

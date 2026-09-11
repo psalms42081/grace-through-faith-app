@@ -26,6 +26,7 @@ import {
   sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 type TutorMessage = {
   role: "user" | "assistant";
@@ -307,7 +308,7 @@ export default function SabbathSchoolDayTutorScreen() {
             >
               {message.role === "assistant" && (
                 <View style={styles.messageLabel}>
-                  <Ionicons name="school-outline" size={13} color={theme.accent} />
+                  <AIGeneratedLabel />
                   <Text style={styles.messageLabelText}>STUDY TUTOR</Text>
                 </View>
               )}
@@ -347,33 +348,36 @@ export default function SabbathSchoolDayTutorScreen() {
           )}
         </ScrollView>
 
-        <View style={[styles.inputArea, { paddingBottom: bottomPad + 10 }]}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder={isAuthenticated ? "Ask about today’s lesson…" : "Sign in to ask a question"}
-            placeholderTextColor={theme.textMuted}
-            multiline
-            maxLength={1500}
-            editable={canAsk}
-            testID="ss-day-tutor-input"
-          />
-          <Pressable
-            onPress={sendQuestion}
-            disabled={!input.trim() || !canAsk}
-            style={({ pressed }) => [
-              styles.sendButton,
-              (!input.trim() || !canAsk) && styles.sendButtonDisabled,
-              pressed && styles.sendButtonPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Send question to Study Tutor"
-            accessibilityState={{ disabled: !input.trim() || !canAsk }}
-            testID="ss-day-tutor-send"
-          >
-            <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
-          </Pressable>
+        <View style={[styles.inputArea, { paddingBottom: bottomPad + 10, flexDirection: "column", alignItems: "stretch" }]}>
+          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder={isAuthenticated ? "Ask about today’s lesson…" : "Sign in to ask a question"}
+              placeholderTextColor={theme.textMuted}
+              multiline
+              maxLength={1500}
+              editable={canAsk}
+              testID="ss-day-tutor-input"
+            />
+            <Pressable
+              onPress={sendQuestion}
+              disabled={!input.trim() || !canAsk}
+              style={({ pressed }) => [
+                styles.sendButton,
+                (!input.trim() || !canAsk) && styles.sendButtonDisabled,
+                pressed && styles.sendButtonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Send question to Study Tutor"
+              accessibilityState={{ disabled: !input.trim() || !canAsk }}
+              testID="ss-day-tutor-send"
+            >
+              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+            </Pressable>
+          </View>
+          <AIAdventistNote />
         </View>
       </KeyboardAvoidingView>
     </View>

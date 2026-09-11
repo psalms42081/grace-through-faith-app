@@ -21,6 +21,7 @@ import { TOPICS } from "@/data/topics";
 import { useTranslation } from "@/context/TranslationContext";
 import { getApiUrl } from "@/lib/query-client";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 
 const MEDIA_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   sermon: "mic",
@@ -321,6 +322,7 @@ export default function TopicScreen() {
           ) : dailyReflection ? (
             <>
               <View style={[styles.reflectionCard, { backgroundColor: isDark ? theme.backgroundCard : "#FFFDF6" }]}>
+                <AIGeneratedLabel />
                 <Text style={[styles.reflectionText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
                   {dailyReflection.reflection}
                 </Text>

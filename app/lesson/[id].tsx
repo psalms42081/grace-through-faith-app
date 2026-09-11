@@ -24,6 +24,7 @@ import { useStudyDepth, StudyDepth } from "@/contexts/StudyDepthContext";
 import StudyDepthSelector from "@/components/StudyDepthSelector";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { PathB } from "@/constants/colors";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
@@ -138,6 +139,9 @@ function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; 
           )}
           {explanation && !loading && (
             <>
+              <View style={{ marginBottom: 8 }}>
+                <AIGeneratedLabel />
+              </View>
               {!!explTranslation && (
                 <View style={evStyles.explTxRow}>
                   <Ionicons name="book-outline" size={11} color={PathB.ink} />

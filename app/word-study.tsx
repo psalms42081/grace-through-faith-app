@@ -18,6 +18,8 @@ import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
 import { WORD_STUDY_ATTRIBUTION } from "@/lib/word-study-attribution";
+import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { isAiWordStudyMap } from "@/lib/reader-word-study";
 
 interface StrongEntry {
   id: string;
@@ -39,6 +41,8 @@ interface WordMapping {
     wordPosition: number;
     originalWord: string;
     translatedWord: string | null;
+    source?: string | null;
+    isAiGenerated?: boolean | null;
   };
   entry: StrongEntry | null;
 }
@@ -234,6 +238,11 @@ export default function WordStudyScreen() {
           </Text>
           {wordMappings && wordMappings.length > 0 && (
             <View style={styles.wordPillsContainer}>
+              {wordMappings.some((wm) => isAiWordStudyMap(wm.map)) ? (
+                <View style={{ marginBottom: 8 }}>
+                  <AIGeneratedLabel />
+                </View>
+              ) : null}
               <Text style={[styles.wordPillsLabel, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                 Tap a word to study
               </Text>

@@ -89,7 +89,7 @@ describe("Path B sweep Batch 3", () => {
 
     assert.match(studyCategorySource, /title="Classic Commentators"/);
     assert.match(studySource, /Classic Commentators/);
-    assert.match(studySource, /AI-generated summary/);
+    assert.match(studySource, /AIGeneratedLabel/);
     assert.match(studySource, /Not a quotation from their published works/);
     assert.doesNotMatch(studySource, /tradition: "Adventist Pioneer"/);
     assert.doesNotMatch(studySource, /name: "Uriah Smith"/);
