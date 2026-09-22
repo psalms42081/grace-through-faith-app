@@ -55,6 +55,16 @@ if (_isExpoGo()) {
       shouldShowList: true,
     }),
   });
+  if (Platform.OS !== "web") {
+    Notifications.addNotificationResponseReceivedListener((response: {
+      notification?: { request?: { content?: { data?: { url?: unknown } } } };
+    }) => {
+      const url = response.notification?.request?.content?.data?.url;
+      if (typeof url === "string" && url.startsWith("/")) {
+        router.push(url as never);
+      }
+    });
+  }
 }
 import {
   useFonts,

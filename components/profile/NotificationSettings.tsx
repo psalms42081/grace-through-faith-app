@@ -1,273 +1,295 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PathB } from "@/constants/colors";
+import { HV2 } from "@/components/home-v2/theme";
 import { PathBSwitch } from "@/components/settings/PathBSwitch";
-import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import { useToast } from "@/contexts/ToastContext";
+import { apiRequest } from "@/lib/query-client";
 import {
-  getReminderSettings,
-  setReminderEnabled,
-  setReminderTime,
-  getNotificationPermissionStatus,
-  openAppSettings,
-  isAndroidExpoGo,
-} from "@/lib/notifications";
+  DEFAULT_VERSE_PUSH_TIME,
+  NOTIFICATIONS_BLOCKED_MESSAGE,
+  formatVerseTimeLabel,
+  normalizeHm,
+} from "@/lib/daily-verse-push";
+import {
+  acquirePushEndpoint,
+  currentWebEndpoint,
+  deviceTimeZone,
+  dropWebPushSubscription,
+  existingPushEndpoint,
+  notificationPermissionState,
+  type PushEndpoint,
+} from "@/lib/push-subscribe";
 
-interface NotificationSettingsProps {
-  theme: typeof Colors.dark;
-  expanded: boolean;
-  onToggle: () => void;
+type StoredSubscription = {
+  endpoint: string;
+  verseTimeLocal: string | null;
+  ssReminder: boolean;
+  timezone: string;
+  web: boolean;
+};
+
+type SubscriptionResponse = {
+  vapidConfigured: boolean;
+  subscriptions: StoredSubscription[];
+};
+
+const QUERY_KEY = ["/api/push/subscription"];
+
+function shiftTime(value: string, deltaMinutes: number): string {
+  const normalized = normalizeHm(value) ?? DEFAULT_VERSE_PUSH_TIME;
+  const [hour, minute] = normalized.split(":").map(Number);
+  const total = (hour * 60 + minute + deltaMinutes + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
-const TIME_OPTIONS = [
-  { label: "6:00 AM", hour: 6, minute: 0 },
-  { label: "7:00 AM", hour: 7, minute: 0 },
-  { label: "8:00 AM", hour: 8, minute: 0 },
-  { label: "9:00 AM", hour: 9, minute: 0 },
-  { label: "12:00 PM", hour: 12, minute: 0 },
-  { label: "6:00 PM", hour: 18, minute: 0 },
-  { label: "7:30 PM", hour: 19, minute: 30 },
-  { label: "9:00 PM", hour: 21, minute: 0 },
-];
-
-export default function NotificationSettings({
-  theme,
-  expanded,
-  onToggle,
-}: NotificationSettingsProps) {
-  const [enabled, setEnabled] = useState(false);
-  const [hour, setHour] = useState(8);
-  const [minute, setMinute] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [permDenied, setPermDenied] = useState(false);
+export default function NotificationSettings() {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const permission = notificationPermissionState();
+  const [blocked, setBlocked] = useState(permission === "denied");
+  const [busy, setBusy] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [draftTime, setDraftTime] = useState(DEFAULT_VERSE_PUSH_TIME);
+  const [localTime, setLocalTime] = useState(DEFAULT_VERSE_PUSH_TIME);
+  const [browserEndpoint, setBrowserEndpoint] = useState<string | null>(null);
 
   useEffect(() => {
-    getReminderSettings().then(settings => {
-      setEnabled(settings.enabled);
-      setHour(settings.hour);
-      setMinute(settings.minute);
-    }).catch(() => {});
-    if (Platform.OS !== "web") {
-      getNotificationPermissionStatus().then(p => {
-        if (!p.granted && !p.canAskAgain) setPermDenied(true);
-      }).catch(() => {});
-    }
+    void currentWebEndpoint().then(setBrowserEndpoint);
   }, []);
 
-  const handleToggle = async (value: boolean) => {
-    if (isAndroidExpoGo()) return;
-    setLoading(true);
-    const result = await setReminderEnabled(value);
-    if (result.success) {
-      setEnabled(value);
-      setPermDenied(false);
-    } else if (result.unavailable) {
-      setEnabled(false);
-    } else if (result.permissionDenied) {
-      setEnabled(false);
-      if (!result.canAskAgain) {
-        setPermDenied(true);
+  const query = useQuery<SubscriptionResponse>({ queryKey: QUERY_KEY });
+  const mine =
+    Platform.OS === "web"
+      ? query.data?.subscriptions.find((row) => row.endpoint === browserEndpoint)
+      : query.data?.subscriptions.find((row) => !row.web);
+  const verseOn = Boolean(mine?.verseTimeLocal);
+  const ssOn = Boolean(mine?.ssReminder);
+  const verseTime = mine?.verseTimeLocal ?? localTime;
+
+  async function save(next: {
+    verseTimeLocal: string | null;
+    ssReminder: boolean;
+    endpoint?: PushEndpoint | null;
+  }) {
+    const endpoint = next.endpoint ?? null;
+    const currentEndpoint = endpoint?.endpoint ?? mine?.endpoint ?? (await currentWebEndpoint());
+    if (!next.verseTimeLocal && !next.ssReminder) {
+      if (currentEndpoint) {
+        await apiRequest("DELETE", "/api/push/subscription", { endpoint: currentEndpoint });
+        await dropWebPushSubscription(currentEndpoint);
       }
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      return;
     }
-    setLoading(false);
-  };
+    let acquired = endpoint ?? (await existingPushEndpoint());
+    if (!acquired) {
+      const result = await acquirePushEndpoint();
+      if (!result.ok) {
+        if (result.reason === "denied") setBlocked(true);
+        else showToast("Notifications are not available on this device", "error");
+        return;
+      }
+      acquired = result.endpoint;
+    }
+    await apiRequest("PUT", "/api/push/subscription", {
+      endpoint: acquired.endpoint,
+      keys: acquired.kind === "web" ? acquired.keys : null,
+      timezone: deviceTimeZone(),
+      verseTimeLocal: next.verseTimeLocal,
+      ssReminder: next.ssReminder,
+    });
+    setBlocked(false);
+    await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  }
 
-  const handleTimeSelect = async (h: number, m: number) => {
-    setHour(h);
-    setMinute(m);
-    await setReminderTime(h, m);
-  };
+  async function onVerseChange(enabled: boolean) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await save({
+        verseTimeLocal: enabled ? verseTime : null,
+        ssReminder: ssOn,
+      });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not update notifications", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  const isWeb = Platform.OS === "web";
-  const androidExpoGo = isAndroidExpoGo();
+  async function onSabbathChange(enabled: boolean) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await save({
+        verseTimeLocal: verseOn ? verseTime : null,
+        ssReminder: enabled,
+      });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not update notifications", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyTime(nextTime: string) {
+    const normalized = normalizeHm(nextTime) ?? DEFAULT_VERSE_PUSH_TIME;
+    setLocalTime(normalized);
+    setTimeOpen(false);
+    if (!verseOn) return;
+    setBusy(true);
+    try {
+      await save({ verseTimeLocal: normalized, ssReminder: ssOn });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not update the time", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <View style={[styles.wrap, { borderColor: theme.border }]}>
-      <Pressable
-        onPress={onToggle}
-        style={styles.headerRow}
-        hitSlop={4}
-      >
-        <View style={[styles.iconWrap, { backgroundColor: "#5B86E5" + "18" }]}>
-          <Ionicons name="notifications-outline" size={18} color="#5B86E5" />
-        </View>
-        <Text style={[styles.title, { color: theme.text, fontFamily: "Inter_600SemiBold" }]}>
-          Daily Reminders
+    <View style={styles.section} testID="profile-notifications-section">
+      <Text style={styles.heading}>Notifications</Text>
+      {blocked ? (
+        <Text style={styles.blocked} testID="profile-notifications-blocked">
+          {Platform.OS === "web"
+            ? NOTIFICATIONS_BLOCKED_MESSAGE
+            : "Notifications are blocked — enable them in your device settings."}
         </Text>
-        <Ionicons
-          name={expanded ? "chevron-up" : "chevron-down"}
-          size={16}
-          color={theme.textMuted}
-        />
-      </Pressable>
-
-      {expanded && (
-        <View style={styles.body}>
-          {isWeb || androidExpoGo ? (
-            <View style={styles.unavailableBox}>
-              <Ionicons name="information-circle-outline" size={16} color={theme.textMuted} style={{ marginRight: 8 }} />
-              <Text style={[styles.webNote, { color: theme.textMuted, fontFamily: "Inter_400Regular", flex: 1 }]}>
-                {androidExpoGo
-                  ? "Push notifications are not supported in Expo Go on Android (SDK 53+). Install the app via a development build to enable reminders."
-                  : "Notifications are available on mobile devices only."}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.toggleRow}>
-                <Text style={[styles.toggleLabel, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
-                  Enable daily reading reminder
-                </Text>
-                <PathBSwitch
-                  value={enabled}
-                  onValueChange={handleToggle}
-                  disabled={loading}
-                  testID="reminder-toggle"
-                />
-              </View>
-
-              {permDenied && !enabled && (
-                <Pressable
-                  onPress={openAppSettings}
-                  style={[styles.settingsLink, { backgroundColor: theme.backgroundSecondary }]}
-                >
-                  <Ionicons name="settings-outline" size={14} color={theme.text} />
-                  <Text style={[styles.settingsText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                    Open device settings to allow notifications
-                  </Text>
-                </Pressable>
-              )}
-
-              {enabled && (
-                <View style={styles.timeSection}>
-                  <Text style={[styles.timeLabel, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-                    Remind me at
-                  </Text>
-                  <View style={styles.timeGrid}>
-                    {TIME_OPTIONS.map(opt => {
-                      const selected = opt.hour === hour && opt.minute === minute;
-                      return (
-                        <Pressable
-                          key={opt.label}
-                          onPress={() => handleTimeSelect(opt.hour, opt.minute)}
-                          style={[
-                            styles.timeChip,
-                            {
-                              backgroundColor: selected ? theme.text : theme.backgroundCard,
-                              borderColor: selected ? theme.text : theme.border,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.timeChipText,
-                              {
-                                color: selected ? "#fff" : theme.text,
-                                fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular",
-                              },
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  <Text style={[styles.confirmText, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    You'll be reminded at {TIME_OPTIONS.find(o => o.hour === hour && o.minute === minute)?.label || `${hour}:${String(minute).padStart(2, "0")}`} daily
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
+      ) : null}
+      <View style={styles.row}>
+        <View style={styles.copy}>
+          <Text style={styles.title}>Daily verse</Text>
+          <Text style={styles.meta}>The same verse shown on Home</Text>
         </View>
-      )}
+        {busy ? <ActivityIndicator color={PathB.coral} /> : null}
+        <PathBSwitch
+          value={verseOn}
+          onValueChange={(value) => {
+            void onVerseChange(value);
+          }}
+          disabled={busy}
+          testID="profile-daily-verse-switch"
+        />
+      </View>
+      <Pressable
+        style={styles.timeRow}
+        onPress={() => {
+          setDraftTime(verseTime);
+          setTimeOpen(true);
+        }}
+        testID="profile-daily-verse-time"
+      >
+        <Text style={styles.meta}>Time</Text>
+        <Text style={styles.timeValue}>{formatVerseTimeLabel(verseTime)}</Text>
+      </Pressable>
+      <View style={styles.row}>
+        <View style={styles.copy}>
+          <Text style={styles.title}>Sabbath School reminder</Text>
+          <Text style={styles.meta}>Friday at 6:00 pm, your time</Text>
+        </View>
+        <PathBSwitch
+          value={ssOn}
+          onValueChange={(value) => {
+            void onSabbathChange(value);
+          }}
+          disabled={busy}
+          testID="profile-ss-reminder-switch"
+        />
+      </View>
+      <Modal visible={timeOpen} transparent animationType="fade" onRequestClose={() => setTimeOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setTimeOpen(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.title}>Daily verse time</Text>
+            <Text style={styles.timeLarge} testID="profile-daily-verse-time-value">
+              {formatVerseTimeLabel(draftTime)}
+            </Text>
+            <View style={styles.steppers}>
+              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, -60))} testID="profile-verse-hour-down">
+                <Text style={styles.stepLabel}>−1 hour</Text>
+              </Pressable>
+              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, 60))} testID="profile-verse-hour-up">
+                <Text style={styles.stepLabel}>+1 hour</Text>
+              </Pressable>
+              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, -15))} testID="profile-verse-minute-down">
+                <Text style={styles.stepLabel}>−15 min</Text>
+              </Pressable>
+              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, 15))} testID="profile-verse-minute-up">
+                <Text style={styles.stepLabel}>+15 min</Text>
+              </Pressable>
+            </View>
+            <Pressable style={styles.save} onPress={() => void applyTime(draftTime)} testID="profile-daily-verse-time-save">
+              <Text style={styles.saveLabel}>Save time</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: 6,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    gap: 12,
-  },
-  iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    flex: 1,
-    fontSize: 15,
-  },
-  body: {
-    paddingHorizontal: 4,
-    paddingBottom: 12,
-  },
-  unavailableBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 8,
-  },
-  webNote: {
+  section: { paddingHorizontal: 24, marginBottom: 24 },
+  heading: {
+    color: HV2.inkMutedText,
     fontSize: 13,
-    fontStyle: "italic",
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  toggleLabel: {
+  blocked: {
+    color: PathB.coralInk,
     fontSize: 14,
-    flex: 1,
-    marginRight: 12,
+    lineHeight: 20,
+    marginBottom: 12,
+    fontFamily: "Inter_500Medium",
   },
-  settingsLink: {
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 8, gap: 12 },
+  copy: { flex: 1 },
+  title: { color: PathB.ink, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  meta: { color: HV2.inkMutedText, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" },
+  timeRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    marginTop: 8,
-  },
-  settingsText: {
-    fontSize: 13,
-  },
-  timeSection: {
-    marginTop: 12,
-  },
-  timeLabel: {
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  timeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  timeChip: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
+    marginBottom: 4,
   },
-  timeChipText: {
-    fontSize: 13,
+  timeValue: { color: PathB.ink, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(42, 36, 24, 0.35)",
+    justifyContent: "flex-end",
   },
-  confirmText: {
-    fontSize: 12,
-    marginTop: 12,
-    fontStyle: "italic" as const,
-    opacity: 0.8,
+  sheet: {
+    backgroundColor: PathB.surface,
+    padding: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
+  timeLarge: {
+    color: PathB.ink,
+    fontSize: 32,
+    fontFamily: "Lora_700Bold",
+    marginVertical: 12,
+  },
+  steppers: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  step: {
+    backgroundColor: PathB.surfaceCard,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  stepLabel: { color: PathB.ink, fontFamily: "Inter_600SemiBold" },
+  save: {
+    marginTop: 16,
+    backgroundColor: PathB.coral,
+    borderRadius: 14,
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  saveLabel: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16 },
 });

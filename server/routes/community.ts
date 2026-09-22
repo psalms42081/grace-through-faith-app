@@ -29,6 +29,7 @@ import { Router } from "express";
   import { churchDirectoryQueryReady, recordChurchSubmission, verifiedDirectoryWhere } from "../services/church-directory";
   import { geocodeChurchQuery, reverseGeocodeChurch } from "../services/church-geocode";
   import { churchesNearResolvedPlace, haversineKm, type ResolvedChurchPlace } from "../../lib/church-finder";
+  import { readRegisteredPushToken } from "../../lib/daily-verse-push";
   import { churchSubmissionLimiter } from "../middleware/rate-limit";
 
   const router = Router();
@@ -61,7 +62,8 @@ import { Router } from "express";
   router.post("/api/notifications/register-token", requireAuth, async (req, res) => {
     try {
       const userId = req.authUserId!;
-      const { pushToken, platform } = req.body;
+      const pushToken = readRegisteredPushToken(req.body);
+      const platform = typeof req.body?.platform === "string" ? req.body.platform : null;
       if (!pushToken) return res.status(400).json({ error: "Push token is required" });
 
       const existing = await db.select().from(deviceTokens)

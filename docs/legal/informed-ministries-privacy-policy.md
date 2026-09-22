@@ -17,6 +17,8 @@ Informed Ministries (ABN [insert]) ("we", "us", "our") operates the Informed Min
 
 **Technical information.** Device type, operating system, app version, approximate region derived from your connection, error reports, and basic usage events (for example that a screen was opened). We use this to keep the App working and to understand which features are used.
 
+**Notification subscriptions.** If you turn on a Daily verse or Sabbath School reminder, we store the push endpoint for that browser or device, the time you chose, and your time zone. We use these only to send the reminder you asked for.
+
 **Kids mode.** Kids mode runs inside a parent's or guardian's account. We do not create a profile for the child, do not ask the child for personal information, and do not make community features available in kids mode. Progress in kids mode is stored against the parent's account.
 
 We do not collect payment information (the App is free), precise location, contacts, or photos unless you choose to share one within a group.
@@ -54,7 +56,7 @@ Other members of a group you join can see your display name, your posts in that 
 
 ## 5. How long we keep it
 
-We keep your information while your account is active. If you delete your account, we delete your personal information and content within 30 days, except where we must keep records to meet a legal obligation or resolve a dispute. Backups are overwritten in the ordinary course. Group posts you made remain visible to the group in anonymised form ("Former member") unless the host removes them.
+We keep your information while your account is active. If you delete your account, we delete your personal information and content within 30 days, except where we must keep records to meet a legal obligation or resolve a dispute. Backups are overwritten in the ordinary course. Group posts you made remain visible to the group in anonymised form ("Former member") unless the host removes them. Notification subscriptions (the endpoint, the time you chose, and your time zone) are deleted when you turn the reminder off, and they are deleted with your account.
 
 Records of AI questions are kept for no longer than [30] days.
 

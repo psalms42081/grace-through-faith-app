@@ -2820,3 +2820,34 @@ export const churchGeocodeCache = pgTable("church_geocode_cache", {
 });
 
 export type ChurchGeocodeCache = typeof churchGeocodeCache.$inferSelect;
+
+/**
+ * Web Push subscriptions and Expo push tokens that opted into daily verse
+ * or the Friday Sabbath School reminder. last_* dates make each local day
+ * send at most once. Rows cascade-delete with the user.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscription",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    keys: jsonb("keys").$type<{ p256dh: string; auth: string } | null>(),
+    timezone: text("timezone").notNull().default("UTC"),
+    verseTimeLocal: text("verse_time_local"),
+    ssReminder: boolean("ss_reminder").notNull().default(false),
+    lastVerseLocalDate: text("last_verse_local_date"),
+    lastSsLocalDate: text("last_ss_local_date"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    endpointUnique: uniqueIndex("push_subscription_endpoint_unique").on(table.endpoint),
+    userIdx: index("push_subscription_user_idx").on(table.userId),
+  }),
+);
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;

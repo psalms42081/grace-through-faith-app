@@ -15,6 +15,8 @@ const envSchema = z.object({
   LIVEKIT_URL: z.string().optional(),
   RUN_STARTUP_SEEDS: z.string().optional().default("false"),
   ALLOW_INSECURE_PASSWORD_RESET: z.string().optional().default("false"),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
 });
 
 function validateEnv() {
@@ -50,4 +52,5 @@ export function logSecurityPosture() {
   console.log(`[security] OpenAI API: ${getOpenAIApiKey() ? "configured" : "not configured"}`);
   console.log(`[security] ElevenLabs TTS: ${env.ELEVENLABS_API_KEY ? "configured" : "not configured"}`);
   console.log(`[security] LiveKit: ${env.LIVEKIT_API_KEY ? "configured" : "not configured"}`);
+  console.log(`[security] Web push (VAPID): ${env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY ? "configured" : "not configured"}`);
 }

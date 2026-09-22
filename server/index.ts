@@ -574,6 +574,12 @@ function setupErrorHandler(app: express.Application) {
         }
       }, 30000);
 
+      setTimeout(() => {
+        void import("./services/daily-verse-push")
+          .then(({ startDailyVersePushScheduler }) => startDailyVersePushScheduler())
+          .catch((err) => console.error("[push] scheduler failed to start:", err));
+      }, 15000);
+
       const FOUR_HOURS = 4 * 60 * 60 * 1000;
       setTimeout(async () => {
         try {

@@ -100,6 +100,58 @@ async function networkFirstUnhashed(request) {
   }
 }
 
+self.addEventListener("push", (event) => {
+  const fallback = { title: "Informed Ministries", body: "", url: "/" };
+  let payload = fallback;
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      payload = {
+        title: typeof parsed.title === "string" ? parsed.title : fallback.title,
+        body: typeof parsed.body === "string" ? parsed.body : "",
+        url: typeof parsed.url === "string" ? parsed.url : "/",
+      };
+    }
+  } catch {
+    payload = fallback;
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      data: { url: payload.url },
+      icon: "/assets/images/informed-ministries-icon.png",
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const raw = event.notification.data && event.notification.data.url;
+  const path = typeof raw === "string" && raw.startsWith("/") ? raw : "/";
+  const target = new URL(path, self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if ("focus" in client) {
+          await client.focus();
+          if (typeof client.navigate === "function") {
+            try {
+              await client.navigate(target);
+            } catch {
+              client.postMessage({ type: "PUSH_OPEN", url: path });
+            }
+          } else {
+            client.postMessage({ type: "PUSH_OPEN", url: path });
+          }
+          return;
+        }
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;

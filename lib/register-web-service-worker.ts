@@ -69,6 +69,14 @@ export function registerWebServiceWorker(): void {
     if (event.data && event.data.type === "SW_UPDATED") {
       reloadOnce();
     }
+    if (
+      event.data &&
+      event.data.type === "PUSH_OPEN" &&
+      typeof event.data.url === "string" &&
+      event.data.url.startsWith("/")
+    ) {
+      window.location.assign(event.data.url);
+    }
   });
 
   const register = () => {

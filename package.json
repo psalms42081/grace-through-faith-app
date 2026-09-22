@@ -133,6 +133,7 @@
     "sharp": "^0.35.4",
     "tsx": "^4.20.6",
     "vite": "^8.0.3",
+    "web-push": "^3.6.7",
     "ws": "^8.18.0",
     "yaml": "^2.8.2",
     "zod": "^3.25.76"
@@ -142,6 +143,7 @@
     "@expo/ngrok": "^4.1.0",
     "@types/express": "^5.0.0",
     "@types/react": "~19.2.4",
+    "@types/web-push": "^3.6.4",
     "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
     "drizzle-kit": "^0.18.1",
     "eslint": "^9.31.0",

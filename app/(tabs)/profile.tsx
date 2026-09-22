@@ -30,6 +30,7 @@ import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { displayInitials } from "@/lib/user-initials";
 import ProfileGroupsSection from "@/components/bible-groups/ProfileGroupsSection";
 import { shareInformedMinistries } from "@/lib/share-app";
+import NotificationSettings from "@/components/profile/NotificationSettings";
 
 const C = {
   surface: PathB.surface,
@@ -713,6 +714,8 @@ function ProfileScreenInner() {
         </>
       )}
       </>)}
+
+      {isAuthenticated && !isKidsMode ? <NotificationSettings /> : null}
 
       {!isKidsMode && (
         <View style={st.sectionPad} testID="profile-about-section">

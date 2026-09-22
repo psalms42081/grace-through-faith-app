@@ -292,7 +292,7 @@ export async function registerPushToken(authToken: string, apiBaseUrl: string): 
         "Content-Type": "application/json",
         Authorization: `Bearer ${authToken}`,
       },
-      body: JSON.stringify({ token: pushToken, platform: Platform.OS }),
+      body: JSON.stringify({ pushToken, platform: Platform.OS }),
     });
 
     if (res.ok) {
