@@ -1,18 +1,18 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { apiRequest } from "@/lib/query-client";
@@ -22,6 +22,10 @@ import {
   type ReaderStrongMap,
 } from "@/lib/reader-word-study";
 import { SABBATH_SCHOOL_READING_OVERLAY } from "@/lib/sabbath-school-route-containment";
+import {
+  refreshVerseMapAfterGeneration,
+  VerseMapGenerationGate,
+} from "@/lib/verse-map-generation";
 import {
   VERSE_SHEET_ATTRIBUTION,
   VERSE_SHEET_COLLAPSED_HEIGHT,
@@ -36,7 +40,6 @@ const INK = PathB.ink;
 const MUTED = "#6B6660";
 const BORDER = "#E7E0D2";
 const PILL = "#F1EBDD";
-const SCREEN_H = Dimensions.get("window").height;
 
 type VerseSheetContext = {
   commentators: { id: string; name: string; content: string }[];
@@ -61,6 +64,13 @@ type CrossRef = {
   text: string;
   connection: string;
   source?: string;
+};
+
+type VerseMapPayload = {
+  words?: ReaderStrongMap[];
+  crossReferences?: CrossRef[];
+  relatedVerses?: CrossRef[];
+  hasCachedData?: boolean;
 };
 
 function SheetAction({
@@ -167,6 +177,10 @@ export function VerseSheet({
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
+  const queryClient = useQueryClient();
+  const { height: windowHeight } = useWindowDimensions();
+  const expandedHeight = Math.round(windowHeight * 0.78);
+  const verseMapGenerationGate = useRef(new VerseMapGenerationGate()).current;
 
   const sorted = useMemo(
     () => [...verses].sort((a, b) => a.verse - b.verse),
@@ -183,10 +197,9 @@ export function VerseSheet({
       ? `Showing ${bookName} ${chapter}:${first.verse}`
       : null;
 
-  const chips = useMemo(
-    () => (first ? wordStudyChipsForVerse(first.text, maps) : []),
-    [first, maps],
-  );
+  const verseMapKey = first?.id
+    ? `/api/verse-map/${encodeURIComponent(first.id)}?translation=${encodeURIComponent(translation)}`
+    : null;
 
   const contextQuery = useQuery<VerseSheetContext>({
     queryKey: [
@@ -195,12 +208,20 @@ export function VerseSheet({
     enabled: expanded && !!first,
   });
 
-  const xrefQuery = useQuery<{ crossReferences?: CrossRef[]; relatedVerses?: CrossRef[] }>({
-    queryKey: [
-      `/api/verse-map/${encodeURIComponent(first?.id ?? "")}?translation=${encodeURIComponent(translation)}`,
-    ],
-    enabled: expanded && !!first?.id,
+  const xrefQuery = useQuery<VerseMapPayload>({
+    queryKey: [verseMapKey as string],
+    enabled: expanded && !!verseMapKey,
   });
+
+  const sheetMaps = useMemo<ReaderStrongMap[]>(() => {
+    if (maps.length > 0) return maps;
+    return Array.isArray(xrefQuery.data?.words) ? xrefQuery.data.words : [];
+  }, [maps, xrefQuery.data?.words]);
+
+  const chips = useMemo(
+    () => (first ? wordStudyChipsForVerse(first.text, sheetMaps) : []),
+    [first, sheetMaps],
+  );
 
   const pan = useRef(
     PanResponder.create({
@@ -225,6 +246,35 @@ export function VerseSheet({
     (row) => row.ref,
   );
   const loadingExpanded = expanded && (contextQuery.isLoading || xrefQuery.isLoading);
+
+  useEffect(() => {
+    verseMapGenerationGate.resetFor(verseMapKey);
+  }, [verseMapKey, verseMapGenerationGate]);
+
+  useEffect(() => {
+    if (!expanded || !verseMapKey || !first?.id || !reference) return;
+    if (xrefQuery.isLoading || !xrefQuery.isFetched) return;
+    if (crossRefs.length > 0) return;
+    if (!verseMapGenerationGate.tryStart(verseMapKey)) return;
+    void apiRequest("POST", "/api/verse-map/generate", {
+      verseId: first.id,
+      verseReference: reference,
+      translation,
+    })
+      .then(() => refreshVerseMapAfterGeneration(queryClient, verseMapKey))
+      .catch(() => {});
+  }, [
+    expanded,
+    verseMapKey,
+    first?.id,
+    reference,
+    translation,
+    xrefQuery.isLoading,
+    xrefQuery.isFetched,
+    crossRefs.length,
+    queryClient,
+    verseMapGenerationGate,
+  ]);
 
   const saveNote = async () => {
     if (!isAuthenticated || !userId) return;
@@ -261,7 +311,9 @@ export function VerseSheet({
           s.sheet,
           {
             paddingBottom: bottomPad + 8,
-            maxHeight: expanded ? SCREEN_H * 0.78 : undefined,
+            ...(expanded
+              ? { height: expandedHeight, maxHeight: expandedHeight }
+              : {}),
           },
         ]}
       >
@@ -363,6 +415,7 @@ export function VerseSheet({
         {expanded ? (
           <ScrollView
             testID="reader-verse-sheet-expanded"
+            style={s.expandedScroll}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={s.expandedBody}
@@ -380,7 +433,7 @@ export function VerseSheet({
               <CollapsibleSection title="Words" testID="reader-verse-sheet-words">
                 <View style={s.chipWrap}>
                   {chips.map((chip) => {
-                    const mapping = maps[chip.mapIndex];
+                    const mapping = sheetMaps[chip.mapIndex];
                     if (!mapping) return null;
                     return (
                       <Pressable
@@ -494,6 +547,32 @@ export function VerseSheet({
             ) : null}
 
             <CollapsibleSection title="See also" testID="reader-verse-sheet-see-also">
+              {first ? (
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: "/verse-explain" as any,
+                      params: {
+                        bookId,
+                        bookName,
+                        chapter,
+                        verse: String(first.verse),
+                        verseId: first.id,
+                        text: first.text,
+                        translation,
+                      },
+                    })
+                  }
+                  testID="reader-verse-sheet-explain"
+                  style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
+                >
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <AIGeneratedLabel />
+                    <Text style={s.linkTitle}>Explain This Verse</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={MUTED} />
+                </Pressable>
+              ) : null}
               <Pressable
                 onPress={onOpenDeepDive}
                 style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
@@ -538,10 +617,15 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: BORDER,
     paddingTop: 6,
+    flexDirection: "column",
+    overflow: "hidden",
     shadowColor: "#1F1A12",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
+  },
+  expandedScroll: {
+    flex: 1,
   },
   handleHit: {
     alignItems: "center",
@@ -688,6 +772,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
+    flex: 1,
     fontFamily: "Inter_600SemiBold",
     fontSize: 12,
     letterSpacing: 0.6,

@@ -22,11 +22,13 @@ import { Router } from "express";
     deviceTokens,
     leaderRequests,
   } from "../../shared/schema";
-  import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
+  import { eq, and, or, ilike, sql, desc, asc } from "drizzle-orm";
   import { notifyGroupMembers, notifyUser } from "../services/push-notifications";
   import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
   import { churchDirectoryQueryReady, recordChurchSubmission, verifiedDirectoryWhere } from "../services/church-directory";
+  import { geocodeChurchQuery, reverseGeocodeChurch } from "../services/church-geocode";
+  import { churchesNearResolvedPlace, haversineKm, type ResolvedChurchPlace } from "../../lib/church-finder";
   import { churchSubmissionLimiter } from "../middleware/rate-limit";
 
   const router = Router();
@@ -761,19 +763,88 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
   }
 });
 
+  async function listVerifiedChurchCountries(): Promise<string[]> {
+    const rows = await db
+      .selectDistinct({ country: sdaChurches.country })
+      .from(sdaChurches)
+      .where(verifiedDirectoryWhere())
+      .orderBy(asc(sdaChurches.country));
+    return rows.map((row) => row.country).filter((country) => country.trim().length > 0);
+  }
+
+  function parseRadiusKm(radius: string | undefined): number | null {
+    const radiusKm = parseFloat(radius || "50");
+    return Number.isFinite(radiusKm) && radiusKm > 0 ? radiusKm : null;
+  }
+
+  router.get("/api/churches/coverage", cachedResponse(300), async (_req, res) => {
+    try {
+      const countries = await listVerifiedChurchCountries();
+      const [row] = await db
+        .select({ verifiedCount: sql<number>`count(*)::int` })
+        .from(sdaChurches)
+        .where(verifiedDirectoryWhere());
+      return res.json({
+        verifiedCount: row?.verifiedCount ?? 0,
+        countryCount: countries.length,
+        countries,
+      });
+    } catch (err) {
+      console.error("Church coverage error:", err);
+      return res.status(500).json({ error: "Failed to list church coverage" });
+    }
+  });
+
   router.get("/api/churches", cachedResponse(300), async (req, res) => {
   try {
-    const { lat, lng, radius, city } = req.query as {
+    const { lat, lng, radius, city, place } = req.query as {
       lat?: string;
       lng?: string;
       radius?: string;
       city?: string;
+      place?: string;
     };
 
+    const placeQuery = typeof place === "string" ? place.trim() : "";
     const searchTerm = typeof city === "string" ? city.trim() : "";
-    const hasTextSearch = searchTerm.length > 0;
 
-    if (hasTextSearch) {
+    if (placeQuery) {
+      const radiusKm = parseRadiusKm(radius);
+      if (radiusKm == null) {
+        return res.status(400).json({ error: "Invalid radius" });
+      }
+      // The searched place is the distance origin. Device coordinates on the same request are ignored.
+      let resolved: ResolvedChurchPlace | null = null;
+      try {
+        resolved = await geocodeChurchQuery(placeQuery);
+      } catch (err) {
+        console.error("Church place geocode error:", err);
+      }
+      const coveredCountries = await listVerifiedChurchCountries();
+      if (!resolved) {
+        const whereClause = buildChurchTextSearchWhere(placeQuery);
+        const rows = whereClause
+          ? await db.select().from(sdaChurches).where(and(verifiedDirectoryWhere(), whereClause))
+          : [];
+        return res.json({
+          churches: rows,
+          resolvedPlace: null,
+          resolvedCountry: null,
+          outsideCoverage: false,
+          origin: null,
+        });
+      }
+      const verifiedChurches = await db.select().from(sdaChurches).where(verifiedDirectoryWhere());
+      const near = churchesNearResolvedPlace({
+        churches: verifiedChurches,
+        resolved,
+        coveredCountries,
+        radiusKm,
+      });
+      return res.json(near);
+    }
+
+    if (searchTerm) {
       const whereClause = buildChurchTextSearchWhere(searchTerm);
       if (!whereClause) {
         return res.json([]);
@@ -792,35 +863,50 @@ router.post("/api/groups/:id/announcement", requireAuth, async (req, res) => {
     if (lat && lng) {
       const userLat = parseFloat(lat);
       const userLng = parseFloat(lng);
-      const radiusKm = parseFloat(radius || "50");
+      const radiusKm = parseRadiusKm(radius);
 
-      if (isNaN(userLat) || isNaN(userLng) || isNaN(radiusKm)) {
+      if (isNaN(userLat) || isNaN(userLng) || radiusKm == null) {
         return res.status(400).json({ error: "Invalid lat, lng, or radius values" });
       }
-
-      const toRad = (deg: number) => (deg * Math.PI) / 180;
-      const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-        const R = 6371;
-        const dLat = toRad(lat2 - lat1);
-        const dLon = toRad(lon2 - lon1);
-        const a =
-          Math.sin(dLat / 2) ** 2 +
-          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      };
 
       const verifiedChurches = await db
         .select()
         .from(sdaChurches)
         .where(verifiedDirectoryWhere());
-      const withDist = verifiedChurches.map((c) => ({
-        ...c,
-        distance: haversine(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)),
-      }));
 
-      return res.json(
-        withDist.filter((c) => c.distance <= radiusKm).sort((a, b) => a.distance - b.distance),
-      );
+      let resolved: ResolvedChurchPlace | null = null;
+      try {
+        resolved = await reverseGeocodeChurch(userLat, userLng);
+      } catch (err) {
+        console.error("Church reverse geocode error:", err);
+      }
+
+      if (resolved) {
+        const coveredCountries = await listVerifiedChurchCountries();
+        const near = churchesNearResolvedPlace({
+          churches: verifiedChurches,
+          resolved: { ...resolved, lat: userLat, lng: userLng },
+          coveredCountries,
+          radiusKm,
+        });
+        return res.json(near);
+      }
+
+      const withDist = verifiedChurches
+        .map((c) => ({
+          ...c,
+          distance: haversineKm(userLat, userLng, parseFloat(c.lat), parseFloat(c.lng)),
+        }))
+        .filter((c) => Number.isFinite(c.distance) && c.distance <= radiusKm)
+        .sort((a, b) => a.distance - b.distance);
+
+      return res.json({
+        churches: withDist,
+        resolvedPlace: null,
+        resolvedCountry: null,
+        outsideCoverage: false,
+        origin: { lat: userLat, lng: userLng },
+      });
     }
 
     return res.json([]);

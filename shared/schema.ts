@@ -2808,3 +2808,15 @@ export const odbPosts = pgTable("odb_posts", {
 
 export type OdbPost = typeof odbPosts.$inferSelect;
 export type InsertOdbPost = typeof odbPosts.$inferInsert;
+
+/** Nominatim / ZIP geocode hits. Keyed by the search query. Rows expire after 30 days. */
+export const churchGeocodeCache = pgTable("church_geocode_cache", {
+  queryKey: text("query_key").primaryKey(),
+  lat: doublePrecision("lat").notNull(),
+  lng: doublePrecision("lng").notNull(),
+  place: text("place").notNull(),
+  country: text("country").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+export type ChurchGeocodeCache = typeof churchGeocodeCache.$inferSelect;

@@ -101,6 +101,23 @@ describe("verse sheet wiring", () => {
     assert.match(colors, /key: "rose"/);
   });
 
+  it("gives the expanded sheet a bounded height and a flex scroll so every section heading stays reachable", () => {
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
+    assert.match(sheet, /useWindowDimensions/);
+    assert.match(sheet, /expandedHeight/);
+    assert.match(sheet, /expandedScroll/);
+    assert.match(sheet, /title="Words"/);
+    assert.match(sheet, /title="Classic Commentators"/);
+    assert.match(sheet, /title="Cross-references"/);
+    assert.match(sheet, /title="Ellen White"/);
+    assert.match(sheet, /title="Sabbath School"/);
+    assert.match(sheet, /title="See also"/);
+    assert.match(sheet, /\/verse-map\/generate/);
+    assert.match(sheet, /Explain This Verse/);
+    assert.match(sheet, /reader-verse-sheet-explain/);
+    assert.doesNotMatch(sheet, /Dimensions\.get\("window"\)\.height/);
+  });
+
   it("hides Book overview unless the API reports content, and opens passage-context overview", () => {
     const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");

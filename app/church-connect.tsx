@@ -17,11 +17,19 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getLocales } from "expo-localization";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import ChurchMap from "@/components/ChurchMap";
 import EmptyState from "@/components/ui/EmptyState";
 import { apiRequest } from "@/lib/query-client";
+import {
+  churchCoverageLine,
+  defaultChurchDistanceUnit,
+  formatChurchDistance,
+  type ChurchDistanceUnit,
+} from "@/lib/church-finder";
 import { useToast } from "@/contexts/ToastContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 
@@ -54,6 +62,32 @@ interface Church {
 
 type ViewMode = "list" | "map";
 
+type ChurchSearchPayload = {
+  churches: Church[];
+  resolvedPlace: string | null;
+  resolvedCountry: string | null;
+  outsideCoverage: boolean;
+  origin: { lat: number; lng: number } | null;
+};
+
+const DISTANCE_UNIT_KEY = "@grace-through-faith/church-distance-unit";
+
+function unpackChurchSearch(data: Church[] | ChurchSearchPayload | undefined): ChurchSearchPayload {
+  if (!data) {
+    return { churches: [], resolvedPlace: null, resolvedCountry: null, outsideCoverage: false, origin: null };
+  }
+  if (Array.isArray(data)) {
+    return { churches: data, resolvedPlace: null, resolvedCountry: null, outsideCoverage: false, origin: null };
+  }
+  return {
+    churches: data.churches ?? [],
+    resolvedPlace: data.resolvedPlace ?? null,
+    resolvedCountry: data.resolvedCountry ?? null,
+    outsideCoverage: data.outsideCoverage === true,
+    origin: data.origin ?? null,
+  };
+}
+
 let locationModule: any = null;
 if (Platform.OS !== "web") {
   try {
@@ -78,7 +112,9 @@ export default function ChurchConnectScreen() {
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "granted" | "denied">("idle");
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(50);
+  const [unitOverride, setUnitOverride] = useState<ChurchDistanceUnit | null>(null);
   const [showTellUs, setShowTellUs] = useState(false);
+  const [showCountries, setShowCountries] = useState(false);
   const [tellName, setTellName] = useState("");
   const [tellCity, setTellCity] = useState("");
   const [tellCountry, setTellCountry] = useState("");
@@ -86,6 +122,19 @@ export default function ChurchConnectScreen() {
   const [tellSubmitting, setTellSubmitting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(DISTANCE_UNIT_KEY)
+      .then((value) => {
+        if (value === "mi" || value === "km") setUnitOverride(value);
+      })
+      .catch(() => {});
+  }, []);
+
+  const chooseUnit = (next: ChurchDistanceUnit) => {
+    setUnitOverride(next);
+    AsyncStorage.setItem(DISTANCE_UNIT_KEY, next).catch(() => {});
+  };
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -97,13 +146,13 @@ export default function ChurchConnectScreen() {
 
   const buildQueryKey = useCallback(() => {
     const params = new URLSearchParams();
-    if (userLat != null && userLng != null) {
+    if (debouncedSearch) {
+      params.set("place", debouncedSearch);
+      params.set("radius", radiusKm.toString());
+    } else if (userLat != null && userLng != null) {
       params.set("lat", userLat.toString());
       params.set("lng", userLng.toString());
       params.set("radius", radiusKm.toString());
-    }
-    if (debouncedSearch) {
-      params.set("city", debouncedSearch);
     }
     const qs = params.toString();
     return `/api/churches${qs ? `?${qs}` : ""}`;
@@ -111,9 +160,33 @@ export default function ChurchConnectScreen() {
 
   const canQuery = (userLat != null && userLng != null) || !!debouncedSearch;
 
-  const { data: churches, isLoading } = useQuery<Church[]>({
+  const { data: churchPayloadRaw, isLoading } = useQuery<Church[] | ChurchSearchPayload>({
     queryKey: [buildQueryKey()],
     enabled: canQuery,
+  });
+  const churchPayload = unpackChurchSearch(churchPayloadRaw);
+  const { data: coverage } = useQuery<{
+    verifiedCount: number;
+    countryCount: number;
+    countries: string[];
+  }>({
+    queryKey: ["/api/churches/coverage?v=counts"],
+  });
+  const coverageLine =
+    typeof coverage?.verifiedCount === "number" && typeof coverage?.countryCount === "number"
+      ? churchCoverageLine(coverage.verifiedCount, coverage.countryCount)
+      : null;
+  const localeTag = (() => {
+    try {
+      return getLocales()[0]?.languageTag ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  const distanceUnit = defaultChurchDistanceUnit({
+    locale: localeTag,
+    resolvedCountry: churchPayload.resolvedCountry,
+    override: unitOverride,
   });
 
   useEffect(() => {
@@ -186,8 +259,8 @@ export default function ChurchConnectScreen() {
 
   const formatDistance = (km?: number) => {
     if (km == null) return null;
-    if (km < 1) return `${Math.round(km * 1000)}m`;
-    return `${Math.round(km)} km`;
+    const label = formatChurchDistance(km, distanceUnit);
+    return label || null;
   };
 
   const getSizeIcon = (size?: string | null) => {
@@ -198,7 +271,10 @@ export default function ChurchConnectScreen() {
     }
   };
 
-  const churchList = churches || [];
+  const churchList = churchPayload.churches;
+  const resolvedPlace = churchPayload.resolvedPlace;
+  const outsideCoverage = churchPayload.outsideCoverage;
+  const origin = churchPayload.origin;
   const needsCitySearch = !canQuery && locationStatus === "denied";
   const waitingForLocation = !canQuery && locationStatus !== "denied";
 
@@ -270,8 +346,20 @@ export default function ChurchConnectScreen() {
       <EmptyState
         appearance="light"
         icon="business-outline"
-        title={debouncedSearch ? "No churches found" : "No churches found nearby"}
-        description={debouncedSearch ? "Try a different city, suburb, or church name" : "Try a different search or expand your radius"}
+        title={
+          outsideCoverage && resolvedPlace
+            ? `No listed churches near ${resolvedPlace} yet`
+            : debouncedSearch
+              ? "No churches found"
+              : "No churches found nearby"
+        }
+        description={
+          outsideCoverage
+            ? "Try a different city, or tell us about a church there."
+            : debouncedSearch
+              ? "Try a different city, suburb, or church name"
+              : "Try a different search or expand your radius"
+        }
         actionLabel="Can't find your church? Tell us"
         onAction={openTellUs}
         testID="church-connect-tell-us-empty"
@@ -343,9 +431,29 @@ export default function ChurchConnectScreen() {
         <Pressable onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.ink} />
         </Pressable>
-        <Text style={[s.title, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
+        <Text style={[s.title, { color: C.ink, fontFamily: "Lora_700Bold" }]} numberOfLines={1}>
           Church Connect
         </Text>
+        <View style={[s.unitToggle, { borderColor: C.border }]} testID="church-connect-unit-toggle">
+          <Pressable
+            onPress={() => chooseUnit("km")}
+            style={[s.unitBtn, distanceUnit === "km" && { backgroundColor: C.pill }]}
+            testID="church-connect-unit-km"
+          >
+            <Text style={[s.unitText, { color: distanceUnit === "km" ? C.ink : C.inkMuted, fontFamily: "Inter_600SemiBold" }]}>
+              km
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => chooseUnit("mi")}
+            style={[s.unitBtn, distanceUnit === "mi" && { backgroundColor: C.pill }]}
+            testID="church-connect-unit-mi"
+          >
+            <Text style={[s.unitText, { color: distanceUnit === "mi" ? C.ink : C.inkMuted, fontFamily: "Inter_600SemiBold" }]}>
+              mi
+            </Text>
+          </Pressable>
+        </View>
         <View style={s.viewToggle}>
           <Pressable
             onPress={() => setViewMode("list")}
@@ -369,7 +477,7 @@ export default function ChurchConnectScreen() {
         <TextInput
           ref={searchInputRef}
           style={[s.searchInput, { color: C.ink, fontFamily: "Inter_400Regular" }]}
-          placeholder="Search by city, suburb, or church name..."
+          placeholder="Search by city, suburb, ZIP, or church name..."
           placeholderTextColor={C.inkMuted}
           value={searchCity}
           onChangeText={setSearchCity}
@@ -382,7 +490,23 @@ export default function ChurchConnectScreen() {
         ) : null}
       </View>
 
-      {locationStatus === "granted" && !debouncedSearch ? (
+      {coverageLine ? (
+        <View style={s.coverageRow}>
+          <Text
+            style={[s.coverage, { color: C.inkMuted, fontFamily: "Inter_400Regular" }]}
+            testID="church-connect-coverage"
+          >
+            {coverageLine}
+          </Text>
+          <Pressable onPress={() => setShowCountries(true)} hitSlop={8} testID="church-connect-see-countries">
+            <Text style={[s.seeCountries, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
+              See countries
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {(locationStatus === "granted" && !debouncedSearch) || (debouncedSearch && resolvedPlace && !outsideCoverage) ? (
         <View style={s.radiusRow}>
           <Text style={[s.radiusLabel, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
             Radius:
@@ -408,7 +532,7 @@ export default function ChurchConnectScreen() {
                   },
                 ]}
               >
-                {r} km
+                {distanceUnit === "mi" ? `${Math.round(r / 1.609344)} mi` : `${r} km`}
               </Text>
             </Pressable>
           ))}
@@ -444,8 +568,8 @@ export default function ChurchConnectScreen() {
         <View style={s.mapContainer}>
           <ChurchMap
             churches={churchList}
-            userLat={userLat ?? undefined}
-            userLng={userLng ?? undefined}
+            userLat={(debouncedSearch ? origin?.lat : userLat) ?? undefined}
+            userLng={(debouncedSearch ? origin?.lng : userLng) ?? undefined}
             selectedChurchId={selectedChurchId}
             onMarkerPress={(c) => setSelectedChurchId(c.id)}
           />
@@ -508,6 +632,30 @@ export default function ChurchConnectScreen() {
           )}
         </>
       )}
+
+      <Modal visible={showCountries} transparent animationType="fade" onRequestClose={() => setShowCountries(false)}>
+        <View style={s.countrySheetRoot}>
+        <Pressable style={s.modalBackdrop} onPress={() => setShowCountries(false)} />
+        <View style={[s.countrySheet, { backgroundColor: C.card }]} testID="church-connect-countries-sheet">
+          <View style={s.countrySheetHead}>
+            <Text style={[s.modalTitle, { color: C.ink, fontFamily: "Lora_700Bold" }]}>Countries</Text>
+            <Pressable onPress={() => setShowCountries(false)} hitSlop={8} accessibilityLabel="Close countries">
+              <Ionicons name="close" size={20} color={C.inkMuted} />
+            </Pressable>
+          </View>
+          <ScrollView style={s.countryList} keyboardShouldPersistTaps="handled">
+            {(coverage?.countries ?? []).map((name) => (
+              <Text
+                key={name}
+                style={[s.countryName, { color: C.ink, fontFamily: "Inter_400Regular", borderColor: C.border }]}
+              >
+                {name}
+              </Text>
+            ))}
+          </ScrollView>
+        </View>
+        </View>
+      </Modal>
 
       <Modal visible={showTellUs} transparent animationType="fade" onRequestClose={() => setShowTellUs(false)}>
         <KeyboardAvoidingView
@@ -612,6 +760,32 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  coverageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginHorizontal: 16,
+    marginTop: 8,
+    gap: 8,
+  },
+  coverage: { fontSize: 12, lineHeight: 18 },
+  seeCountries: { fontSize: 12, textDecorationLine: "underline" },
+  countrySheetRoot: { flex: 1, justifyContent: "flex-end" },
+  countrySheet: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 24,
+    maxHeight: "55%",
+    borderRadius: 16,
+    padding: 16,
+  },
+  countrySheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  countryList: { maxHeight: 360 },
+  countryName: { fontSize: 15, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  unitToggle: { flexDirection: "row", borderRadius: 8, borderWidth: 1, overflow: "hidden" },
+  unitBtn: { paddingHorizontal: 8, paddingVertical: 5 },
+  unitText: { fontSize: 12 },
   locBanner: {
     flexDirection: "row",
     alignItems: "center",
