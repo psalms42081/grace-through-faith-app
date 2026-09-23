@@ -146,7 +146,7 @@ const illStyles = StyleSheet.create({
     overflow: "hidden",
   },
   gradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 60,
   },
 });

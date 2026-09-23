@@ -610,7 +610,7 @@ export function VerseSheet({
 
 const s = StyleSheet.create({
   dim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(31, 26, 18, 0.4)",
     zIndex: 190,
   },

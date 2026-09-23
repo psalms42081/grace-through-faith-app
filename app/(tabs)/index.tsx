@@ -1161,12 +1161,12 @@ const readingPlanStyles = StyleSheet.create({
     height: 160,
   },
   bgImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     padding: 22,
     borderRadius: 20,

@@ -238,7 +238,7 @@ export default function CoachMark({
 
 const st = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
   },
   tooltip: {

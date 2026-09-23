@@ -1,6 +1,6 @@
-import type { Router } from "expo-router";
+import type { ImperativeRouter } from "expo-router";
 
-export function safeGoBack(router: Router, fallbackTab?: string) {
+export function safeGoBack(router: ImperativeRouter, fallbackTab?: string) {
   if (router.canGoBack()) {
     router.back();
   } else {

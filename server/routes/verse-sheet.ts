@@ -99,7 +99,7 @@ async function commentaryForVerse(
     }),
   );
 
-  return fetched.filter((row): row is { id: string; name: string; content: string } => row != null);
+  return fetched.flatMap((row) => (row ? [row] : []));
 }
 
 function ilikeAny(column: ReturnType<typeof sql>, needles: string[]) {

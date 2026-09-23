@@ -372,12 +372,12 @@ const st = StyleSheet.create({
     height: 100,
   },
   topicImageBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%" as any,
     height: "100%" as any,
   },
   topicImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end" as const,
   },
   topicImageContent: {

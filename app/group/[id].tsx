@@ -1229,7 +1229,7 @@ const s = StyleSheet.create({
   },
   leaveText: { color: "#FF6B6B", fontSize: 14 },
   pickerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     padding: 24,

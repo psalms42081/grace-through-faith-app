@@ -212,7 +212,7 @@ const st = StyleSheet.create({
   },
   webView: { flex: 1 },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     gap: 12,

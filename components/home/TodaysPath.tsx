@@ -121,12 +121,12 @@ const s = StyleSheet.create({
     height: 100,
   },
   cardImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
   },
   cardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
   },
   cardContent: {

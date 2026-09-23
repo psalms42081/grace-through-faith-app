@@ -12,7 +12,9 @@ export type PushAcquireResult =
   | { ok: false; reason: "denied" | "unavailable" };
 
 export type WebPermissionStart =
-  | { status: "granted" | "denied" | "unsupported" }
+  | { status: "granted" }
+  | { status: "denied" }
+  | { status: "unsupported" }
   | { status: "pending"; pending: Promise<NotificationPermission> };
 
 const PERMISSION_TIMEOUT_MS = 20000;

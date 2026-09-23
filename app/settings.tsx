@@ -326,11 +326,7 @@ export default function SettingsScreen() {
         })}
         {notifExpanded && (
           <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-            <NotificationSettings
-              theme={SWEEP_LIGHT as any}
-              expanded
-              onToggle={handleNotificationSettings}
-            />
+            <NotificationSettings />
           </View>
         )}
         {ENABLE_PREMIUM && renderRow("diamond-outline", isPatron ? "Mission Partner" : "Go Premium", {

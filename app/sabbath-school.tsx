@@ -203,7 +203,7 @@ export default function SabbathSchoolV2Screen() {
   const bottomPad =
     (Platform.OS === "web" ? 34 : insets.bottom) +
     sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
-  const openDay = (d: DayData) => {
+  const openDay = (d: { dayNumber: number }) => {
     router.push(
       buildSabbathSchoolTabRoute("sabbath-school-day", {
         lessonNumber: lesson!.lessonNumber,

@@ -36,6 +36,7 @@ import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
 import { createAudioPlayer, setIsAudioActiveAsync, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
+import { addPlaybackStatusListener } from "@/lib/audio-playback";
 import { useVideoPlayer, VideoView } from "expo-video";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
@@ -359,7 +360,7 @@ function ConfettiParticle({
 
 const confettiStyles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 100,
@@ -581,7 +582,7 @@ function WonderOptionButton({
 
 const wonderStyles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -888,14 +889,14 @@ function BurstParticle({
 
 const particleStyles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 5,
   },
   particle: {
     position: "absolute",
   },
   tapZone: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 10,
   },
   rippleContainer: {
@@ -1405,7 +1406,7 @@ const videoStyles = StyleSheet.create({
     height: "100%",
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
@@ -2109,7 +2110,7 @@ export default function SceneStoryScreen() {
       };
       scheduleNextWord();
 
-      const statusSub = player.addListener("playbackStatusUpdate", (status: any) => {
+      const statusSub = addPlaybackStatusListener(player, (status) => {
         if (status.didJustFinish) {
           setCurrentWordIndex(words.length - 1);
           if (narrationListenerRef.current === statusSub) narrationListenerRef.current = null;

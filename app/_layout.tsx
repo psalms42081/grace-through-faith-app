@@ -211,7 +211,6 @@ function RootLayoutNav() {
       <Stack.Screen name="touchpoint-study" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-topic-preview" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoint-study-preview" options={{ headerShown: false }} />
-      <Stack.Screen name="ai-plan-tile-preview" options={{ headerShown: false }} />
       <Stack.Screen name="connect-media" options={{ headerShown: false }} />
       <Stack.Screen name="biblical-sabbaths" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
@@ -285,7 +284,6 @@ useEffect(() => {
         "/pioneer-chapter",
         "/touchpoint-topic-preview",
         "/touchpoint-study-preview",
-        "/ai-plan-tile-preview",
         "/sabbath-school",
         "/sabbath-school-quarter",
         "/sabbath-school-day",

@@ -167,12 +167,12 @@ const st = StyleSheet.create({
     height: 130,
   },
   cardImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
   },
   cardGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   cardContent: {
     position: "absolute",

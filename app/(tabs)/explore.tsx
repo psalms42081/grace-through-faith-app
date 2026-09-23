@@ -289,12 +289,12 @@ const st = StyleSheet.create({
     height: 120,
   },
   categoryBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%" as any,
     height: "100%" as any,
   },
   categoryOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end" as const,
   },
   categoryContent: {
@@ -388,12 +388,12 @@ const st = StyleSheet.create({
     height: 130,
   },
   infoBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%" as any,
     height: "100%" as any,
   },
   infoOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end" as const,
   },
   infoContent: {

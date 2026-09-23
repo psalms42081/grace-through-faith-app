@@ -29,7 +29,6 @@ const AI_SURFACES = [
   "app/great-controversy.tsx",
   "app/sabbath-school-discussion.tsx",
   "components/touchpoints/TouchpointPreview.tsx",
-  "app/ai-plan-tile-preview.tsx",
 ] as const;
 
 const HUMAN_SURFACES = [

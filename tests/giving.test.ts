@@ -14,12 +14,12 @@ import { givingBankRows, givingOnlineUrl } from "../lib/giving";
 const root = process.cwd();
 
 describe("giving details", () => {
-  it("publishes the ABN and leaves the payment constants empty", () => {
+  it("publishes the ABN and the filled payment constants", () => {
     assert.equal(GIVING_ABN, "39 741 036 497");
-    assert.equal(GIVING_BANK_NAME, "");
-    assert.equal(GIVING_BANK_BSB, "");
-    assert.equal(GIVING_BANK_ACCOUNT, "");
-    assert.equal(STRIPE_GIVING_URL, "");
+    assert.equal(GIVING_BANK_NAME, "Luis Bermudez");
+    assert.equal(GIVING_BANK_BSB, "182-182");
+    assert.equal(GIVING_BANK_ACCOUNT, "001223585");
+    assert.equal(STRIPE_GIVING_URL, "https://buy.stripe.com/14A4gzbSGcF53VwbAP5sA00");
   });
 
   it("hides an empty online link and empty bank rows", () => {

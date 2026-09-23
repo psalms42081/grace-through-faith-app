@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { db } from "../server/db";
 import { bibleBooks, bibleCache } from "../shared/schema";
 import { eq, and, ilike } from "drizzle-orm";

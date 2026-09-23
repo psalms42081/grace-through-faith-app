@@ -85,7 +85,15 @@ export function parseLegalMarkdown(markdown: string): LegalDocument {
       i += 1;
       continue;
     }
-    if (/^\*\*[^*]+\*\*$/.test(line.trim()) && blocks.every((b) => b.type === "h1")) {
+    const bannerLine = /^\*\*[^*]+\*\*$/.test(line.trim());
+    let beforeSections = true;
+    for (const block of blocks) {
+      if (block.type !== "h1") {
+        beforeSections = false;
+        break;
+      }
+    }
+    if (bannerLine && beforeSections) {
       blocks.push({ type: "banner", text: line.trim().slice(2, -2) });
       i += 1;
       continue;

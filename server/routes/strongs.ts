@@ -279,7 +279,7 @@ router.get("/api/strong/:id", async (req, res) => {
       .from(strongEntries)
       .where(eq(strongEntries.id, rawId))
       .limit(1);
-    let entry = exact ?? null;
+    let entry: typeof exact | null = exact ?? null;
     if (!entry && normalized) {
       const alt = await db.execute(sql`
         SELECT *

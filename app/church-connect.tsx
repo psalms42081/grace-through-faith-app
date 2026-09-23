@@ -895,7 +895,7 @@ const s = StyleSheet.create({
   tellUsBtnText: { fontSize: 14 },
   modalOverlay: { flex: 1, justifyContent: "center" },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   modalScroll: { flexGrow: 1, justifyContent: "center", padding: 24 },

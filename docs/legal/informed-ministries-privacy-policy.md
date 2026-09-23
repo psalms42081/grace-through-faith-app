@@ -3,7 +3,7 @@
 **Draft for legal review — not yet in force**
 Version 0.1 · Prepared 7 September 2026
 
-Informed Ministries (ABN [insert]) ("we", "us", "our") operates the Informed Ministries mobile and web application (the "App"). This policy explains what personal information we collect, why, how we hold it, and your choices. We handle personal information in accordance with the Australian Privacy Principles in the *Privacy Act 1988* (Cth).
+Informed Ministries (ABN 39 741 036 497) ("we", "us", "our") operates the Informed Ministries mobile and web application (the "App"). This policy explains what personal information we collect, why, how we hold it, and your choices. We handle personal information in accordance with the Australian Privacy Principles in the *Privacy Act 1988* (Cth).
 
 ## 1. What we collect
 
@@ -83,7 +83,7 @@ We may update this policy. If we make a material change we will tell you in the 
 ## 10. Contact
 
 Informed Ministries
-ABN [insert]
+ABN 39 741 036 497
 [postal or email address]
 [privacy contact email]
 

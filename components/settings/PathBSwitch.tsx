@@ -29,7 +29,6 @@ export function PathBSwitch({
       disabled={disabled}
       trackColor={{ ...PATH_B_SWITCH_TRACK }}
       thumbColor={PATH_B_SWITCH_THUMB}
-      activeThumbColor={PATH_B_SWITCH_THUMB}
       ios_backgroundColor={PATH_B_SWITCH_IOS_BACKGROUND}
       testID={testID}
       style={style ?? styles.switch}

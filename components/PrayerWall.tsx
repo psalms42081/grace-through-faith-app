@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   glowOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 2,
   },
   cardHeader: {

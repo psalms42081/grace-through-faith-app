@@ -3,7 +3,7 @@
 **Draft for legal review — not yet in force**
 Version 0.1 · Prepared 7 September 2026
 
-These Terms of Use ("Terms") are an agreement between you and Informed Ministries (ABN [insert ABN]) ("Informed Ministries", "we", "us", "our"), which operates the Informed Ministries mobile and web application (the "App"). By creating an account or using the App you agree to these Terms. If you do not agree, please do not use the App.
+These Terms of Use ("Terms") are an agreement between you and Informed Ministries (ABN 39 741 036 497) ("Informed Ministries", "we", "us", "our"), which operates the Informed Ministries mobile and web application (the "App"). By creating an account or using the App you agree to these Terms. If you do not agree, please do not use the App.
 
 Our Privacy Policy explains how we handle your personal information and forms part of these Terms.
 
@@ -114,7 +114,7 @@ These Terms are governed by the laws of Victoria, Australia, and you agree to th
 ## 13. Contact
 
 Informed Ministries
-ABN [insert]
+ABN 39 741 036 497
 [postal or email address]
 [support email]
 

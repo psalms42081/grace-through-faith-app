@@ -51,6 +51,7 @@ export class MemStorage implements IStorage {
       hierarchyNodeId: null,
       ageGroup: null,
       sdaChurchId: null,
+      adultConfirmedAt: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);

@@ -222,14 +222,14 @@ const st = StyleSheet.create({
     backgroundColor: "#000",
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#000",
     zIndex: 10,
   },
   failureOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
@@ -258,12 +258,12 @@ const st = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   thumbnail: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
     height: "100%",
   },
   playOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.35)",

@@ -328,7 +328,7 @@ function AnimatedBadgeItem({
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: theme.accent,
     borderRadius: 18,
     opacity: glowOpacity.value,
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   starGlowOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 22,
   },

@@ -22,6 +22,7 @@ import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme
 import { useAuth } from "@/contexts/AuthContext";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
+import { addPlaybackStatusListener } from "@/lib/audio-playback";
 import {
   SABBATH_SCHOOL_AUDIO_UNAVAILABLE_MESSAGE,
   sabbathSchoolPlaybackHasStarted,
@@ -444,7 +445,7 @@ export default function SabbathSchoolDayScreen() {
             player.remove();
           },
         };
-        player.addListener("playbackStatusUpdate", (status) => {
+        addPlaybackStatusListener(player, (status) => {
           if (!status.isLoaded && (status as { error?: string }).error) {
             onStatus({ isLoaded: false, error: (status as { error?: string }).error });
             return;

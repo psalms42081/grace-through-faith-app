@@ -22,9 +22,10 @@ describe("legal markdown source", () => {
     const privacy = stripDraftingNotes(privacyMd);
     assert.match(terms, /Draft for legal review — not yet in force/);
     assert.match(privacy, /Draft for legal review — not yet in force/);
-    assert.match(terms, /\[insert ABN\]/);
+    assert.match(terms, /ABN 39 741 036 497/);
     assert.match(terms, /\[support email\]/);
-    assert.match(privacy, /\[insert\]/);
+    assert.match(privacy, /ABN 39 741 036 497/);
+    assert.match(privacy, /\[postal or email address\]/);
     assert.match(privacy, /\[hosting provider\]/);
     assert.doesNotMatch(terms, /Drafting notes for review/);
     assert.doesNotMatch(privacy, /Drafting notes for review/);
@@ -96,7 +97,7 @@ describe("legal surfaces", () => {
     assert.match(server, /templates", "terms.html"/);
     assert.match(termsHtml, /Draft for legal review/);
     assert.match(privacyHtml, /Draft for legal review/);
-    assert.match(termsHtml, /\[insert ABN\]/);
+    assert.match(termsHtml, /ABN 39 741 036 497/);
     assert.match(privacyHtml, /\[hosting provider\]/);
     assert.doesNotMatch(termsHtml, /Drafting notes for review/);
     assert.doesNotMatch(privacyHtml, /Drafting notes for review/);

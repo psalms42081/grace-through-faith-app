@@ -926,7 +926,6 @@ export default function VerseReaderScreen() {
         } catch {}
       };
       callNavBar(NavigationBar.setVisibilityAsync, "hidden");
-      callNavBar(NavigationBar.setBehaviorAsync, "overlay-swipe");
       return () => {
         callNavBar(NavigationBar.setVisibilityAsync, "visible");
       };

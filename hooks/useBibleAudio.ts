@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView } from "react-native";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
+import { addPlaybackStatusListener } from "@/lib/audio-playback";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
@@ -367,7 +368,7 @@ export default function useBibleAudio(
       const playFinished = await new Promise<boolean>((resolve) => {
         let resolved = false;
 
-        const sub = player.addListener("playbackStatusUpdate", (status) => {
+        const sub = addPlaybackStatusListener(player, (status) => {
           if (resolved) return;
           if (session !== sessionRef.current) {
             resolved = true;

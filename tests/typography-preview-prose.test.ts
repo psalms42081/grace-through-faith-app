@@ -241,7 +241,10 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(prose, /VersePressRun/);
     assert.match(reader, /onVerseLongPress=\{handleVerseLongPress\}/);
     assert.match(reader, /delayLongPress=\{400\}/);
-    assert.match(reader, /READER_FLOATING_CHROME_HEIGHT \+ READER_SCROLL_END_AIR \+ bottomPad/);
+    assert.match(
+      reader,
+      /READER_FLOATING_CHROME_HEIGHT\) \+\s*READER_SCROLL_END_AIR \+\s*bottomPad/,
+    );
     assert.match(reader, /testID="reader-floating-chrome"/);
   });
 

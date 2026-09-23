@@ -318,7 +318,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
   },
   inlineVideoLoading: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.32)",

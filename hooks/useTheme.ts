@@ -1,7 +1,7 @@
 import { useColorScheme } from "react-native";
 import Colors, { KidsColors } from "@/constants/colors";
 
-type ColorScheme = "light" | "dark" | null | undefined;
+type ColorScheme = "light" | "dark" | "unspecified" | null | undefined;
 
 type RegularTheme = typeof Colors.light;
 type KidsTheme = typeof KidsColors.light;

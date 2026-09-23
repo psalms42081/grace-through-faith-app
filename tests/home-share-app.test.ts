@@ -79,9 +79,9 @@ describe("Home share-app card", () => {
       new URL("../components/home-v2/HomeHeader.tsx", import.meta.url),
       "utf8",
     );
-    assert.match(header, /numberOfLines=\{1\}/);
+    assert.match(header, /greetingThatFits/);
     assert.match(header, /fontSize: 22/);
-    assert.match(header, /flexWrap: "wrap"/);
+    assert.match(header, /testID="home-greeting"/);
   });
 
   it("wires a permanent adult Profile share row that is not dismiss-gated", () => {

@@ -700,7 +700,7 @@ const s = StyleSheet.create({
   },
   endBtnText: { color: "#fff", fontSize: 13 },
   webviewLoading: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#000",

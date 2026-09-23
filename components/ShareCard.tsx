@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import ViewShot from "react-native-view-shot";
+import ViewShot, { type ViewShotRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
@@ -65,7 +65,7 @@ function ShareCardContent({
 }
 
 export function useShareInsight() {
-  const viewShotRef = useRef<ViewShot>(null);
+  const viewShotRef = useRef<ViewShotRef>(null);
   const [shareData, setShareData] = useState<ShareCardProps | null>(null);
   const [isSharing, setIsSharing] = useState(false);
 
