@@ -117,6 +117,17 @@ describe("daily verse push wiring", () => {
     assert.match(subscribe, /Notification\.requestPermission/);
     assert.doesNotMatch(settings, /Notification\.requestPermission/);
     assert.match(settings, /acquirePushEndpoint\(\)/);
+    assert.match(settings, /isFetchedAfterMount/);
+    assert.match(settings, /refetchOnMount: "always"/);
+    const enableVerse = settings.slice(
+      settings.indexOf("function onVerseChange"),
+      settings.indexOf("function onSabbathChange"),
+    );
+    assert.match(enableVerse, /startWebNotificationPermission\(\)/);
+    assert.doesNotMatch(enableVerse, /await/);
+    const save = settings.slice(settings.indexOf("async function save"), settings.indexOf("async function commit"));
+    assert.match(save, /"DELETE", "\/api\/push\/subscription"/);
+    assert.match(save, /next\.turningOn/);
   });
 
   it("records notification subscriptions in the privacy policy", () => {

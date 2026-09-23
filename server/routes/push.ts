@@ -51,16 +51,25 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
       );
     return res.json({ subscribed: false });
   }
-  if (!preference.keys && !isExpoPushEndpoint(preference.endpoint)) {
+  const [existing] = await db
+    .select({ keys: pushSubscriptions.keys, userId: pushSubscriptions.userId })
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.endpoint, preference.endpoint))
+    .limit(1);
+  if (existing && existing.userId !== req.authUserId) {
+    return res.status(409).json({ error: "That push endpoint is registered to another account" });
+  }
+  if (!preference.keys && !isExpoPushEndpoint(preference.endpoint) && !existing) {
     return res.status(400).json({ error: "Web push keys are required" });
   }
+  const keys = preference.keys ?? existing?.keys ?? null;
 
   await db
     .insert(pushSubscriptions)
     .values({
       userId: req.authUserId!,
       endpoint: preference.endpoint,
-      keys: preference.keys,
+      keys,
       timezone: preference.timezone,
       verseTimeLocal: preference.verseTimeLocal,
       ssReminder: preference.ssReminder,
@@ -70,7 +79,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
       target: pushSubscriptions.endpoint,
       set: {
         userId: req.authUserId!,
-        keys: preference.keys,
+        keys,
         timezone: preference.timezone,
         verseTimeLocal: preference.verseTimeLocal,
         ssReminder: preference.ssReminder,

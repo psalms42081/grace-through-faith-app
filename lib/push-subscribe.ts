@@ -37,15 +37,14 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 /**
  * Must be called in the switch press, before any await.
- * Android Chrome never shows the prompt — and never settles the promise —
- * when requestPermission runs after an await.
+ * Always invokes requestPermission in that turn. Skipping the call when
+ * permission already looks granted or denied hides the prompt, and Android
+ * Chrome never shows it — and never settles — if it runs after an await.
  */
 export function startWebNotificationPermission(): WebPermissionStart {
   if (typeof window === "undefined" || typeof Notification === "undefined" || !("serviceWorker" in navigator)) {
     return { status: "unsupported" };
   }
-  if (Notification.permission === "granted") return { status: "granted" };
-  if (Notification.permission === "denied") return { status: "denied" };
   return { status: "pending", pending: Notification.requestPermission() };
 }
 
@@ -112,13 +111,21 @@ async function acquireWebEndpoint(): Promise<PushAcquireResult> {
     const keyJson = (await keyResponse.json()) as { publicKey?: string };
     if (!keyJson.publicKey) return { ok: false, reason: "unavailable" };
     const registration = await withTimeout(navigator.serviceWorker.ready, READY_TIMEOUT_MS);
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
+    const applicationServerKey = urlBase64ToUint8Array(keyJson.publicKey) as BufferSource;
+    const subscribeOptions = { userVisibleOnly: true, applicationServerKey };
+    let subscription: PushSubscription;
+    try {
       subscription = await withTimeout(
-        registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey) as BufferSource,
-        }),
+        registration.pushManager.subscribe(subscribeOptions),
+        SUBSCRIBE_TIMEOUT_MS,
+      );
+    } catch (error) {
+      const invalid = error instanceof DOMException && error.name === "InvalidStateError";
+      const existing = invalid ? await registration.pushManager.getSubscription() : null;
+      if (!existing) return { ok: false, reason: "unavailable" };
+      await existing.unsubscribe();
+      subscription = await withTimeout(
+        registration.pushManager.subscribe(subscribeOptions),
         SUBSCRIBE_TIMEOUT_MS,
       );
     }

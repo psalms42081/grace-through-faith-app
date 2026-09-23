@@ -99,5 +99,6 @@ describe("Sabbath School track selection", () => {
     assert.match(notifSource, /PathBSwitch/);
     assert.doesNotMatch(notifSource, /thumbColor=\{enabled \? theme\.accent/);
     assert.match(switchSource, /thumbColor=\{PATH_B_SWITCH_THUMB\}/);
+    assert.match(switchSource, /activeThumbColor=\{PATH_B_SWITCH_THUMB\}/);
   });
 });
