@@ -78,6 +78,26 @@ export function formatChurchDistance(km: number, unit: ChurchDistanceUnit): stri
   return `${Math.round(miles)} mi`;
 }
 
+export const CHURCH_RADIUS_KM = [25, 50, 100, 500] as const;
+export const CHURCH_RADIUS_MI = [25, 50, 100, 300] as const;
+
+export function churchRadiusOptions(unit: ChurchDistanceUnit): readonly number[] {
+  return unit === "mi" ? CHURCH_RADIUS_MI : CHURCH_RADIUS_KM;
+}
+
+export function churchRadiusToKm(value: number, unit: ChurchDistanceUnit): number {
+  return unit === "mi" ? value * KM_PER_MILE : value;
+}
+
+export function matchingChurchRadius(radiusKm: number, unit: ChurchDistanceUnit): number {
+  const options = churchRadiusOptions(unit);
+  return options.reduce((best, option) => {
+    const bestGap = Math.abs(churchRadiusToKm(best, unit) - radiusKm);
+    const gap = Math.abs(churchRadiusToKm(option, unit) - radiusKm);
+    return gap < bestGap ? option : best;
+  });
+}
+
 export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const earthKm = 6371;

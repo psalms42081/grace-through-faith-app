@@ -26,8 +26,11 @@ import EmptyState from "@/components/ui/EmptyState";
 import { apiRequest } from "@/lib/query-client";
 import {
   churchCoverageLine,
+  churchRadiusOptions,
+  churchRadiusToKm,
   defaultChurchDistanceUnit,
   formatChurchDistance,
+  matchingChurchRadius,
   type ChurchDistanceUnit,
 } from "@/lib/church-finder";
 import { useToast } from "@/contexts/ToastContext";
@@ -102,8 +105,6 @@ export default function ChurchConnectScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const RADIUS_OPTIONS = [25, 50, 100, 500] as const;
-
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchCity, setSearchCity] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -113,6 +114,7 @@ export default function ChurchConnectScreen() {
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(50);
   const [unitOverride, setUnitOverride] = useState<ChurchDistanceUnit | null>(null);
+  const [unitReady, setUnitReady] = useState(false);
   const [showTellUs, setShowTellUs] = useState(false);
   const [showCountries, setShowCountries] = useState(false);
   const [tellName, setTellName] = useState("");
@@ -122,16 +124,26 @@ export default function ChurchConnectScreen() {
   const [tellSubmitting, setTellSubmitting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<TextInput>(null);
+  const radiusAligned = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
     AsyncStorage.getItem(DISTANCE_UNIT_KEY)
       .then((value) => {
+        if (cancelled) return;
         if (value === "mi" || value === "km") setUnitOverride(value);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setUnitReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const chooseUnit = (next: ChurchDistanceUnit) => {
+    setRadiusKm((current) => churchRadiusToKm(matchingChurchRadius(current, next), next));
     setUnitOverride(next);
     AsyncStorage.setItem(DISTANCE_UNIT_KEY, next).catch(() => {});
   };
@@ -188,6 +200,12 @@ export default function ChurchConnectScreen() {
     resolvedCountry: churchPayload.resolvedCountry,
     override: unitOverride,
   });
+
+  useEffect(() => {
+    if (!unitReady || radiusAligned.current) return;
+    radiusAligned.current = true;
+    setRadiusKm(churchRadiusToKm(50, distanceUnit));
+  }, [unitReady, distanceUnit]);
 
   useEffect(() => {
     requestLocation();
@@ -434,26 +452,6 @@ export default function ChurchConnectScreen() {
         <Text style={[s.title, { color: C.ink, fontFamily: "Lora_700Bold" }]} numberOfLines={1}>
           Church Connect
         </Text>
-        <View style={[s.unitToggle, { borderColor: C.border }]} testID="church-connect-unit-toggle">
-          <Pressable
-            onPress={() => chooseUnit("km")}
-            style={[s.unitBtn, distanceUnit === "km" && { backgroundColor: C.pill }]}
-            testID="church-connect-unit-km"
-          >
-            <Text style={[s.unitText, { color: distanceUnit === "km" ? C.ink : C.inkMuted, fontFamily: "Inter_600SemiBold" }]}>
-              km
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => chooseUnit("mi")}
-            style={[s.unitBtn, distanceUnit === "mi" && { backgroundColor: C.pill }]}
-            testID="church-connect-unit-mi"
-          >
-            <Text style={[s.unitText, { color: distanceUnit === "mi" ? C.ink : C.inkMuted, fontFamily: "Inter_600SemiBold" }]}>
-              mi
-            </Text>
-          </Pressable>
-        </View>
         <View style={s.viewToggle}>
           <Pressable
             onPress={() => setViewMode("list")}
@@ -506,36 +504,70 @@ export default function ChurchConnectScreen() {
         </View>
       ) : null}
 
+      <View style={s.unitRow}>
+        <Text style={[s.radiusLabel, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>Distance</Text>
+        <View style={[s.unitToggle, { borderColor: C.border }]} testID="church-connect-unit-toggle">
+          <Pressable
+            onPress={() => chooseUnit("km")}
+            style={[s.unitBtn, distanceUnit === "km" && { backgroundColor: C.coral }]}
+            testID="church-connect-unit-km"
+            accessibilityRole="button"
+            accessibilityLabel="Kilometres"
+            accessibilityState={{ selected: distanceUnit === "km" }}
+          >
+            <Text style={[s.unitText, { color: distanceUnit === "km" ? "#fff" : C.ink, fontFamily: "Inter_600SemiBold" }]}>
+              km
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => chooseUnit("mi")}
+            style={[s.unitBtn, distanceUnit === "mi" && { backgroundColor: C.coral }]}
+            testID="church-connect-unit-mi"
+            accessibilityRole="button"
+            accessibilityLabel="Miles"
+            accessibilityState={{ selected: distanceUnit === "mi" }}
+          >
+            <Text style={[s.unitText, { color: distanceUnit === "mi" ? "#fff" : C.ink, fontFamily: "Inter_600SemiBold" }]}>
+              Miles
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
       {(locationStatus === "granted" && !debouncedSearch) || (debouncedSearch && resolvedPlace && !outsideCoverage) ? (
         <View style={s.radiusRow}>
           <Text style={[s.radiusLabel, { color: C.inkMuted, fontFamily: "Inter_500Medium" }]}>
             Radius:
           </Text>
-          {RADIUS_OPTIONS.map((r) => (
-            <Pressable
-              key={r}
-              onPress={() => setRadiusKm(r)}
-              style={[
-                s.radiusChip,
-                {
-                  backgroundColor: radiusKm === r ? C.coral : C.pill,
-                  borderColor: radiusKm === r ? C.coral : C.border,
-                },
-              ]}
-            >
-              <Text
+          {churchRadiusOptions(distanceUnit).map((option) => {
+            const selected = matchingChurchRadius(radiusKm, distanceUnit) === option;
+            return (
+              <Pressable
+                key={`${distanceUnit}-${option}`}
+                onPress={() => setRadiusKm(churchRadiusToKm(option, distanceUnit))}
                 style={[
-                  s.radiusChipText,
+                  s.radiusChip,
                   {
-                    color: radiusKm === r ? "#fff" : C.inkMuted,
-                    fontFamily: radiusKm === r ? "Inter_600SemiBold" : "Inter_400Regular",
+                    backgroundColor: selected ? C.coral : C.pill,
+                    borderColor: selected ? C.coral : C.border,
                   },
                 ]}
+                testID={`church-connect-radius-${option}`}
               >
-                {distanceUnit === "mi" ? `${Math.round(r / 1.609344)} mi` : `${r} km`}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={[
+                    s.radiusChipText,
+                    {
+                      color: selected ? "#fff" : C.inkMuted,
+                      fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular",
+                    },
+                  ]}
+                >
+                  {distanceUnit === "mi" ? `${option} mi` : `${option} km`}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
 
@@ -784,8 +816,15 @@ const s = StyleSheet.create({
   countryList: { maxHeight: 360 },
   countryName: { fontSize: 15, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   unitToggle: { flexDirection: "row", borderRadius: 8, borderWidth: 1, overflow: "hidden" },
-  unitBtn: { paddingHorizontal: 8, paddingVertical: 5 },
-  unitText: { fontSize: 12 },
+  unitBtn: { paddingHorizontal: 12, paddingVertical: 6 },
+  unitText: { fontSize: 13 },
+  unitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 10,
+  },
   locBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -818,6 +857,7 @@ const s = StyleSheet.create({
   radiusRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     marginHorizontal: 16,
     marginTop: 8,
     gap: 6,

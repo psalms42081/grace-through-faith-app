@@ -4,10 +4,12 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import {
   churchCoverageLine,
+  churchRadiusToKm,
   churchesNearResolvedPlace,
   defaultChurchDistanceUnit,
   formatChurchDistance,
   formatCountryList,
+  matchingChurchRadius,
 } from "../lib/church-finder";
 import {
   GEOCODE_CACHE_TTL_MS,
@@ -36,6 +38,10 @@ describe("church distance units", () => {
     assert.equal(defaultChurchDistanceUnit({ locale: "en-US", resolvedCountry: "United States", override: "km" }), "km");
     assert.equal(formatChurchDistance(15.24, "mi"), "9 mi");
     assert.equal(formatChurchDistance(15.24, "km"), "15 km");
+    assert.equal(Math.round(churchRadiusToKm(25, "mi") * 10) / 10, 40.2);
+    assert.equal(churchRadiusToKm(50, "km"), 50);
+    assert.equal(matchingChurchRadius(50, "km"), 50);
+    assert.equal(matchingChurchRadius(50, "mi"), 25);
   });
 });
 
@@ -125,6 +131,9 @@ describe("church finder screen", () => {
     assert.match(finder, /See countries/);
     assert.match(finder, /@grace-through-faith\/church-distance-unit/);
     assert.match(finder, /church-connect-unit-toggle/);
+    assert.match(finder, /churchRadiusToKm/);
+    assert.match(finder, />\s*Miles\s*</);
+    assert.doesNotMatch(finder, /Math\.round\(r \/ 1\.609344\)/);
     assert.match(finder, /No listed churches near \$\{resolvedPlace\} yet/);
     assert.match(finder, /params\.set\("place"/);
     assert.doesNotMatch(finder, /ip-api|ipapi|geoip/i);
