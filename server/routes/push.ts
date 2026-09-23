@@ -28,6 +28,7 @@ router.get("/api/push/subscription", requireAuth, async (req, res) => {
       endpoint: row.endpoint,
       verseTimeLocal: row.verseTimeLocal,
       ssReminder: row.ssReminder,
+      ssTimeLocal: row.ssTimeLocal,
       timezone: row.timezone,
       web: !isExpoPushEndpoint(row.endpoint),
     })),
@@ -63,6 +64,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
       timezone: preference.timezone,
       verseTimeLocal: preference.verseTimeLocal,
       ssReminder: preference.ssReminder,
+      ssTimeLocal: preference.ssTimeLocal,
     })
     .onConflictDoUpdate({
       target: pushSubscriptions.endpoint,
@@ -72,6 +74,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
         timezone: preference.timezone,
         verseTimeLocal: preference.verseTimeLocal,
         ssReminder: preference.ssReminder,
+        ssTimeLocal: preference.ssTimeLocal,
       },
     });
 
@@ -79,6 +82,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
     subscribed: true,
     verseTimeLocal: preference.verseTimeLocal,
     ssReminder: preference.ssReminder,
+    ssTimeLocal: preference.ssTimeLocal,
     timezone: preference.timezone,
   });
 });

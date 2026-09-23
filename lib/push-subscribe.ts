@@ -11,6 +11,60 @@ export type PushAcquireResult =
   | { ok: true; endpoint: PushEndpoint }
   | { ok: false; reason: "denied" | "unavailable" };
 
+export type WebPermissionStart =
+  | { status: "granted" | "denied" | "unsupported" }
+  | { status: "pending"; pending: Promise<NotificationPermission> };
+
+const PERMISSION_TIMEOUT_MS = 20000;
+const READY_TIMEOUT_MS = 8000;
+const SUBSCRIBE_TIMEOUT_MS = 12000;
+
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+/**
+ * Must be called in the switch press, before any await.
+ * Android Chrome never shows the prompt — and never settles the promise —
+ * when requestPermission runs after an await.
+ */
+export function startWebNotificationPermission(): WebPermissionStart {
+  if (typeof window === "undefined" || typeof Notification === "undefined" || !("serviceWorker" in navigator)) {
+    return { status: "unsupported" };
+  }
+  if (Notification.permission === "granted") return { status: "granted" };
+  if (Notification.permission === "denied") return { status: "denied" };
+  return { status: "pending", pending: Notification.requestPermission() };
+}
+
+export async function settleWebNotificationPermission(
+  start: WebPermissionStart,
+): Promise<"granted" | "denied" | "failed"> {
+  if (start.status === "granted") return "granted";
+  if (start.status === "denied") return "denied";
+  if (start.status === "unsupported") return "failed";
+  try {
+    const result = await withTimeout(start.pending, PERMISSION_TIMEOUT_MS);
+    if (result === "granted") return "granted";
+    if (result === "denied") return "denied";
+    return "failed";
+  } catch {
+    return "failed";
+  }
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -41,7 +95,7 @@ export function notificationPermissionState(): "granted" | "denied" | "default" 
   return Notification.permission;
 }
 
-/** Asks for permission only when a reminder switch is turned on. */
+/** Subscribes after permission is already granted. Does not request permission. */
 export async function acquirePushEndpoint(): Promise<PushAcquireResult> {
   if (Platform.OS === "web") return acquireWebEndpoint();
   return acquireNativeEndpoint();
@@ -52,54 +106,61 @@ async function acquireWebEndpoint(): Promise<PushAcquireResult> {
     return { ok: false, reason: "unavailable" };
   }
   if (Notification.permission === "denied") return { ok: false, reason: "denied" };
-  if (Notification.permission !== "granted") {
-    const permission = await Notification.requestPermission();
-    if (permission === "denied") return { ok: false, reason: "denied" };
-    if (permission !== "granted") return { ok: false, reason: "unavailable" };
-  }
-  const keyResponse = await apiRequest("GET", "/api/push/vapid-public-key");
-  const keyJson = (await keyResponse.json()) as { publicKey?: string };
-  if (!keyJson.publicKey) return { ok: false, reason: "unavailable" };
-  const registration = await navigator.serviceWorker.ready;
-  let subscription = await registration.pushManager.getSubscription();
-  if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey) as BufferSource,
-    });
-  }
-  const json = subscription.toJSON();
-  if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
+  if (Notification.permission !== "granted") return { ok: false, reason: "unavailable" };
+  try {
+    const keyResponse = await withTimeout(apiRequest("GET", "/api/push/vapid-public-key"), READY_TIMEOUT_MS);
+    const keyJson = (await keyResponse.json()) as { publicKey?: string };
+    if (!keyJson.publicKey) return { ok: false, reason: "unavailable" };
+    const registration = await withTimeout(navigator.serviceWorker.ready, READY_TIMEOUT_MS);
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await withTimeout(
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey) as BufferSource,
+        }),
+        SUBSCRIBE_TIMEOUT_MS,
+      );
+    }
+    const json = subscription.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
+      return { ok: false, reason: "unavailable" };
+    }
+    return {
+      ok: true,
+      endpoint: {
+        kind: "web",
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      },
+    };
+  } catch {
     return { ok: false, reason: "unavailable" };
   }
-  return {
-    ok: true,
-    endpoint: {
-      kind: "web",
-      endpoint: json.endpoint,
-      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-    },
-  };
 }
 
 async function acquireNativeEndpoint(): Promise<PushAcquireResult> {
   if (isExpoGo() || isAndroidExpoGo()) return { ok: false, reason: "unavailable" };
-  const mod = await import("expo-notifications");
-  const existing = await mod.getPermissionsAsync();
-  let status = existing.status;
-  if (status !== "granted") {
-    const asked = await mod.requestPermissionsAsync();
-    status = asked.status;
+  try {
+    const mod = await import("expo-notifications");
+    const existing = await mod.getPermissionsAsync();
+    let status = existing.status;
+    if (status !== "granted") {
+      const asked = await withTimeout(mod.requestPermissionsAsync(), PERMISSION_TIMEOUT_MS);
+      status = asked.status;
+    }
+    if (status !== "granted") return { ok: false, reason: "denied" };
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ||
+      (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId ||
+      undefined;
+    if (!projectId) return { ok: false, reason: "unavailable" };
+    const token = await withTimeout(mod.getExpoPushTokenAsync({ projectId }), SUBSCRIBE_TIMEOUT_MS);
+    if (!token.data) return { ok: false, reason: "unavailable" };
+    return { ok: true, endpoint: { kind: "native", endpoint: token.data } };
+  } catch {
+    return { ok: false, reason: "unavailable" };
   }
-  if (status !== "granted") return { ok: false, reason: "denied" };
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ||
-    (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId ||
-    undefined;
-  if (!projectId) return { ok: false, reason: "unavailable" };
-  const token = await mod.getExpoPushTokenAsync({ projectId });
-  if (!token.data) return { ok: false, reason: "unavailable" };
-  return { ok: true, endpoint: { kind: "native", endpoint: token.data } };
 }
 
 /** Reads an existing subscription. Does not request permission. */
@@ -107,7 +168,12 @@ export async function existingPushEndpoint(): Promise<PushEndpoint | null> {
   if (Platform.OS !== "web") return null;
   if (typeof window === "undefined" || typeof Notification === "undefined") return null;
   if (Notification.permission !== "granted" || !("serviceWorker" in navigator)) return null;
-  const registration = await navigator.serviceWorker.getRegistration();
+  let registration: ServiceWorkerRegistration | undefined;
+  try {
+    registration = await withTimeout(navigator.serviceWorker.getRegistration(), READY_TIMEOUT_MS);
+  } catch {
+    return null;
+  }
   const subscription = await registration?.pushManager.getSubscription();
   const json = subscription?.toJSON();
   if (!json?.endpoint || !json.keys?.p256dh || !json.keys.auth) return null;
@@ -122,14 +188,23 @@ export async function currentWebEndpoint(): Promise<string | null> {
   if (Platform.OS !== "web" || typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
     return null;
   }
-  const registration = await navigator.serviceWorker.getRegistration();
-  const subscription = await registration?.pushManager.getSubscription();
-  return subscription?.endpoint ?? null;
+  try {
+    const registration = await withTimeout(navigator.serviceWorker.getRegistration(), READY_TIMEOUT_MS);
+    const subscription = await registration?.pushManager.getSubscription();
+    return subscription?.endpoint ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function dropWebPushSubscription(endpoint: string | null): Promise<void> {
   if (Platform.OS !== "web" || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-  const registration = await navigator.serviceWorker.getRegistration();
+  let registration: ServiceWorkerRegistration | undefined;
+  try {
+    registration = await withTimeout(navigator.serviceWorker.getRegistration(), READY_TIMEOUT_MS);
+  } catch {
+    return;
+  }
   const subscription = await registration?.pushManager.getSubscription();
   if (subscription && (!endpoint || subscription.endpoint === endpoint)) {
     await subscription.unsubscribe();

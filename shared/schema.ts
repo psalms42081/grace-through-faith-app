@@ -2840,6 +2840,7 @@ export const pushSubscriptions = pgTable(
     timezone: text("timezone").notNull().default("UTC"),
     verseTimeLocal: text("verse_time_local"),
     ssReminder: boolean("ss_reminder").notNull().default(false),
+    ssTimeLocal: text("ss_time_local"),
     lastVerseLocalDate: text("last_verse_local_date"),
     lastSsLocalDate: text("last_ss_local_date"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

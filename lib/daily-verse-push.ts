@@ -4,6 +4,9 @@ import { getTodaysVerse } from "@/components/home-v2/home-data";
 export const NOTIFICATIONS_BLOCKED_MESSAGE =
   "Notifications are blocked for this site — enable them in your browser settings";
 
+export const NOTIFICATIONS_SETUP_FAILED_MESSAGE =
+  "Couldn't set up notifications — try again";
+
 export const DAILY_VERSE_PUSH_WINDOW_MINUTES = 15;
 /** Friday, local time. */
 export const SABBATH_SCHOOL_PUSH_WEEKDAY = 5;
@@ -30,6 +33,7 @@ export type PushScheduleRow = {
   timezone: string;
   verseTimeLocal: string | null;
   ssReminder: boolean;
+  ssTimeLocal?: string | null;
   lastVerseLocalDate: string | null;
   lastSsLocalDate: string | null;
 };
@@ -193,7 +197,7 @@ export function duePushKinds(row: PushScheduleRow, now: Date): DuePushKind[] {
     row.ssReminder &&
     clock.weekday === SABBATH_SCHOOL_PUSH_WEEKDAY &&
     row.lastSsLocalDate !== clock.dateKey &&
-    fallsInCurrentWindow(clock.minutes, SABBATH_SCHOOL_PUSH_TIME)
+    fallsInCurrentWindow(clock.minutes, row.ssTimeLocal || SABBATH_SCHOOL_PUSH_TIME)
   ) {
     due.push("sabbath");
   }

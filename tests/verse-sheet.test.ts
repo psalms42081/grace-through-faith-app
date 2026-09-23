@@ -109,8 +109,11 @@ describe("verse sheet wiring", () => {
     assert.match(sheet, /title="Words"/);
     assert.match(sheet, /title="Classic Commentators"/);
     assert.match(sheet, /title="Cross-references"/);
-    assert.match(sheet, /title="Ellen White"/);
+    assert.match(sheet, /title="Ellen White & Pioneers"/);
+    assert.match(sheet, /row\.kind === "egw"/);
+    assert.match(sheet, /sabbathSchool\?\.title \?/);
     assert.match(sheet, /title="Sabbath School"/);
+    assert.match(sheet, /paddingTop: 28/);
     assert.match(sheet, /title="See also"/);
     assert.match(sheet, /\/verse-map\/generate/);
     assert.match(sheet, /Explain This Verse/);

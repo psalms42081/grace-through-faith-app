@@ -3,6 +3,7 @@ import { and, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { APP_CONTACT_EMAIL } from "../../constants/app";
 import { bibleBookNamesMatch } from "../../components/home-v2/home-data";
 import {
+  SABBATH_SCHOOL_PUSH_TIME,
   dailyVerseNotification,
   duePushKinds,
   isExpoPushEndpoint,
@@ -278,6 +279,7 @@ export async function runDueDailyVersePushes(now = new Date()): Promise<{
             timezone: row.timezone,
             verseTimeLocal: row.verseTimeLocal,
             ssReminder: row.ssReminder,
+            ssTimeLocal: row.ssTimeLocal,
             lastVerseLocalDate: row.lastVerseLocalDate,
             lastSsLocalDate: row.lastSsLocalDate,
           },
@@ -355,6 +357,7 @@ export function readPushPreference(body: unknown): {
   timezone: string;
   verseTimeLocal: string | null;
   ssReminder: boolean;
+  ssTimeLocal: string | null;
 } | null {
   if (!body || typeof body !== "object") return null;
   const record = body as {
@@ -363,6 +366,7 @@ export function readPushPreference(body: unknown): {
     timezone?: unknown;
     verseTimeLocal?: unknown;
     ssReminder?: unknown;
+    ssTimeLocal?: unknown;
   };
   if (typeof record.endpoint !== "string" || !record.endpoint.trim()) return null;
   const timezone = typeof record.timezone === "string" && record.timezone.trim()
@@ -382,11 +386,21 @@ export function readPushPreference(body: unknown): {
     if (typeof keyRecord.p256dh !== "string" || typeof keyRecord.auth !== "string") return null;
     keys = { p256dh: keyRecord.p256dh, auth: keyRecord.auth };
   }
+  const ssReminder = record.ssReminder === true;
+  let ssTimeLocal: string | null = null;
+  if (record.ssTimeLocal != null) {
+    if (typeof record.ssTimeLocal !== "string") return null;
+    ssTimeLocal = normalizeHm(record.ssTimeLocal);
+    if (!ssTimeLocal) return null;
+  } else if (ssReminder) {
+    ssTimeLocal = SABBATH_SCHOOL_PUSH_TIME;
+  }
   return {
     endpoint: record.endpoint.trim(),
     keys,
     timezone,
     verseTimeLocal,
-    ssReminder: record.ssReminder === true,
+    ssReminder,
+    ssTimeLocal,
   };
 }

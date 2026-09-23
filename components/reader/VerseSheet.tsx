@@ -240,8 +240,16 @@ export function VerseSheet({
   ).current;
 
   const commentators = contextQuery.data?.commentators ?? [];
-  const ellenWhite = contextQuery.data?.ellenWhite ?? [];
-  const sabbathSchool = contextQuery.data?.sabbathSchool ?? null;
+  const ellenWhite = useMemo(() => {
+    const rows = contextQuery.data?.ellenWhite ?? [];
+    return [
+      ...rows.filter((row) => row.kind === "egw"),
+      ...rows.filter((row) => row.kind !== "egw"),
+    ];
+  }, [contextQuery.data?.ellenWhite]);
+  const sabbathSchool = contextQuery.data?.sabbathSchool?.title
+    ? contextQuery.data.sabbathSchool
+    : null;
   const crossRefs = (xrefQuery.data?.relatedVerses ?? xrefQuery.data?.crossReferences ?? []).filter(
     (row) => row.ref,
   );
@@ -497,7 +505,7 @@ export function VerseSheet({
             ) : null}
 
             {ellenWhite.length > 0 ? (
-              <CollapsibleSection title="Ellen White" testID="reader-verse-sheet-egw">
+              <CollapsibleSection title="Ellen White & Pioneers" testID="reader-verse-sheet-egw">
                 {ellenWhite.map((row) => (
                   <Pressable
                     key={`${row.hrefKind}-${row.id}`}
@@ -522,7 +530,7 @@ export function VerseSheet({
               </CollapsibleSection>
             ) : null}
 
-            {sabbathSchool ? (
+            {sabbathSchool?.title ? (
               <CollapsibleSection title="Sabbath School" testID="reader-verse-sheet-ss">
                 <Pressable
                   onPress={() =>
@@ -625,7 +633,9 @@ const s = StyleSheet.create({
     shadowRadius: 12,
   },
   expandedScroll: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 0,
   },
   handleHit: {
     alignItems: "center",
@@ -661,6 +671,8 @@ const s = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 6,
     paddingBottom: 4,
+    backgroundColor: "#FFFFFF",
+    zIndex: 2,
   },
   colorRow: {
     flexDirection: "row",
@@ -748,7 +760,7 @@ const s = StyleSheet.create({
   },
   expandedBody: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 28,
     paddingBottom: 20,
     gap: 4,
   },

@@ -4,11 +4,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { PathBSwitch } from "@/components/settings/PathBSwitch";
-import { useToast } from "@/contexts/ToastContext";
 import { apiRequest } from "@/lib/query-client";
 import {
   DEFAULT_VERSE_PUSH_TIME,
   NOTIFICATIONS_BLOCKED_MESSAGE,
+  NOTIFICATIONS_SETUP_FAILED_MESSAGE,
+  SABBATH_SCHOOL_PUSH_TIME,
   formatVerseTimeLabel,
   normalizeHm,
 } from "@/lib/daily-verse-push";
@@ -19,13 +20,17 @@ import {
   dropWebPushSubscription,
   existingPushEndpoint,
   notificationPermissionState,
+  settleWebNotificationPermission,
+  startWebNotificationPermission,
   type PushEndpoint,
+  type WebPermissionStart,
 } from "@/lib/push-subscribe";
 
 type StoredSubscription = {
   endpoint: string;
   verseTimeLocal: string | null;
   ssReminder: boolean;
+  ssTimeLocal: string | null;
   timezone: string;
   web: boolean;
 };
@@ -46,13 +51,14 @@ function shiftTime(value: string, deltaMinutes: number): string {
 
 export default function NotificationSettings() {
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
   const permission = notificationPermissionState();
   const [blocked, setBlocked] = useState(permission === "denied");
+  const [setupFailed, setSetupFailed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [timeOpen, setTimeOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState<"verse" | "sabbath" | null>(null);
   const [draftTime, setDraftTime] = useState(DEFAULT_VERSE_PUSH_TIME);
   const [localTime, setLocalTime] = useState(DEFAULT_VERSE_PUSH_TIME);
+  const [localSsTime, setLocalSsTime] = useState(SABBATH_SCHOOL_PUSH_TIME);
   const [browserEndpoint, setBrowserEndpoint] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,10 +73,25 @@ export default function NotificationSettings() {
   const verseOn = Boolean(mine?.verseTimeLocal);
   const ssOn = Boolean(mine?.ssReminder);
   const verseTime = mine?.verseTimeLocal ?? localTime;
+  const ssTime = mine?.ssTimeLocal ?? localSsTime;
+  const notice = blocked
+    ? Platform.OS === "web"
+      ? NOTIFICATIONS_BLOCKED_MESSAGE
+      : "Notifications are blocked — enable them in your device settings."
+    : setupFailed
+      ? NOTIFICATIONS_SETUP_FAILED_MESSAGE
+      : null;
+
+  function markFailure(kind: "denied" | "failed") {
+    setBlocked(kind === "denied");
+    setSetupFailed(kind === "failed");
+  }
 
   async function save(next: {
     verseTimeLocal: string | null;
     ssReminder: boolean;
+    ssTimeLocal: string | null;
+    permission: WebPermissionStart | null;
     endpoint?: PushEndpoint | null;
   }) {
     const endpoint = next.endpoint ?? null;
@@ -83,12 +104,22 @@ export default function NotificationSettings() {
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       return;
     }
+    if (Platform.OS === "web") {
+      if (!next.permission) {
+        markFailure("failed");
+        return;
+      }
+      const settled = await settleWebNotificationPermission(next.permission);
+      if (settled !== "granted") {
+        markFailure(settled === "denied" ? "denied" : "failed");
+        return;
+      }
+    }
     let acquired = endpoint ?? (await existingPushEndpoint());
     if (!acquired) {
       const result = await acquirePushEndpoint();
       if (!result.ok) {
-        if (result.reason === "denied") setBlocked(true);
-        else showToast("Notifications are not available on this device", "error");
+        markFailure(result.reason === "denied" ? "denied" : "failed");
         return;
       }
       acquired = result.endpoint;
@@ -99,64 +130,106 @@ export default function NotificationSettings() {
       timezone: deviceTimeZone(),
       verseTimeLocal: next.verseTimeLocal,
       ssReminder: next.ssReminder,
+      ssTimeLocal: next.ssReminder ? next.ssTimeLocal : null,
     });
     setBlocked(false);
+    setSetupFailed(false);
     await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
   }
 
-  async function onVerseChange(enabled: boolean) {
+  async function commit(
+    next: { verseTimeLocal: string | null; ssReminder: boolean; ssTimeLocal: string | null },
+    permission: WebPermissionStart | null,
+  ) {
     if (busy) return;
     setBusy(true);
     try {
-      await save({
-        verseTimeLocal: enabled ? verseTime : null,
-        ssReminder: ssOn,
-      });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not update notifications", "error");
+      await save({ ...next, permission });
+    } catch {
+      markFailure("failed");
     } finally {
       setBusy(false);
     }
   }
 
-  async function onSabbathChange(enabled: boolean) {
+  function onVerseChange(enabled: boolean) {
     if (busy) return;
-    setBusy(true);
-    try {
-      await save({
+    setSetupFailed(false);
+    const permission = enabled && Platform.OS === "web" ? startWebNotificationPermission() : null;
+    if (permission?.status === "denied") {
+      markFailure("denied");
+      return;
+    }
+    void commit(
+      {
+        verseTimeLocal: enabled ? verseTime : null,
+        ssReminder: ssOn,
+        ssTimeLocal: ssOn ? ssTime : null,
+      },
+      permission,
+    );
+  }
+
+  function onSabbathChange(enabled: boolean) {
+    if (busy) return;
+    setSetupFailed(false);
+    const permission = enabled && Platform.OS === "web" ? startWebNotificationPermission() : null;
+    if (permission?.status === "denied") {
+      markFailure("denied");
+      return;
+    }
+    void commit(
+      {
         verseTimeLocal: verseOn ? verseTime : null,
         ssReminder: enabled,
-      });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not update notifications", "error");
-    } finally {
-      setBusy(false);
-    }
+        ssTimeLocal: enabled ? ssTime : null,
+      },
+      permission,
+    );
   }
 
   async function applyTime(nextTime: string) {
-    const normalized = normalizeHm(nextTime) ?? DEFAULT_VERSE_PUSH_TIME;
-    setLocalTime(normalized);
-    setTimeOpen(false);
-    if (!verseOn) return;
-    setBusy(true);
-    try {
-      await save({ verseTimeLocal: normalized, ssReminder: ssOn });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not update the time", "error");
-    } finally {
-      setBusy(false);
+    const picker = timeOpen;
+    const fallback = picker === "sabbath" ? SABBATH_SCHOOL_PUSH_TIME : DEFAULT_VERSE_PUSH_TIME;
+    const normalized = normalizeHm(nextTime) ?? fallback;
+    setTimeOpen(null);
+    if (picker === "sabbath") {
+      setLocalSsTime(normalized);
+      if (!ssOn) return;
+      const permission = Platform.OS === "web" ? startWebNotificationPermission() : null;
+      if (permission?.status === "denied") {
+        markFailure("denied");
+        return;
+      }
+      await commit(
+        { verseTimeLocal: verseOn ? verseTime : null, ssReminder: true, ssTimeLocal: normalized },
+        permission,
+      );
+      return;
     }
+    setLocalTime(normalized);
+    if (!verseOn) return;
+    const permission = Platform.OS === "web" ? startWebNotificationPermission() : null;
+    if (permission?.status === "denied") {
+      markFailure("denied");
+      return;
+    }
+    await commit(
+      {
+        verseTimeLocal: normalized,
+        ssReminder: ssOn,
+        ssTimeLocal: ssOn ? ssTime : null,
+      },
+      permission,
+    );
   }
 
   return (
     <View style={styles.section} testID="profile-notifications-section">
       <Text style={styles.heading}>Notifications</Text>
-      {blocked ? (
+      {notice ? (
         <Text style={styles.blocked} testID="profile-notifications-blocked">
-          {Platform.OS === "web"
-            ? NOTIFICATIONS_BLOCKED_MESSAGE
-            : "Notifications are blocked — enable them in your device settings."}
+          {notice}
         </Text>
       ) : null}
       <View style={styles.row}>
@@ -167,9 +240,7 @@ export default function NotificationSettings() {
         {busy ? <ActivityIndicator color={PathB.coral} /> : null}
         <PathBSwitch
           value={verseOn}
-          onValueChange={(value) => {
-            void onVerseChange(value);
-          }}
+          onValueChange={onVerseChange}
           disabled={busy}
           testID="profile-daily-verse-switch"
         />
@@ -178,7 +249,7 @@ export default function NotificationSettings() {
         style={styles.timeRow}
         onPress={() => {
           setDraftTime(verseTime);
-          setTimeOpen(true);
+          setTimeOpen("verse");
         }}
         testID="profile-daily-verse-time"
       >
@@ -188,21 +259,30 @@ export default function NotificationSettings() {
       <View style={styles.row}>
         <View style={styles.copy}>
           <Text style={styles.title}>Sabbath School reminder</Text>
-          <Text style={styles.meta}>Friday at 6:00 pm, your time</Text>
+          <Text style={styles.meta}>Friday, your time</Text>
         </View>
         <PathBSwitch
           value={ssOn}
-          onValueChange={(value) => {
-            void onSabbathChange(value);
-          }}
+          onValueChange={onSabbathChange}
           disabled={busy}
           testID="profile-ss-reminder-switch"
         />
       </View>
-      <Modal visible={timeOpen} transparent animationType="fade" onRequestClose={() => setTimeOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setTimeOpen(false)}>
+      <Pressable
+        style={styles.timeRow}
+        onPress={() => {
+          setDraftTime(ssTime);
+          setTimeOpen("sabbath");
+        }}
+        testID="profile-ss-reminder-time"
+      >
+        <Text style={styles.meta}>Friday</Text>
+        <Text style={styles.timeValue}>{formatVerseTimeLabel(ssTime)}</Text>
+      </Pressable>
+      <Modal visible={timeOpen !== null} transparent animationType="fade" onRequestClose={() => setTimeOpen(null)}>
+        <Pressable style={styles.backdrop} onPress={() => setTimeOpen(null)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.title}>Daily verse time</Text>
+            <Text style={styles.title}>{timeOpen === "sabbath" ? "Friday reminder" : "Daily verse time"}</Text>
             <Text style={styles.timeLarge} testID="profile-daily-verse-time-value">
               {formatVerseTimeLabel(draftTime)}
             </Text>
