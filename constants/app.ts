@@ -15,10 +15,10 @@ export const APP_PUBLIC_ORIGINS = [
 ] as const;
 
 /** Stripe-hosted giving page. Empty hides the online card. Opened in the system browser. */
-export const STRIPE_GIVING_URL = "";
-
+export const STRIPE_GIVING_URL = "https://buy.stripe.com/14A4gzbSGcF53VwbAP5sA00";
 /** Bank transfer details. Empty values are omitted; the card hides when all four are empty. */
-export const GIVING_BANK_NAME = "luis Bermudez";
+export const GIVING_BANK_NAME = "Luis Bermudez";
 export const GIVING_BANK_BSB = "182-182";
-export const GIVING_BANK_ACCOUNT = "001-223585";
+export const GIVING_BANK_ACCOUNT = "001223585";
 export const GIVING_ABN = "39 741 036 497";
+
