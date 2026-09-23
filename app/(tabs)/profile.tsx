@@ -31,6 +31,7 @@ import { displayInitials } from "@/lib/user-initials";
 import ProfileGroupsSection from "@/components/bible-groups/ProfileGroupsSection";
 import { shareInformedMinistries } from "@/lib/share-app";
 import NotificationSettings from "@/components/profile/NotificationSettings";
+import ReportProblem from "@/components/profile/ReportProblem";
 
 const C = {
   surface: PathB.surface,
@@ -722,6 +723,15 @@ function ProfileScreenInner() {
           <Text style={{ color: C.inkMuted, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
             About
           </Text>
+          <View style={st.aboutNameRow} testID="profile-about-app-name">
+            <Text style={[st.aboutAppName, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>
+              Informed Ministries
+            </Text>
+            <View style={[st.betaChip, { backgroundColor: C.coral }]} testID="profile-beta-chip">
+              <Text style={st.betaChipText}>Beta</Text>
+            </View>
+          </View>
+          <ReportProblem />
           <ListItem
             icon="share-outline"
             iconColor={C.coral}
@@ -1132,6 +1142,25 @@ const st = StyleSheet.create({
   sectionPad: {
     paddingHorizontal: 24,
     marginBottom: 24,
+  },
+  aboutNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  aboutAppName: {
+    fontSize: 16,
+  },
+  betaChip: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  betaChipText: {
+    color: "#fff",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
   },
   sectionTitle: { fontSize: 21, marginBottom: 16, letterSpacing: -0.1 },
   orgCard: {

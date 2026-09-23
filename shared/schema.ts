@@ -2061,6 +2061,20 @@ export const userFeedback = pgTable("user_feedback", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const feedback = pgTable("feedback", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  message: text("message").notNull(),
+  screen: varchar("screen", { length: 32 }).notNull(),
+  device: text("device"),
+  email: varchar("email", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  createdAtIdx: index("feedback_created_at_idx").on(table.createdAt),
+}));
+
 // ─── DEVICE TOKENS (Push Notifications) ──────────────────────────────────────
 
 export const deviceTokens = pgTable(
