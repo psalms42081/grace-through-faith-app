@@ -35,6 +35,7 @@ import { useKidsMode } from "@/context/KidsModeContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getHomeLocalDay, getTodaysReflection } from "@/components/home-v2/home-data";
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { useToast } from "@/contexts/ToastContext";
 import { useSabbath } from "@/lib/sabbath";
@@ -1372,16 +1373,6 @@ const VERSE_BACKGROUNDS = [
   "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
 ];
 
-const DAILY_REFLECTIONS = [
-  { thought: "Grace is not a doctrine to be memorised but a Person to be embraced. Today, let Christ's unmerited favour reshape every anxious thought.", source: "Reflection on Ephesians 2:8-9" },
-  { thought: "The cross does not merely pardon the past; it empowers the present. Walk today in the strength of the One who conquered death.", source: "Reflection on Galatians 2:20" },
-  { thought: "Sabbath rest is heaven's rhythm set in time \u2014 a weekly reminder that our worth is not in what we produce but in Whose we are.", source: "Reflection on Exodus 20:8-11" },
-  { thought: "Prayer is not convincing God to act; it is aligning our hearts with the One who is already working all things for good.", source: "Reflection on Romans 8:28" },
-  { thought: "When we behold Christ, we become like Him \u2014 not by straining to imitate, but by gazing until His character becomes our own.", source: "Reflection on 2 Corinthians 3:18" },
-  { thought: "Hope is not wishful thinking. It is the anchor of the soul, fastened to the promise of a God who cannot lie.", source: "Reflection on Hebrews 6:19" },
-  { thought: "Love your neighbour not because they deserve it, but because you have been loved beyond all deserving. Grace received becomes grace given.", source: "Reflection on 1 John 4:19" },
-];
-
 const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
 
 function AdultHomeScreen() {
@@ -1535,10 +1526,8 @@ function AdultHomeScreen() {
   });
 
   const todayReflection = useMemo(() => {
-    const dayOfYear = Math.floor(
-      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-    );
-    return DAILY_REFLECTIONS[dayOfYear % DAILY_REFLECTIONS.length];
+    const item = getTodaysReflection(getHomeLocalDay().dayIndex);
+    return { thought: item.thought, source: `Reflection on ${item.reference}` };
   }, []);
 
   const { data: todayData } = useQuery<TodayResponse>({

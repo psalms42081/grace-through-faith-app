@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import ReminderTimeField from "@/components/profile/ReminderTimeField";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
@@ -10,7 +11,6 @@ import {
   NOTIFICATIONS_BLOCKED_MESSAGE,
   NOTIFICATIONS_SETUP_FAILED_MESSAGE,
   SABBATH_SCHOOL_PUSH_TIME,
-  formatVerseTimeLabel,
   normalizeHm,
 } from "@/lib/daily-verse-push";
 import {
@@ -42,21 +42,12 @@ type SubscriptionResponse = {
 
 const QUERY_KEY = ["/api/push/subscription"];
 
-function shiftTime(value: string, deltaMinutes: number): string {
-  const normalized = normalizeHm(value) ?? DEFAULT_VERSE_PUSH_TIME;
-  const [hour, minute] = normalized.split(":").map(Number);
-  const total = (hour * 60 + minute + deltaMinutes + 24 * 60) % (24 * 60);
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
-
 export default function NotificationSettings() {
   const queryClient = useQueryClient();
   const permission = notificationPermissionState();
   const [blocked, setBlocked] = useState(permission === "denied");
   const [setupFailed, setSetupFailed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [timeOpen, setTimeOpen] = useState<"verse" | "sabbath" | null>(null);
-  const [draftTime, setDraftTime] = useState(DEFAULT_VERSE_PUSH_TIME);
   const [localTime, setLocalTime] = useState(DEFAULT_VERSE_PUSH_TIME);
   const [localSsTime, setLocalSsTime] = useState(SABBATH_SCHOOL_PUSH_TIME);
   const [browserEndpoint, setBrowserEndpoint] = useState<string | null>(null);
@@ -240,12 +231,10 @@ export default function NotificationSettings() {
     );
   }
 
-  async function applyTime(nextTime: string) {
-    const picker = timeOpen;
-    const fallback = picker === "sabbath" ? SABBATH_SCHOOL_PUSH_TIME : DEFAULT_VERSE_PUSH_TIME;
+  async function applyTime(which: "verse" | "sabbath", nextTime: string) {
+    const fallback = which === "sabbath" ? SABBATH_SCHOOL_PUSH_TIME : DEFAULT_VERSE_PUSH_TIME;
     const normalized = normalizeHm(nextTime) ?? fallback;
-    setTimeOpen(null);
-    if (picker === "sabbath") {
+    if (which === "sabbath") {
       setLocalSsTime(normalized);
       if (!ssOn) return;
       await commit(
@@ -290,17 +279,12 @@ export default function NotificationSettings() {
           testID="profile-daily-verse-switch"
         />
       </View>
-      <Pressable
-        style={styles.timeRow}
-        onPress={() => {
-          setDraftTime(verseTime);
-          setTimeOpen("verse");
-        }}
+      <ReminderTimeField
+        label="Time"
+        value={verseTime}
         testID="profile-daily-verse-time"
-      >
-        <Text style={styles.meta}>Time</Text>
-        <Text style={styles.timeValue}>{formatVerseTimeLabel(verseTime)}</Text>
-      </Pressable>
+        onCommit={(next) => void applyTime("verse", next)}
+      />
       <View style={styles.row}>
         <View style={styles.copy}>
           <Text style={styles.title}>Sabbath School reminder</Text>
@@ -314,44 +298,12 @@ export default function NotificationSettings() {
           testID="profile-ss-reminder-switch"
         />
       </View>
-      <Pressable
-        style={styles.timeRow}
-        onPress={() => {
-          setDraftTime(ssTime);
-          setTimeOpen("sabbath");
-        }}
+      <ReminderTimeField
+        label="Friday"
+        value={ssTime}
         testID="profile-ss-reminder-time"
-      >
-        <Text style={styles.meta}>Friday</Text>
-        <Text style={styles.timeValue}>{formatVerseTimeLabel(ssTime)}</Text>
-      </Pressable>
-      <Modal visible={timeOpen !== null} transparent animationType="fade" onRequestClose={() => setTimeOpen(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setTimeOpen(null)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.title}>{timeOpen === "sabbath" ? "Friday reminder" : "Daily verse time"}</Text>
-            <Text style={styles.timeLarge} testID="profile-daily-verse-time-value">
-              {formatVerseTimeLabel(draftTime)}
-            </Text>
-            <View style={styles.steppers}>
-              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, -60))} testID="profile-verse-hour-down">
-                <Text style={styles.stepLabel}>−1 hour</Text>
-              </Pressable>
-              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, 60))} testID="profile-verse-hour-up">
-                <Text style={styles.stepLabel}>+1 hour</Text>
-              </Pressable>
-              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, -15))} testID="profile-verse-minute-down">
-                <Text style={styles.stepLabel}>−15 min</Text>
-              </Pressable>
-              <Pressable style={styles.step} onPress={() => setDraftTime(shiftTime(draftTime, 15))} testID="profile-verse-minute-up">
-                <Text style={styles.stepLabel}>+15 min</Text>
-              </Pressable>
-            </View>
-            <Pressable style={styles.save} onPress={() => void applyTime(draftTime)} testID="profile-daily-verse-time-save">
-              <Text style={styles.saveLabel}>Save time</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onCommit={(next) => void applyTime("sabbath", next)}
+      />
     </View>
   );
 }
@@ -377,45 +329,4 @@ const styles = StyleSheet.create({
   copy: { flex: 1 },
   title: { color: PathB.ink, fontSize: 16, fontFamily: "Inter_600SemiBold" },
   meta: { color: HV2.inkMutedText, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" },
-  timeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    marginBottom: 4,
-  },
-  timeValue: { color: PathB.ink, fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(42, 36, 24, 0.35)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: PathB.surface,
-    padding: 24,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  timeLarge: {
-    color: PathB.ink,
-    fontSize: 32,
-    fontFamily: "Lora_700Bold",
-    marginVertical: 12,
-  },
-  steppers: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  step: {
-    backgroundColor: PathB.surfaceCard,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  stepLabel: { color: PathB.ink, fontFamily: "Inter_600SemiBold" },
-  save: {
-    marginTop: 16,
-    backgroundColor: PathB.coral,
-    borderRadius: 14,
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  saveLabel: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 16 },
 });

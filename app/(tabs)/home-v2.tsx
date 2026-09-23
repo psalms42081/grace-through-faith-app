@@ -16,7 +16,6 @@ import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 
 import { HV2 } from "@/components/home-v2/theme";
 import {
-  formatGreeting,
   getHomeLocalDay,
   getTodaysReflection,
   getTodaysVerse,
@@ -97,15 +96,12 @@ export default function HomeV2Screen() {
   const localDay = useMemo(() => getHomeLocalDay(clock), [clock]);
   const { dateLine, dayLabel } = localDay;
 
-  const greeting = useMemo(() => {
-    const g =
-      localDay.daypart === "morning"
-        ? t("home.goodMorning")
-        : localDay.daypart === "afternoon"
-          ? t("home.goodAfternoon")
-          : t("home.goodEvening");
-    return formatGreeting(g, user?.displayName);
-  }, [localDay.daypart, t, user?.displayName]);
+  const greetingBase =
+    localDay.daypart === "morning"
+      ? t("home.goodMorning")
+      : localDay.daypart === "afternoon"
+        ? t("home.goodAfternoon")
+        : t("home.goodEvening");
 
   const reflection = useMemo(
     () => getTodaysReflection(localDay.dayIndex),
@@ -401,7 +397,8 @@ export default function HomeV2Screen() {
     >
       <HomeHeader
         dateLine={dateLine}
-        greeting={greeting}
+        greetingBase={greetingBase}
+        displayName={user?.displayName}
         streak={streak}
         onKidsPress={() => setShowChildPicker(true)}
       />

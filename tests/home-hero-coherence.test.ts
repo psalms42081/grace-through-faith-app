@@ -3,10 +3,13 @@ import { readFileSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
 import {
   assertReflectionReadingAlignment,
+  DAILY_REFLECTIONS,
   formatGreeting,
   getHomeLocalDay,
   getTodaysReflection,
+  greetingThatFits,
   parseBibleReference,
+  REFLECTION_REPEAT_GAP_DAYS,
 } from "../components/home-v2/home-data";
 import {
   SIGNPOST_SHARE_ORIGIN,
@@ -60,6 +63,40 @@ describe("Home hero coherence", () => {
     assert.equal(formatGreeting("Good morning", ""), "Good morning.");
     assert.equal(formatGreeting("Good morning", "..."), "Good morning.");
     assert.equal(formatGreeting("Good morning", "  Joe Example  "), "Good morning, Joe");
+    assert.equal(greetingThatFits("Good morning", "Joe", 180, 220), "Good morning, Joe");
+    assert.equal(greetingThatFits("Good morning", "Josephine", 280, 200), "Good morning.");
+    assert.equal(greetingThatFits("Good morning", null, 280, 200), "Good morning.");
+  });
+
+  it("keeps a seeded reflection from repeating within one full pass of the pool", () => {
+    assert.equal(DAILY_REFLECTIONS.length, 84);
+    assert.equal(REFLECTION_REPEAT_GAP_DAYS, DAILY_REFLECTIONS.length);
+    const references = DAILY_REFLECTIONS.map((item) => item.reference);
+    assert.equal(new Set(references).size, references.length);
+    const thoughts = DAILY_REFLECTIONS.map((item) => item.thought);
+    assert.equal(new Set(thoughts).size, thoughts.length);
+    for (const item of DAILY_REFLECTIONS) {
+      assert.doesNotThrow(() => parseBibleReference(item.reference));
+    }
+    for (let start = 1; start <= 400; start += 1) {
+      const seen = new Set<string>();
+      for (let offset = 0; offset < REFLECTION_REPEAT_GAP_DAYS; offset += 1) {
+        const thought = getTodaysReflection(start + offset).thought;
+        assert.equal(seen.has(thought), false, `day ${start + offset} repeats ${thought}`);
+        seen.add(thought);
+      }
+    }
+    const header = readFileSync(
+      new URL("../components/home-v2/HomeHeader.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(header, /greetingThatFits/);
+    assert.doesNotMatch(header, /numberOfLines/);
+    assert.doesNotMatch(header, /ellipsizeMode/);
+    assert.doesNotMatch(
+      readFileSync(new URL("../components/home-v2/HeroCard.tsx", import.meta.url), "utf8"),
+      /AIGeneratedLabel/,
+    );
   });
 
   it("parses multi-word reflection references and fails loudly on CTA drift", () => {

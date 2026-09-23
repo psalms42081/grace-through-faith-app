@@ -57,14 +57,15 @@ export function normalizeHm(value: string): string | null {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-export function formatVerseTimeLabel(value: string): string {
+export function formatVerseTimeLabel(value: string, locales?: Intl.LocalesArgument): string {
   const minutes = parseHmToMinutes(value);
   if (minutes === null) return value;
   const hour24 = Math.floor(minutes / 60);
   const minute = minutes % 60;
-  const suffix = hour24 < 12 ? "am" : "pm";
-  const hour12 = hour24 % 12 || 12;
-  return `${hour12}:${String(minute).padStart(2, "0")} ${suffix}`;
+  return new Intl.DateTimeFormat(locales, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(2000, 0, 1, hour24, minute));
 }
 
 export function zonedClock(now: Date, timeZone: string): ZonedClock | null {

@@ -1,24 +1,51 @@
-import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import { formatGreeting, greetingThatFits } from "./home-data";
 import { HV2, F } from "./theme";
 
 interface Props {
   dateLine: string;
-  greeting: string; // "Good evening, Joe"
+  greetingBase: string;
+  displayName?: string | null;
   streak: number;
   onKidsPress: () => void;
 }
 
-export default function HomeHeader({ dateLine, greeting, streak, onKidsPress }: Props) {
+function nodeWidth(node: unknown): number {
+  const element = node as { getBoundingClientRect?: () => { width: number } } | null;
+  const width = element?.getBoundingClientRect?.()?.width ?? 0;
+  return Number.isFinite(width) ? width : 0;
+}
+
+export default function HomeHeader({ dateLine, greetingBase, displayName, streak, onKidsPress }: Props) {
+  const measureRef = useRef<Text>(null);
+  const slotRef = useRef<View>(null);
+  const [slotWidth, setSlotWidth] = useState(0);
+  const [namedWidth, setNamedWidth] = useState(0);
+  const greeting = greetingThatFits(greetingBase, displayName, namedWidth, slotWidth);
+
+  useEffect(() => {
+    let cancelled = false;
+    const measure = () => {
+      const named = nodeWidth(measureRef.current);
+      const slot = nodeWidth(slotRef.current);
+      if (cancelled) return;
+      if (named > 0) setNamedWidth(named);
+      if (slot > 0) setSlotWidth(slot);
+    };
+    measure();
+    const fonts = (globalThis as { document?: { fonts?: { ready: Promise<unknown> } } }).document?.fonts;
+    void fonts?.ready.then(measure);
+    return () => {
+      cancelled = true;
+    };
+  }, [greetingBase, displayName]);
+
   return (
-    <View style={s.row}>
-      <View style={s.left}>
+    <View style={s.wrap}>
+      <View style={s.row}>
         <Text style={s.date}>{dateLine}</Text>
-        <Text style={s.greeting} numberOfLines={1} testID="home-greeting">
-          {greeting}
-        </Text>
-      </View>
-      <View style={s.right}>
+        <View style={s.right}>
         <Pressable
           style={s.pill}
           onPress={onKidsPress}
@@ -34,24 +61,54 @@ export default function HomeHeader({ dateLine, greeting, streak, onKidsPress }: 
           <Text style={s.pillEmoji}>🔥</Text>
           <Text style={s.streakCount}>{streak}</Text>
         </View>
+        </View>
+      </View>
+      <View
+        ref={slotRef}
+        style={s.slot}
+        onLayout={(event) => {
+          const width = event.nativeEvent.layout.width;
+          if (width > 0) setSlotWidth(width);
+        }}
+      >
+        <Text
+          ref={measureRef}
+          style={[s.greeting, s.measure]}
+          pointerEvents="none"
+          onLayout={(event) => {
+            const width = nodeWidth(measureRef.current) || event.nativeEvent.layout.width;
+            if (width > 0) setNamedWidth(width);
+          }}
+        >
+          {formatGreeting(greetingBase, displayName)}
+        </Text>
+        <Text style={s.greeting} testID="home-greeting">
+          {greeting}
+        </Text>
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  wrap: { paddingHorizontal: 20, paddingBottom: 16 },
   row: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    rowGap: 10,
+    gap: 10,
   },
-  left: { flexGrow: 1, flexShrink: 1, flexBasis: 180, marginRight: 10, minWidth: 0 },
-  date: { fontFamily: F.interMed, fontSize: 13, color: HV2.inkMutedText },
+  date: { flex: 1, fontFamily: F.interMed, fontSize: 13, color: HV2.inkMutedText },
   greeting: { fontFamily: F.loraSemi, fontSize: 22, color: HV2.ink, marginTop: 2 },
+  slot: { overflow: "hidden" },
+  measure: {
+    position: "absolute",
+    opacity: 0,
+    left: 0,
+    top: 0,
+    alignSelf: "flex-start",
+    ...(Platform.OS === "web" ? ({ whiteSpace: "nowrap", width: "max-content" } as object) : null),
+  },
   right: { flexDirection: "row", alignItems: "center", gap: 10, flexShrink: 0 },
   pill: {
     flexDirection: "row",

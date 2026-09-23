@@ -13,6 +13,8 @@ import {
   isGonePushStatus,
   readRegisteredPushToken,
   sabbathSchoolNotification,
+  formatVerseTimeLabel,
+  normalizeHm,
   verseReferenceForLocalDate,
 } from "../lib/daily-verse-push";
 
@@ -99,6 +101,34 @@ describe("daily verse push wiring", () => {
     assert.match(source, /addEventListener\("push"/);
     assert.match(source, /addEventListener\("notificationclick"/);
     assert.match(source, /openWindow/);
+  });
+
+  it("lets either reminder use any time of day in the device hour cycle", () => {
+    assert.equal(normalizeHm("18:30"), "18:30");
+    assert.equal(normalizeHm("00:00"), "00:00");
+    assert.equal(normalizeHm("23:59"), "23:59");
+    assert.match(formatVerseTimeLabel("18:30", "en-US"), /6:30/);
+    assert.match(formatVerseTimeLabel("18:30", "en-US"), /PM/i);
+    assert.match(formatVerseTimeLabel("18:30", "en-GB"), /18:30/);
+    const settings = readFileSync(
+      path.join(root, "components", "profile", "NotificationSettings.tsx"),
+      "utf8",
+    );
+    const web = readFileSync(
+      path.join(root, "components", "profile", "ReminderTimeField.web.tsx"),
+      "utf8",
+    );
+    const native = readFileSync(
+      path.join(root, "components", "profile", "ReminderTimeField.tsx"),
+      "utf8",
+    );
+    assert.doesNotMatch(settings, /−1 hour|\+15 min|profile-verse-hour/);
+    assert.match(settings, /testID="profile-daily-verse-time"/);
+    assert.match(settings, /testID="profile-ss-reminder-time"/);
+    assert.match(web, /type: "time"/);
+    assert.match(native, /@react-native-community\/datetimepicker/);
+    assert.match(native, /mode="time"/);
+    assert.doesNotMatch(native, /is24Hour/);
   });
 
   it("hides notification settings in kids mode and states the blocked message", () => {
