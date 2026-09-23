@@ -217,6 +217,7 @@ function RootLayoutNav() {
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="terms" options={{ headerShown: false }} />
       <Stack.Screen name="privacy" options={{ headerShown: false }} />
+      <Stack.Screen name="giving" options={{ headerShown: false }} />
       <Stack.Screen name="conference-portal" options={{ headerShown: false }} />
     </Stack>
   );

@@ -324,15 +324,18 @@ function ProfileScreenInner() {
           </View>
           <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Prayer</Text>
         </Pressable>
-        <Pressable
-          style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => showToast("Giving features coming soon", "info")}
-        >
-          <View style={[st.tileIcon, { backgroundColor: C.pill }]}>
-            <Ionicons name="heart" size={22} color={C.inkMuted} />
-          </View>
-          <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
-        </Pressable>
+        {!isKidsMode ? (
+          <Pressable
+            style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => router.push("/giving" as never)}
+            testID="profile-giving"
+          >
+            <View style={[st.tileIcon, { backgroundColor: C.pill }]}>
+              <Ionicons name="heart" size={22} color={C.inkMuted} />
+            </View>
+            <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <Pressable
