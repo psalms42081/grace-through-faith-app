@@ -16,6 +16,8 @@ import { Router } from "express";
   import type { StudyDepth } from "../services/ai-engine";
   import { translateObject, translateBatch } from "../services/translationService";
   import { normalizeLanguageCode } from "../services/languageAwareContent";
+  import { getCalendarDate, normalizeTimeZone } from "../../shared/calendar-date";
+  import { pacePlanDays } from "../../lib/plan-pacing";
 
   const router = Router();
 
@@ -216,8 +218,13 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
     }
 
     const completedDays = await db
-      .select()
+      .select({
+        dayId: userPlanProgress.dayId,
+        localDate: userPlanProgress.completedLocalDate,
+        dayNumber: devotionalDays.dayNumber,
+      })
       .from(userPlanProgress)
+      .innerJoin(devotionalDays, eq(devotionalDays.id, userPlanProgress.dayId))
       .where(eq(userPlanProgress.enrollmentId, activeEnrollment[0].id));
 
     const completedDayIds = new Set(completedDays.map((p) => p.dayId));
@@ -258,6 +265,18 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
       }
     }
 
+    const todayKey = getCalendarDate(new Date(), normalizeTimeZone(req.query.tz)).dateKey;
+    const pace = pacePlanDays({
+      dayNumbers: allDays.map((day) => day.dayNumber),
+      completed: completedDays.map((row) => ({
+        dayNumber: row.dayNumber,
+        localDate: row.localDate,
+      })),
+      today: todayKey,
+    });
+    const paceByDay = new Map(pace.map((row) => [row.dayNumber, row]));
+    const openPace = paceByDay.get(todayDay.dayNumber);
+
     return res.json({
       today: translatedDay,
       enrollment: {
@@ -268,6 +287,18 @@ router.get("/api/devotionals/today", optionalAuth, async (req, res) => {
       completedCount: completedDays.length,
       totalDays: allDays.length,
       depth: depth || "standard",
+      canComplete: openPace?.canComplete === true,
+      localDate: todayKey,
+      outline: allDays.map((day) => {
+        const row = paceByDay.get(day.dayNumber);
+        return {
+          id: day.id,
+          dayNumber: day.dayNumber,
+          title: day.title,
+          status: row?.status ?? "locked",
+          canComplete: row?.canComplete === true,
+        };
+      }),
     });
   } catch (err) {
     console.error(err);

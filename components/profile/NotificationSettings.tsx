@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ReminderTimeField from "@/components/profile/ReminderTimeField";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
@@ -7,10 +8,12 @@ import { HV2 } from "@/components/home-v2/theme";
 import { PathBSwitch } from "@/components/settings/PathBSwitch";
 import { apiRequest } from "@/lib/query-client";
 import {
+  ANDROID_CHROME_BATTERY_TIP,
   DEFAULT_VERSE_PUSH_TIME,
   NOTIFICATIONS_BLOCKED_MESSAGE,
   NOTIFICATIONS_SETUP_FAILED_MESSAGE,
   SABBATH_SCHOOL_PUSH_TIME,
+  isAndroidChrome,
   normalizeHm,
 } from "@/lib/daily-verse-push";
 import {
@@ -31,9 +34,19 @@ type StoredSubscription = {
   verseTimeLocal: string | null;
   ssReminder: boolean;
   ssTimeLocal: string | null;
+  planReminder: boolean;
   timezone: string;
   web: boolean;
 };
+
+type PlanProgress = {
+  planId: string;
+  isActive: boolean;
+  completedCount: number;
+  totalDays: number;
+};
+
+const BATTERY_TIP_KEY = "@grace-through-faith/android-battery-tip-dismissed";
 
 type SubscriptionResponse = {
   vapidConfigured: boolean;
@@ -53,6 +66,8 @@ export default function NotificationSettings() {
   const [browserEndpoint, setBrowserEndpoint] = useState<string | null>(null);
   const [endpointChecked, setEndpointChecked] = useState(Platform.OS !== "web");
   const [switchEpoch, setSwitchEpoch] = useState(0);
+  const [planChoice, setPlanChoice] = useState<boolean | null>(null);
+  const [batteryTipDismissed, setBatteryTipDismissed] = useState(true);
 
   useEffect(() => {
     void currentWebEndpoint().then((endpoint) => {
@@ -60,6 +75,20 @@ export default function NotificationSettings() {
       setEndpointChecked(true);
     });
   }, []);
+
+  useEffect(() => {
+    void AsyncStorage.getItem(BATTERY_TIP_KEY).then((value) => {
+      setBatteryTipDismissed(value === "1");
+    });
+  }, []);
+
+  const plans = useQuery<PlanProgress[]>({
+    queryKey: ["/api/devotionals/user-progress"],
+    staleTime: 30_000,
+  });
+  const hasActivePlan = (plans.data ?? []).some(
+    (plan) => plan.isActive && plan.completedCount < plan.totalDays,
+  );
 
   const query = useQuery<SubscriptionResponse>({
     queryKey: QUERY_KEY,
@@ -75,6 +104,13 @@ export default function NotificationSettings() {
       : query.data?.subscriptions.find((row) => !row.web);
   const verseOn = Boolean(mine?.verseTimeLocal);
   const ssOn = Boolean(mine?.ssReminder);
+  const planOn = planChoice ?? (mine ? mine.planReminder : hasActivePlan);
+  const showBatteryTip =
+    verseOn &&
+    !batteryTipDismissed &&
+    Platform.OS === "web" &&
+    typeof navigator !== "undefined" &&
+    isAndroidChrome(navigator.userAgent);
   const verseTime = mine?.verseTimeLocal ?? localTime;
   const ssTime = mine?.ssTimeLocal ?? localSsTime;
   const notice = blocked
@@ -96,17 +132,19 @@ export default function NotificationSettings() {
       verseTimeLocal: string | null;
       ssReminder: boolean;
       ssTimeLocal: string | null;
+      planReminder: boolean;
       timezone: string;
     } | null,
   ) {
     queryClient.setQueryData<SubscriptionResponse>(QUERY_KEY, (current) => {
       const subscriptions = (current?.subscriptions ?? []).filter((row) => row.endpoint !== endpoint);
-      if (next && (next.verseTimeLocal || next.ssReminder)) {
+      if (next && (next.verseTimeLocal || next.ssReminder || next.planReminder)) {
         subscriptions.push({
           endpoint,
           verseTimeLocal: next.verseTimeLocal,
           ssReminder: next.ssReminder,
           ssTimeLocal: next.ssTimeLocal,
+          planReminder: next.planReminder,
           timezone: next.timezone,
           web: !endpoint.startsWith("ExponentPushToken[") && !endpoint.startsWith("ExpoPushToken["),
         });
@@ -119,11 +157,12 @@ export default function NotificationSettings() {
     verseTimeLocal: string | null;
     ssReminder: boolean;
     ssTimeLocal: string | null;
+    planReminder: boolean;
     permission: WebPermissionStart | null;
     turningOn: boolean;
   }) {
     const knownEndpoint = mine?.endpoint ?? (await currentWebEndpoint());
-    if (!next.verseTimeLocal && !next.ssReminder) {
+    if (!next.verseTimeLocal && !next.ssReminder && !next.planReminder) {
       if (!knownEndpoint) {
         markFailure("failed");
         return;
@@ -167,6 +206,7 @@ export default function NotificationSettings() {
       verseTimeLocal: next.verseTimeLocal,
       ssReminder: next.ssReminder,
       ssTimeLocal: next.ssReminder ? next.ssTimeLocal : null,
+      planReminder: next.planReminder,
       timezone,
     };
     const keys = acquired.kind === "web" && acquired.keys.p256dh && acquired.keys.auth ? acquired.keys : null;
@@ -186,7 +226,12 @@ export default function NotificationSettings() {
   }
 
   async function commit(
-    next: { verseTimeLocal: string | null; ssReminder: boolean; ssTimeLocal: string | null },
+    next: {
+      verseTimeLocal: string | null;
+      ssReminder: boolean;
+      ssTimeLocal: string | null;
+      planReminder: boolean;
+    },
     permission: WebPermissionStart | null,
     turningOn: boolean,
   ) {
@@ -211,9 +256,27 @@ export default function NotificationSettings() {
         verseTimeLocal: enabled ? verseTime : null,
         ssReminder: ssOn,
         ssTimeLocal: ssOn ? ssTime : null,
+        planReminder: planOn,
       },
       permission,
       enabled,
+    );
+  }
+
+  function onPlanChange(enabled: boolean) {
+    if (!ready || busy || enabled === planOn) return;
+    setPlanChoice(enabled);
+    if (!enabled && !mine) return;
+    const permission = enabled && Platform.OS === "web" && !mine ? startWebNotificationPermission() : null;
+    void commit(
+      {
+        verseTimeLocal: verseOn ? verseTime : null,
+        ssReminder: ssOn,
+        ssTimeLocal: ssOn ? ssTime : null,
+        planReminder: enabled,
+      },
+      permission,
+      enabled && !mine,
     );
   }
 
@@ -225,6 +288,7 @@ export default function NotificationSettings() {
         verseTimeLocal: verseOn ? verseTime : null,
         ssReminder: enabled,
         ssTimeLocal: enabled ? ssTime : null,
+        planReminder: planOn,
       },
       permission,
       enabled,
@@ -238,7 +302,12 @@ export default function NotificationSettings() {
       setLocalSsTime(normalized);
       if (!ssOn) return;
       await commit(
-        { verseTimeLocal: verseOn ? verseTime : null, ssReminder: true, ssTimeLocal: normalized },
+        {
+          verseTimeLocal: verseOn ? verseTime : null,
+          ssReminder: true,
+          ssTimeLocal: normalized,
+          planReminder: planOn,
+        },
         null,
         false,
       );
@@ -251,6 +320,7 @@ export default function NotificationSettings() {
         verseTimeLocal: normalized,
         ssReminder: ssOn,
         ssTimeLocal: ssOn ? ssTime : null,
+        planReminder: planOn,
       },
       null,
       false,
@@ -285,6 +355,35 @@ export default function NotificationSettings() {
         testID="profile-daily-verse-time"
         onCommit={(next) => void applyTime("verse", next)}
       />
+      {showBatteryTip ? (
+        <View style={styles.tip} testID="profile-android-battery-tip">
+          <Text style={styles.tipText}>{ANDROID_CHROME_BATTERY_TIP}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss battery tip"
+            testID="profile-android-battery-tip-dismiss"
+            onPress={() => {
+              setBatteryTipDismissed(true);
+              void AsyncStorage.setItem(BATTERY_TIP_KEY, "1");
+            }}
+          >
+            <Text style={styles.tipDismiss}>Dismiss</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      <View style={styles.row}>
+        <View style={styles.copy}>
+          <Text style={styles.title}>Reading plan</Text>
+          <Text style={styles.meta}>Day of your plan, with the daily verse</Text>
+        </View>
+        <PathBSwitch
+          key={`plan-${planOn}-${switchEpoch}`}
+          value={planOn}
+          onValueChange={onPlanChange}
+          disabled={!ready || busy}
+          testID="profile-plan-reminder-switch"
+        />
+      </View>
       <View style={styles.row}>
         <View style={styles.copy}>
           <Text style={styles.title}>Sabbath School reminder</Text>
@@ -329,4 +428,22 @@ const styles = StyleSheet.create({
   copy: { flex: 1 },
   title: { color: PathB.ink, fontSize: 16, fontFamily: "Inter_600SemiBold" },
   meta: { color: HV2.inkMutedText, fontSize: 13, marginTop: 2, fontFamily: "Inter_400Regular" },
+  tip: {
+    backgroundColor: "#FBF7EE",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    gap: 8,
+  },
+  tipText: {
+    color: PathB.ink,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "Inter_400Regular",
+  },
+  tipDismiss: {
+    color: PathB.coralInk,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
 });

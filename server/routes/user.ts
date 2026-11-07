@@ -342,6 +342,8 @@ router.get("/api/highlights/:userId", optionalAuth, async (req, res) => {
         userId: userHighlights.userId,
         verseId: userHighlights.verseId,
         color: userHighlights.color,
+        startWord: userHighlights.startWord,
+        endWord: userHighlights.endWord,
         createdAt: userHighlights.createdAt,
         bookId: bibleVerses.bookId,
         chapter: bibleVerses.chapter,
@@ -364,12 +366,18 @@ router.get("/api/highlights/:userId", optionalAuth, async (req, res) => {
 router.post("/api/highlights", requireAuth, validate(highlightSchema), async (req, res) => {
   try {
     const userId = req.authUserId!;
-    const { verseId, color = "yellow" } = req.body;
+    const { verseId, color = "yellow", startWord = null, endWord = null } = req.body;
     const persistedVerseId = await resolveAnnotationVerseId(verseId);
     if (!persistedVerseId) return res.status(400).json({ error: "Verse not found" });
     const highlight = await db
       .insert(userHighlights)
-      .values({ userId, verseId: persistedVerseId, color })
+      .values({
+        userId,
+        verseId: persistedVerseId,
+        color,
+        startWord,
+        endWord,
+      })
       .onConflictDoNothing()
       .returning();
     return res.json(highlight[0] ?? null);
@@ -497,7 +505,7 @@ router.post("/api/prayers", optionalAuth, (req, res, next) => {
     const { title, content, category = "personal" } = req.body;
     const [prayer] = await db
       .insert(prayerRequests)
-      .values({ userId, title, content, category })
+      .values({ userId, title, content, category, answered: false, answeredAt: null })
       .returning();
     return res.json(prayer);
   } catch (err) {

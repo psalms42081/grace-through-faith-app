@@ -1,4 +1,4 @@
-import React, { Component, useState, useCallback, useMemo } from "react";
+import React, { Component, useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ import ProfileGroupsSection from "@/components/bible-groups/ProfileGroupsSection
 import { shareInformedMinistries } from "@/lib/share-app";
 import NotificationSettings from "@/components/profile/NotificationSettings";
 import ReportProblem from "@/components/profile/ReportProblem";
+import { getSessionHighlights, subscribeSessionHighlights } from "@/lib/session-highlights";
 
 const C = {
   surface: PathB.surface,
@@ -194,6 +195,15 @@ function ProfileScreenInner() {
     queryKey: [`/api/notes?userId=${uid}`],
     enabled: isAuthenticated,
   });
+  const sessionHighlights = useSyncExternalStore(
+    subscribeSessionHighlights,
+    getSessionHighlights,
+    getSessionHighlights,
+  );
+  const savedCount = isAuthenticated
+    ? (recentBookmarks?.length ?? 0) + (recentHighlights?.length ?? 0) + (recentNotes?.length ?? 0)
+    : sessionHighlights.length;
+  const savedLit = savedCount > 0;
 
   const [codeCopied, setCodeCopied] = useState(false);
   const [addChurchName, setAddChurchName] = useState("");
@@ -309,9 +319,11 @@ function ProfileScreenInner() {
         <Pressable
           style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.push("/library" as any)}
+          testID="profile-saved-tile"
+          accessibilityState={{ selected: savedLit }}
         >
-          <View style={[st.tileIcon, { backgroundColor: PathB.coral + "14" }]}>
-            <Ionicons name="bookmark" size={22} color={C.coral} />
+          <View style={[st.tileIcon, { backgroundColor: savedLit ? PathB.coral + "14" : C.pill }]}>
+            <Ionicons name={savedLit ? "bookmark" : "bookmark-outline"} size={22} color={savedLit ? C.coral : C.inkMuted} />
           </View>
           <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Saved</Text>
         </Pressable>

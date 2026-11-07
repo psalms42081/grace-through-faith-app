@@ -1,5 +1,5 @@
 import * as webpush from "web-push";
-import { and, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { APP_CONTACT_EMAIL } from "../../constants/app";
 import { bibleBookNamesMatch } from "../../components/home-v2/home-data";
 import {
@@ -10,18 +10,25 @@ import {
   isGonePushStatus,
   normalizeHm,
   parseDailyVerseReference,
+  readingPlanNotification,
   sabbathSchoolNotification,
   scripturePushPath,
   verseReferenceForLocalDate,
+  webPushSendOptions,
   zonedClock,
   type DuePushKind,
 } from "../../lib/daily-verse-push";
+import { pacePlanDays } from "../../lib/plan-pacing";
 import {
   bibleBooks,
   bibleTranslations,
   bibleVerses,
+  devotionalDays,
+  devotionalPlans,
   deviceTokens,
   pushSubscriptions,
+  userPlanEnrollments,
+  userPlanProgress,
   type PushSubscription,
 } from "../../shared/schema";
 import { db } from "../db";
@@ -111,6 +118,7 @@ async function sendWebPush(row: PushSubscription, payload: PushDelivery): Promis
         keys: { p256dh: row.keys.p256dh, auth: row.keys.auth },
       },
       JSON.stringify(payload),
+      webPushSendOptions(),
     );
     return "ok";
   } catch (err) {
@@ -141,10 +149,20 @@ async function claimDate(
   dateKey: string,
 ): Promise<boolean> {
   const column =
-    kind === "verse" ? pushSubscriptions.lastVerseLocalDate : pushSubscriptions.lastSsLocalDate;
+    kind === "verse"
+      ? pushSubscriptions.lastVerseLocalDate
+      : kind === "sabbath"
+        ? pushSubscriptions.lastSsLocalDate
+        : pushSubscriptions.lastPlanLocalDate;
   const claimed = await db
     .update(pushSubscriptions)
-    .set(kind === "verse" ? { lastVerseLocalDate: dateKey } : { lastSsLocalDate: dateKey })
+    .set(
+      kind === "verse"
+        ? { lastVerseLocalDate: dateKey }
+        : kind === "sabbath"
+          ? { lastSsLocalDate: dateKey }
+          : { lastPlanLocalDate: dateKey },
+    )
     .where(
       and(
         eq(pushSubscriptions.id, row.id),
@@ -162,10 +180,20 @@ async function releaseClaim(
   previous: string | null,
 ): Promise<void> {
   const column =
-    kind === "verse" ? pushSubscriptions.lastVerseLocalDate : pushSubscriptions.lastSsLocalDate;
+    kind === "verse"
+      ? pushSubscriptions.lastVerseLocalDate
+      : kind === "sabbath"
+        ? pushSubscriptions.lastSsLocalDate
+        : pushSubscriptions.lastPlanLocalDate;
   await db
     .update(pushSubscriptions)
-    .set(kind === "verse" ? { lastVerseLocalDate: previous } : { lastSsLocalDate: previous })
+    .set(
+      kind === "verse"
+        ? { lastVerseLocalDate: previous }
+        : kind === "sabbath"
+          ? { lastSsLocalDate: previous }
+          : { lastPlanLocalDate: previous },
+    )
     .where(and(eq(pushSubscriptions.id, row.id), eq(column, dateKey)));
 }
 
@@ -225,6 +253,44 @@ async function sabbathPayloadFor(timeZone: string, now: Date): Promise<PushDeliv
   return payload;
 }
 
+async function planPayloadFor(userId: string, today: string): Promise<PushDelivery | null> {
+  const enrollments = await db
+    .select({
+      id: userPlanEnrollments.id,
+      planId: userPlanEnrollments.planId,
+      title: devotionalPlans.title,
+    })
+    .from(userPlanEnrollments)
+    .innerJoin(devotionalPlans, eq(devotionalPlans.id, userPlanEnrollments.planId))
+    .where(and(eq(userPlanEnrollments.userId, userId), eq(userPlanEnrollments.isActive, true)))
+    .orderBy(desc(userPlanEnrollments.enrolledAt));
+
+  for (const enrollment of enrollments) {
+    const [days, completed] = await Promise.all([
+      db
+        .select({ dayNumber: devotionalDays.dayNumber })
+        .from(devotionalDays)
+        .where(eq(devotionalDays.planId, enrollment.planId)),
+      db
+        .select({
+          dayNumber: devotionalDays.dayNumber,
+          localDate: userPlanProgress.completedLocalDate,
+        })
+        .from(userPlanProgress)
+        .innerJoin(devotionalDays, eq(devotionalDays.id, userPlanProgress.dayId))
+        .where(eq(userPlanProgress.enrollmentId, enrollment.id)),
+    ]);
+    const ready = pacePlanDays({
+      dayNumbers: days.map((day) => day.dayNumber),
+      completed,
+      today,
+    }).find((day) => day.canComplete);
+    if (!ready) continue;
+    return readingPlanNotification(ready.dayNumber, enrollment.title, enrollment.planId);
+  }
+  return null;
+}
+
 async function sendClaimed(
   row: PushSubscription,
   kind: DuePushKind,
@@ -232,13 +298,20 @@ async function sendClaimed(
 ): Promise<"sent" | "retired" | "skipped"> {
   const clock = zonedClock(now, row.timezone);
   if (!clock) return "skipped";
-  const previous = kind === "verse" ? row.lastVerseLocalDate : row.lastSsLocalDate;
+  const previous =
+    kind === "verse"
+      ? row.lastVerseLocalDate
+      : kind === "sabbath"
+        ? row.lastSsLocalDate
+        : row.lastPlanLocalDate;
   const claimed = await claimDate(row, kind, clock.dateKey);
   if (!claimed) return "skipped";
   const payload =
     kind === "verse"
       ? await versePayloadFor(clock.dateKey)
-      : await sabbathPayloadFor(row.timezone, now);
+      : kind === "sabbath"
+        ? await sabbathPayloadFor(row.timezone, now)
+        : await planPayloadFor(row.userId, clock.dateKey);
   if (!payload) {
     await releaseClaim(row, kind, clock.dateKey, previous);
     return "skipped";
@@ -270,7 +343,11 @@ export async function runDueDailyVersePushes(now = new Date()): Promise<{
       .select()
       .from(pushSubscriptions)
       .where(
-        or(isNotNull(pushSubscriptions.verseTimeLocal), eq(pushSubscriptions.ssReminder, true)),
+        or(
+          isNotNull(pushSubscriptions.verseTimeLocal),
+          eq(pushSubscriptions.ssReminder, true),
+          eq(pushSubscriptions.planReminder, true),
+        ),
       );
     for (const row of rows) {
       try {
@@ -280,8 +357,10 @@ export async function runDueDailyVersePushes(now = new Date()): Promise<{
             verseTimeLocal: row.verseTimeLocal,
             ssReminder: row.ssReminder,
             ssTimeLocal: row.ssTimeLocal,
+            planReminder: row.planReminder,
             lastVerseLocalDate: row.lastVerseLocalDate,
             lastSsLocalDate: row.lastSsLocalDate,
+            lastPlanLocalDate: row.lastPlanLocalDate,
           },
           now,
         );
@@ -358,6 +437,7 @@ export function readPushPreference(body: unknown): {
   verseTimeLocal: string | null;
   ssReminder: boolean;
   ssTimeLocal: string | null;
+  planReminder: boolean;
 } | null {
   if (!body || typeof body !== "object") return null;
   const record = body as {
@@ -367,6 +447,7 @@ export function readPushPreference(body: unknown): {
     verseTimeLocal?: unknown;
     ssReminder?: unknown;
     ssTimeLocal?: unknown;
+    planReminder?: unknown;
   };
   if (typeof record.endpoint !== "string" || !record.endpoint.trim()) return null;
   const timezone = typeof record.timezone === "string" && record.timezone.trim()
@@ -402,5 +483,6 @@ export function readPushPreference(body: unknown): {
     verseTimeLocal,
     ssReminder,
     ssTimeLocal,
+    planReminder: record.planReminder === true,
   };
 }

@@ -24,6 +24,7 @@ import Button from "@/components/ui/Button";
 import { track } from "@/lib/analytics";
 import FeatureTutorial from "@/components/FeatureTutorial";
 import { PRAYER_JOURNAL_STEPS } from "@/lib/tutorial-steps";
+import { isPrayerAnswered } from "@/lib/prayer-journal";
 
 interface Prayer {
   id: string;
@@ -88,7 +89,7 @@ export default function PrayerJournalScreen() {
       await apiRequest("POST", "/api/prayers", {
         userId,
         title: newTitle.trim(),
-        content: newContent.trim() || null,
+        content: newContent.trim() || undefined,
         category: newCategory,
       });
     },
@@ -144,8 +145,8 @@ export default function PrayerJournalScreen() {
     });
   };
 
-  const activePrayers = prayers?.filter((p) => !p.answered) ?? [];
-  const answeredPrayers = prayers?.filter((p) => p.answered) ?? [];
+  const activePrayers = prayers?.filter((p) => !isPrayerAnswered(p.answered)) ?? [];
+  const answeredPrayers = prayers?.filter((p) => isPrayerAnswered(p.answered)) ?? [];
   const displayPrayers = filter === "active" ? activePrayers : answeredPrayers;
 
   return (
@@ -223,6 +224,7 @@ export default function PrayerJournalScreen() {
               <View
                 key={prayer.id}
                 style={[styles.prayerCard, { backgroundColor: theme.backgroundCard }]}
+                testID={`prayer-card-${prayer.id}`}
               >
                 <View style={styles.prayerCardHeader}>
                   <View style={[styles.catBadge, { backgroundColor: cat.color + "18" }]}>
@@ -239,8 +241,8 @@ export default function PrayerJournalScreen() {
                     {prayer.content}
                   </Text>
                 )}
-                {prayer.answered && prayer.answeredAt && (
-                  <View style={[styles.answeredBadge, { backgroundColor: theme.success + "18" }]}>
+                {isPrayerAnswered(prayer.answered) && prayer.answeredAt && (
+                  <View style={[styles.answeredBadge, { backgroundColor: theme.success + "18" }]} testID={`prayer-answered-badge-${prayer.id}`}>
                     <Ionicons name="checkmark-circle" size={14} color={theme.success} />
                     <Text style={[styles.answeredText, { color: theme.success, fontFamily: "Inter_600SemiBold" }]}>
                       Answered {formatDate(prayer.answeredAt)}
@@ -249,22 +251,22 @@ export default function PrayerJournalScreen() {
                 )}
                 <View style={styles.prayerActions}>
                   <Pressable
-                    onPress={() => toggleAnswered.mutate({ id: prayer.id, answered: !prayer.answered })}
-                    style={[styles.actionBtn, { backgroundColor: prayer.answered ? theme.textMuted + "15" : theme.success + "15" }]}
-                    testID={`toggle-answered-${prayer.id}`}
+                    onPress={() => toggleAnswered.mutate({ id: prayer.id, answered: !isPrayerAnswered(prayer.answered) })}
+                    style={[styles.actionBtn, { backgroundColor: isPrayerAnswered(prayer.answered) ? theme.textMuted + "15" : theme.backgroundSecondary }]}
+                    testID={`mark-answered-${prayer.id}`}
                   >
                     <Ionicons
-                      name={prayer.answered ? "arrow-undo" : "checkmark-circle-outline"}
+                      name={isPrayerAnswered(prayer.answered) ? "arrow-undo" : "checkmark-circle-outline"}
                       size={16}
-                      color={prayer.answered ? theme.textMuted : theme.success}
+                      color={isPrayerAnswered(prayer.answered) ? theme.textMuted : theme.textSecondary}
                     />
                     <Text
                       style={[
                         styles.actionBtnText,
-                        { color: prayer.answered ? theme.textMuted : theme.success, fontFamily: "Inter_500Medium" },
+                        { color: isPrayerAnswered(prayer.answered) ? theme.textMuted : theme.text, fontFamily: "Inter_500Medium" },
                       ]}
                     >
-                      {prayer.answered ? "Reopen" : "Answered"}
+                      {isPrayerAnswered(prayer.answered) ? "Reopen" : "Mark answered"}
                     </Text>
                   </Pressable>
                   <Pressable

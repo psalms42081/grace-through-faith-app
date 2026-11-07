@@ -5,17 +5,23 @@ import { describe, it } from "node:test";
 import { getHomeLocalDay, getTodaysVerse } from "../components/home-v2/home-data";
 import {
   NOTIFICATIONS_BLOCKED_MESSAGE,
+  ANDROID_CHROME_BATTERY_TIP,
+  WEB_PUSH_TTL_SECONDS,
+  WEB_PUSH_URGENCY,
   dailyVerseNotification,
   dayIndexForDateKey,
   duePushKinds,
   fallsInCurrentWindow,
   firstVerseLine,
+  isAndroidChrome,
   isGonePushStatus,
   readRegisteredPushToken,
+  readingPlanNotification,
   sabbathSchoolNotification,
   formatVerseTimeLabel,
   normalizeHm,
   verseReferenceForLocalDate,
+  webPushSendOptions,
 } from "../lib/daily-verse-push";
 
 const root = process.cwd();
@@ -82,6 +88,42 @@ describe("daily verse push schedule", () => {
     assert.equal(readRegisteredPushToken({}), "");
   });
 
+  it("sends a reading plan reminder in the daily verse window", () => {
+    const due = duePushKinds(
+      { ...base, planReminder: true },
+      new Date("2026-09-23T07:07:00Z"),
+    );
+    assert.deepEqual(due, ["verse", "plan"]);
+    const note = readingPlanNotification(2, "The Life of Christ", "plan-1");
+    assert.equal(note.title, "Reading plan");
+    assert.equal(note.body, "Day 2 of The Life of Christ is ready");
+    assert.equal(note.url, "/devotional-day-preview?planId=plan-1");
+    const again = duePushKinds(
+      { ...base, planReminder: true, lastPlanLocalDate: "2026-09-23" },
+      new Date("2026-09-23T07:07:00Z"),
+    );
+    assert.deepEqual(again, ["verse"]);
+  });
+
+  it("sends web push as high urgency with a six-hour TTL", () => {
+    assert.equal(WEB_PUSH_URGENCY, "high");
+    assert.equal(WEB_PUSH_TTL_SECONDS, 6 * 60 * 60);
+    assert.deepEqual(webPushSendOptions(), { urgency: "high", TTL: 21600 });
+    const source = readFileSync(path.join(root, "server", "services", "daily-verse-push.ts"), "utf8");
+    assert.match(source, /webPushSendOptions\(\)/);
+    assert.equal(
+      ANDROID_CHROME_BATTERY_TIP,
+      "If notifications arrive late, turn off battery optimisation for Chrome in Android settings.",
+    );
+    assert.equal(
+      isAndroidChrome(
+        "Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+      ),
+      true,
+    );
+    assert.equal(isAndroidChrome("Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0 Safari/537.36"), false);
+  });
+
   it("retires endpoints the push service reports as gone", () => {
     assert.equal(isGonePushStatus(410), true);
     assert.equal(isGonePushStatus(404), true);
@@ -125,6 +167,9 @@ describe("daily verse push wiring", () => {
     assert.doesNotMatch(settings, /−1 hour|\+15 min|profile-verse-hour/);
     assert.match(settings, /testID="profile-daily-verse-time"/);
     assert.match(settings, /testID="profile-ss-reminder-time"/);
+    assert.match(settings, /Reading plan/);
+    assert.match(settings, /testID="profile-plan-reminder-switch"/);
+    assert.match(settings, /ANDROID_CHROME_BATTERY_TIP/);
     assert.match(web, /type: "time"/);
     assert.match(native, /@react-native-community\/datetimepicker/);
     assert.match(native, /mode="time"/);

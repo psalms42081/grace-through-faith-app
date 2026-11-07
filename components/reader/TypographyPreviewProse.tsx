@@ -13,9 +13,11 @@ import {
   type VersePointerEvent,
 } from "@/lib/verse-web-long-press";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
+import { VerseWordSpans, type VerseWordRangeHighlight } from "@/components/reader/VerseWordSpans";
 import { ReaderVerseWords } from "@/components/reader/ReaderVerseWords";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { verseSurfaceStyle } from "@/lib/verse-selection";
+import { wordsOfChristRanges } from "@/lib/words-of-christ";
 
 export interface PreviewVerse {
   id: string;
@@ -60,6 +62,9 @@ export function TypographyPreviewProse({
   wordStudyMode = false,
   mapsByVerseId,
   onWordActivate,
+  wordRanges = [],
+  onWordRange,
+  wordsOfChrist = false,
 }: {
   verses: PreviewVerse[];
   headingsByVerse: Map<number, ReaderHeading[]>;
@@ -75,6 +80,9 @@ export function TypographyPreviewProse({
   wordStudyMode?: boolean;
   mapsByVerseId?: Map<string, ReaderStrongMap[]>;
   onWordActivate?: (verse: PreviewVerse, surface: string, mapping: ReaderStrongMap) => void;
+  wordRanges?: VerseWordRangeHighlight[];
+  onWordRange?: (verseId: string, start: number, end: number) => void;
+  wordsOfChrist?: boolean;
 }) {
   const groups = groupVersesByParagraphStarts(verses, paragraphStarts);
   const indexById = useMemo(() => {
@@ -186,7 +194,7 @@ export function TypographyPreviewProse({
                         {v.verse}
                       </Text>
                       {"\u00a0"}
-                      {useWordTokens ? (
+                      {wordStudyMode && useWordTokens ? (
                         <ReaderVerseWords
                           verseId={v.id}
                           verseNum={v.verse}
@@ -194,11 +202,14 @@ export function TypographyPreviewProse({
                           maps={maps}
                           wordStudyMode={wordStudyMode}
                           indicateTagged={wordStudyMode}
+                          spokenRanges={
+                            wordsOfChrist ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse) : []
+                          }
                           onVerseTap={() => onVerseTap(v)}
                           onVerseLongPress={() => onVerseLongPress(v)}
                           onWordActivate={(surface, mapping) => onWordActivate(v, surface, mapping)}
                         />
-                      ) : (
+                      ) : wordStudyMode ? (
                         <>
                           <VerseTextRuns text={firstWord} />
                           <VerseTextRuns text={remainder} />
@@ -217,6 +228,18 @@ export function TypographyPreviewProse({
                             ),
                           )}
                         </>
+                      ) : (
+                        <VerseWordSpans
+                          verseId={v.id}
+                          verseNum={v.verse}
+                          text={v.text}
+                          ranges={wordRanges.filter((range) => range.verseId === v.id)}
+                          spokenRanges={
+                            wordsOfChrist ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse) : []
+                          }
+                          onTap={() => onVerseTap(v)}
+                          onCommitRange={(id, start, end) => onWordRange?.(id, start, end)}
+                        />
                       )}
                       {isBookmarked ? (
                         <Text pointerEvents="none" style={s.bookmarkMark}>

@@ -5,6 +5,8 @@ import {
   alignMapsToSurface,
   type ReaderStrongMap,
 } from "@/lib/reader-word-study";
+import { wordInRange, type WordRange } from "@/lib/verse-word-range";
+import { WORDS_OF_CHRIST_INK } from "@/lib/words-of-christ";
 import {
   createVerseWebLongPress,
   pointerCoords,
@@ -37,6 +39,7 @@ export function ReaderVerseWords({
   onVerseTap,
   onVerseLongPress,
   onWordActivate,
+  spokenRanges = [],
 }: {
   verseId: string;
   verseNum: number;
@@ -47,6 +50,7 @@ export function ReaderVerseWords({
   onVerseTap: () => void;
   onVerseLongPress: () => void;
   onWordActivate: (surface: string, mapping: ReaderStrongMap) => void;
+  spokenRanges?: WordRange[];
 }) {
   const tokens = useMemo(
     () =>
@@ -86,9 +90,12 @@ export function ReaderVerseWords({
   const webLongPress = webLongPressRef.current;
   const mark = indicateTagged ? taggedStyle : undefined;
 
+  let spokenOrdinal = -1;
   return (
     <>
       {tokens.map((token, index) => {
+        if (token.kind === "word") spokenOrdinal += 1;
+        const spoken = token.kind === "word" && spokenRanges.some((range) => wordInRange(spokenOrdinal, range));
         const mapping = token.mapIndex != null ? maps[token.mapIndex] : null;
         const tagged = token.kind === "word" && mapping != null;
         const pressOpensSheet = tagged && wordStudyMode;
@@ -140,7 +147,7 @@ export function ReaderVerseWords({
             <Text
               key={`${verseId}-w-${index}`}
               pointerEvents="none"
-              style={webInline}
+              style={[webInline, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
             >
               <VerseTextRuns text={token.surface} />
             </Text>
@@ -172,6 +179,7 @@ export function ReaderVerseWords({
                   : mark
                 : null,
               IS_WEB && tagged ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
+              spoken ? { color: WORDS_OF_CHRIST_INK } : null,
             ]}
             accessibilityLabel={
               tagged ? `Word study ${token.surface}` : `Verse ${verseNum}`

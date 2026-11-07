@@ -700,6 +700,7 @@ export const userPlanProgress = pgTable(
       .notNull()
       .references(() => devotionalDays.id),
     completedAt: timestamp("completed_at").defaultNow().notNull(),
+    completedLocalDate: text("completed_local_date"),
     journalEntry: text("journal_entry"),
   },
   (table) => ({
@@ -747,6 +748,8 @@ export const userHighlights = pgTable(
       .notNull()
       .references(() => bibleVerses.id),
     color: varchar("color", { length: 20 }).default("yellow").notNull(),
+    startWord: integer("start_word"),
+    endWord: integer("end_word"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -2855,8 +2858,10 @@ export const pushSubscriptions = pgTable(
     verseTimeLocal: text("verse_time_local"),
     ssReminder: boolean("ss_reminder").notNull().default(false),
     ssTimeLocal: text("ss_time_local"),
+    planReminder: boolean("plan_reminder").notNull().default(true),
     lastVerseLocalDate: text("last_verse_local_date"),
     lastSsLocalDate: text("last_ss_local_date"),
+    lastPlanLocalDate: text("last_plan_local_date"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

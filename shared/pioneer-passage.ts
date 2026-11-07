@@ -39,21 +39,17 @@ export function selectPioneerWeekReading<T extends PublishedReadingCandidate>(
   sabbathDate: string,
 ): T | null {
   if (readings.length === 0) return null;
-  const forWeek = readings
-    .filter((row) => row.weekStart === sabbathDate)
-    .sort(compareReadings);
-  if (forWeek[0]) return forWeek[0];
-
-  const dated = readings
-    .filter((row) => row.weekStart)
+  const eligible = readings
+    .filter((row) => row.weekStart != null && row.weekStart <= sabbathDate)
     .sort((a, b) => {
       const dateCmp = (b.weekStart || "").localeCompare(a.weekStart || "");
       if (dateCmp !== 0) return dateCmp;
       return compareReadings(a, b);
     });
-  if (dated[0]) return dated[0];
+  if (eligible[0]) return eligible[0];
 
-  return [...readings].sort(compareReadings)[0] ?? null;
+  const undated = readings.filter((row) => !row.weekStart).sort(compareReadings);
+  return undated[0] ?? null;
 }
 
 function compareReadings(

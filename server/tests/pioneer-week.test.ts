@@ -30,15 +30,17 @@ describe("Sabbath-week selection for Voice of the Week", () => {
     );
   });
 
-  it("prefers the published reading for this Sabbath, else the most recent dated one", () => {
+  it("prefers the most recent Saturday on or before today and leaves future weeks queued", () => {
     const rows = [
       { id: "older", weekStart: "2026-08-29", sortOrder: 0 },
       { id: "this-week", weekStart: "2026-09-05", sortOrder: 2 },
       { id: "this-week-first", weekStart: "2026-09-05", sortOrder: 0 },
+      { id: "future", weekStart: "2026-09-19", sortOrder: 0 },
       { id: "undated", weekStart: null, sortOrder: 0 },
     ];
     assert.equal(selectPioneerWeekReading(rows, "2026-09-05")?.id, "this-week-first");
     assert.equal(selectPioneerWeekReading(rows, "2026-09-12")?.id, "this-week-first");
+    assert.equal(selectPioneerWeekReading(rows, "2026-08-29")?.id, "older");
     assert.equal(
       selectPioneerWeekReading(
         rows.filter((row) => !row.weekStart),

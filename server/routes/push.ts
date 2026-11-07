@@ -29,6 +29,7 @@ router.get("/api/push/subscription", requireAuth, async (req, res) => {
       verseTimeLocal: row.verseTimeLocal,
       ssReminder: row.ssReminder,
       ssTimeLocal: row.ssTimeLocal,
+      planReminder: row.planReminder,
       timezone: row.timezone,
       web: !isExpoPushEndpoint(row.endpoint),
     })),
@@ -40,7 +41,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
   if (!preference) {
     return res.status(400).json({ error: "A push endpoint, time zone, and reminder settings are required" });
   }
-  if (!preference.verseTimeLocal && !preference.ssReminder) {
+  if (!preference.verseTimeLocal && !preference.ssReminder && !preference.planReminder) {
     await db
       .delete(pushSubscriptions)
       .where(
@@ -74,6 +75,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
       verseTimeLocal: preference.verseTimeLocal,
       ssReminder: preference.ssReminder,
       ssTimeLocal: preference.ssTimeLocal,
+      planReminder: preference.planReminder,
     })
     .onConflictDoUpdate({
       target: pushSubscriptions.endpoint,
@@ -84,6 +86,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
         verseTimeLocal: preference.verseTimeLocal,
         ssReminder: preference.ssReminder,
         ssTimeLocal: preference.ssTimeLocal,
+        planReminder: preference.planReminder,
       },
     });
 
@@ -92,6 +95,7 @@ router.put("/api/push/subscription", requireAuth, async (req, res) => {
     verseTimeLocal: preference.verseTimeLocal,
     ssReminder: preference.ssReminder,
     ssTimeLocal: preference.ssTimeLocal,
+    planReminder: preference.planReminder,
     timezone: preference.timezone,
   });
 });

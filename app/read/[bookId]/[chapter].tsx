@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/Ve
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
+import { PathBSwitch } from "@/components/settings/PathBSwitch";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -56,6 +57,14 @@ import {
 import { scriptureOverlayHref } from "@/lib/scripture-nav";
 import { scrollDomToVerse } from "@/lib/reader-verse-anchor";
 import { VERSE_SHEET_HIGHLIGHTS, type VerseSheetHighlightKey } from "@/lib/verse-sheet";
+import { isPartialWordRange } from "@/lib/verse-word-range";
+import {
+  addSessionHighlight,
+  getSessionHighlights,
+  removeSessionHighlight,
+  subscribeSessionHighlights,
+} from "@/lib/session-highlights";
+import type { VerseWordRangeHighlight } from "@/components/reader/VerseWordSpans";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
@@ -104,6 +113,7 @@ const RV2_CORAL = "#E8604C";     // ONLY the Listen play button
 const RV2_PILL = "#F1EBDD";      // slightly darker cream for pills/surfaces
 const RV2_BORDER = "#E7E0D2";
 const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
+const WORDS_OF_CHRIST_KEY = "@grace-through-faith/reader-words-of-christ";
 const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
 /** Internal one-release rollback. Default off = new typography + floating chrome. */
 const READER_LEGACY_VERSE_BLOCKS = false;
@@ -844,8 +854,10 @@ export default function VerseReaderScreen() {
 
 
 
+
   // reader-v2: text size (AA sheet), chapter picker, strip visibility
   const [fontScale, setFontScale] = useState(1);
+  const [wordsOfChrist, setWordsOfChrist] = useState(false);
   const [showTextSizeSheet, setShowTextSizeSheet] = useState(false);
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [showStudySheet, setShowStudySheet] = useState(false);
@@ -860,11 +872,19 @@ export default function VerseReaderScreen() {
       const n = v ? parseFloat(v) : NaN;
       if (!isNaN(n) && FONT_SCALE_STEPS.includes(n as any)) setFontScale(n);
     });
+    AsyncStorage.getItem(WORDS_OF_CHRIST_KEY).then((v) => {
+      if (v === "1") setWordsOfChrist(true);
+    });
   }, []);
 
   const applyFontScale = useCallback((n: number) => {
     setFontScale(n);
     AsyncStorage.setItem(RV2_FONT_SCALE_KEY, String(n));
+  }, []);
+
+  const applyWordsOfChrist = useCallback((on: boolean) => {
+    setWordsOfChrist(on);
+    AsyncStorage.setItem(WORDS_OF_CHRIST_KEY, on ? "1" : "0");
   }, []);
 
   const setStripHidden = useCallback((hidden: boolean) => {
@@ -936,7 +956,34 @@ export default function VerseReaderScreen() {
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
   });
 
-  const { data: highlightsData } = useQuery<{ id: string; verseId: string; color: string; bookId?: number; chapter?: number; verse?: number }[]>({
+  const sessionHighlights = useSyncExternalStore(
+    subscribeSessionHighlights,
+    getSessionHighlights,
+    getSessionHighlights,
+  );
+  useEffect(() => {
+    if (isAuthenticated) return;
+    setLocalHighlightMap(() => {
+      const next = new Map<string, HighlightColorKey>();
+      for (const row of sessionHighlights) {
+        if (row.startWord != null || row.endWord != null) continue;
+        next.set(row.verseId, (row.color as HighlightColorKey) || "yellow");
+      }
+      return next;
+    });
+  }, [isAuthenticated, sessionHighlights]);
+  const { data: highlightsData } = useQuery<{
+    id: string;
+    verseId: string;
+    color: string;
+    startWord?: number | null;
+    endWord?: number | null;
+    bookId?: number;
+    chapter?: number;
+    verse?: number;
+    verseText?: string | null;
+    bookName?: string | null;
+  }[]>({
     queryKey: [`/api/highlights/${userId}`],
   });
 
@@ -948,6 +995,7 @@ export default function VerseReaderScreen() {
     const map = new Map<string, string>();
     if (highlightsData) {
       for (const h of highlightsData) {
+        if (isPartialWordRange(h)) continue;
         map.set(h.verseId, h.color);
         if (h.bookId && h.chapter && h.verse) {
           map.set(`${h.bookId}:${h.chapter}:${h.verse}`, h.color);
@@ -978,6 +1026,27 @@ export default function VerseReaderScreen() {
   const canGoNext = chapterNum < totalChapters;
 
   const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
+  const wordRanges = useMemo((): VerseWordRangeHighlight[] => {
+    const rows: VerseWordRangeHighlight[] = [];
+    const seen = new Set<string>();
+    const push = (verseId: string, start: number, end: number, color: string) => {
+      const key = `${verseId}:${start}:${end}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      rows.push({ verseId, start, end, color });
+    };
+    for (const row of highlightsData ?? []) {
+      if (!isPartialWordRange(row)) continue;
+      push(row.verseId, row.startWord, row.endWord, row.color);
+    }
+    if (!isAuthenticated) {
+      for (const row of sessionHighlights) {
+        if (!isPartialWordRange(row)) continue;
+        push(row.verseId, row.startWord, row.endWord, row.color);
+      }
+    }
+    return rows;
+  }, [highlightsData, isAuthenticated, sessionHighlights]);
 
   useEffect(() => {
     if (!verseParam) return;
@@ -1293,6 +1362,11 @@ export default function VerseReaderScreen() {
   const handleRemoveHighlight = useCallback(async () => {
     if (selectedVerseObjs.length === 0) { showStripToast("Tap a verse first"); return; }
     if (!isAuthenticated || !userId) {
+      for (const row of getSessionHighlights()) {
+        if (selectedVerseObjs.some((verse) => verse.id === row.verseId)) {
+          removeSessionHighlight(row.id);
+        }
+      }
       setLocalHighlightMap((prev) => {
         const next = new Map(prev);
         for (const v of selectedVerseObjs) next.delete(v.id);
@@ -1327,6 +1401,19 @@ export default function VerseReaderScreen() {
       return;
     }
     if (!isAuthenticated || !userId) {
+      for (const v of selectedVerseObjs) {
+        addSessionHighlight({
+          verseId: v.id,
+          color,
+          startWord: null,
+          endWord: null,
+          bookId: Number(bookId) || null,
+          chapter: chapterNum,
+          verse: v.verse,
+          verseText: v.text,
+          bookName: bookName || null,
+        });
+      }
       setLocalHighlightMap((prev) => {
         const next = new Map(prev);
         for (const v of selectedVerseObjs) next.set(v.id, color);
@@ -1357,7 +1444,7 @@ export default function VerseReaderScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showStripToast("Failed to highlight");
     }
-  }, [selectedVerseObjs, isAuthenticated, userId, showStripToast, activeSheetColor, handleRemoveHighlight, selectedHighlightIds]);
+  }, [selectedVerseObjs, isAuthenticated, userId, showStripToast, activeSheetColor, handleRemoveHighlight, selectedHighlightIds, bookId, chapterNum, bookName]);
 
   const selectionPayload = useMemo(
     () =>
@@ -1416,6 +1503,59 @@ export default function VerseReaderScreen() {
       /* user cancelled */
     }
   }, [selectionPayload.copyText]);
+
+  const studyVerseRef = useRef<number | null>(null);
+  const handleWordRange = useCallback(async (verseId: string, start: number, end: number) => {
+    if (wordStudyMode) return;
+    const verse = verses.find((item) => item.id === verseId);
+    if (!verse) return;
+    if (!isAuthenticated || !userId) {
+      addSessionHighlight({
+        verseId,
+        color: "yellow",
+        startWord: start,
+        endWord: end,
+        bookId: Number(bookId) || null,
+        chapter: chapterNum,
+        verse: verse.verse,
+        verseText: verse.text,
+        bookName: bookName || null,
+      });
+      showStripToast("Highlighted");
+      return;
+    }
+    try {
+      await apiRequest("POST", "/api/highlights", {
+        userId,
+        verseId,
+        color: "yellow",
+        startWord: start,
+        endWord: end,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
+      showStripToast("Highlighted");
+    } catch {
+      showStripToast("Failed to highlight");
+    }
+  }, [wordStudyMode, verses, isAuthenticated, userId, bookId, chapterNum, bookName, showStripToast]);
+
+  const handleStudyInKjv = useCallback(() => {
+    const verse = selectedVerseObjs[0];
+    if (!verse) return;
+    studyVerseRef.current = verse.verse;
+    setTranslation("KJV");
+    setWordStudyMode(true);
+    setSheetOpen(false);
+    setSelectedVerseNums([]);
+  }, [selectedVerseObjs, setTranslation]);
+
+  useEffect(() => {
+    if (!kjvWordStudy || studyVerseRef.current == null || verses.length === 0) return;
+    const verseNum = studyVerseRef.current;
+    studyVerseRef.current = null;
+    const start = setTimeout(() => scrollDomToVerse(verseNum), 120);
+    return () => clearTimeout(start);
+  }, [kjvWordStudy, verses]);
 
   const getHighlightBg = useCallback((verseId: string, verseNum: number, index: number): string => {
     if (highlightedFromNav === verseNum) {
@@ -1708,6 +1848,9 @@ export default function VerseReaderScreen() {
                         ? (verse, surface, mapping) => handleWordActivate(surface, mapping, verse.verse, verse.text)
                         : undefined
                     }
+                    wordRanges={wordRanges}
+                    onWordRange={(verseId, start, end) => void handleWordRange(verseId, start, end)}
+                    wordsOfChrist={wordsOfChrist && isKjvTranslation(translation)}
                   />
                 ) : verses.map((v, i) => {
                   const isActive = selectedVerseSet.has(v.verse);
@@ -1930,6 +2073,7 @@ export default function VerseReaderScreen() {
                     params: { bookId: String(bookId), chapter: String(chapter) },
                   } as any)
                 }
+                onStudyInKjv={handleStudyInKjv}
                 onOpenBookOverview={() =>
                   router.push({
                     pathname: "/passage-context",
@@ -2139,6 +2283,17 @@ export default function VerseReaderScreen() {
               <Text style={[styles.fontScalePreview, { fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
                 For by grace are ye saved through faith.
               </Text>
+              <View style={styles.wordsOfChristRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.wordsOfChristTitle}>Words of Christ in red</Text>
+                  <Text style={styles.wordsOfChristMeta}>Shown in the KJV</Text>
+                </View>
+                <PathBSwitch
+                  value={wordsOfChrist}
+                  onValueChange={applyWordsOfChrist}
+                  testID="reader-words-of-christ-switch"
+                />
+              </View>
             </View>
           </>
         )}
@@ -2592,6 +2747,26 @@ const styles = StyleSheet.create({
   fontScaleStopActive: {
     backgroundColor: "#1F1A12",
     transform: [{ scale: 1.35 }],
+  },
+  wordsOfChristRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(31,26,18,0.12)",
+  },
+  wordsOfChristTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: "#1F1A12",
+  },
+  wordsOfChristMeta: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#6B6660",
+    marginTop: 2,
   },
   fontScalePreview: {
     fontFamily: "Lora_400Regular",

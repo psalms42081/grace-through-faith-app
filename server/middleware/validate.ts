@@ -36,7 +36,16 @@ export const noteSchema = z.object({
 export const highlightSchema = z.object({
   verseId: z.string().min(1, "verseId is required"),
   color: z.string().optional(),
-});
+  startWord: z.number().int().min(0).optional(),
+  endWord: z.number().int().min(0).optional(),
+}).refine(
+  (body) =>
+    (body.startWord == null && body.endWord == null) ||
+    (typeof body.startWord === "number" &&
+      typeof body.endWord === "number" &&
+      body.endWord >= body.startWord),
+  { message: "startWord and endWord must be a word range" },
+);
 
 export const bookmarkSchema = z.object({
   verseId: z.string().min(1, "verseId is required"),
@@ -45,7 +54,7 @@ export const bookmarkSchema = z.object({
 
 export const prayerSchema = z.object({
   title: z.string().min(1, "Prayer title is required").max(200),
-  content: z.string().max(2000).optional(),
+  content: z.string().max(2000).nullish(),
   category: z.string().optional(),
 });
 

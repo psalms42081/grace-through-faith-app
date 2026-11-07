@@ -13,6 +13,25 @@ export const SABBATH_SCHOOL_PUSH_WEEKDAY = 5;
 export const SABBATH_SCHOOL_PUSH_TIME = "18:00";
 export const DEFAULT_VERSE_PUSH_TIME = "07:00";
 
+/** web-push 3.6.7 sends Urgency: normal and TTL 2419200 (four weeks) when options are omitted. */
+export const WEB_PUSH_URGENCY = "high" as const;
+export const WEB_PUSH_TTL_SECONDS = 6 * 60 * 60;
+
+export function webPushSendOptions(): { urgency: typeof WEB_PUSH_URGENCY; TTL: number } {
+  return { urgency: WEB_PUSH_URGENCY, TTL: WEB_PUSH_TTL_SECONDS };
+}
+
+export const ANDROID_CHROME_BATTERY_TIP =
+  "If notifications arrive late, turn off battery optimisation for Chrome in Android settings.";
+
+export function isAndroidChrome(userAgent: string): boolean {
+  return (
+    /Android/i.test(userAgent) &&
+    /Chrome\/\d/i.test(userAgent) &&
+    !/EdgA|Edg\/|OPR\/|SamsungBrowser|Firefox/i.test(userAgent)
+  );
+}
+
 const WEEKDAYS: Record<string, number> = {
   Sun: 0,
   Mon: 1,
@@ -34,11 +53,13 @@ export type PushScheduleRow = {
   verseTimeLocal: string | null;
   ssReminder: boolean;
   ssTimeLocal?: string | null;
+  planReminder?: boolean;
   lastVerseLocalDate: string | null;
   lastSsLocalDate: string | null;
+  lastPlanLocalDate?: string | null;
 };
 
-export type DuePushKind = "verse" | "sabbath";
+export type DuePushKind = "verse" | "sabbath" | "plan";
 
 export function parseHmToMinutes(value: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
@@ -172,6 +193,15 @@ export function sabbathSchoolNotification(lessonNumber: number) {
   };
 }
 
+export function readingPlanNotification(dayNumber: number, planTitle: string, planId: string) {
+  const params = new URLSearchParams({ planId });
+  return {
+    title: "Reading plan",
+    body: `Day ${dayNumber} of ${planTitle} is ready`,
+    url: `/devotional-day-preview?${params.toString()}`,
+  };
+}
+
 export function fallsInCurrentWindow(
   localMinutes: number,
   scheduledHm: string,
@@ -201,6 +231,13 @@ export function duePushKinds(row: PushScheduleRow, now: Date): DuePushKind[] {
     fallsInCurrentWindow(clock.minutes, row.ssTimeLocal || SABBATH_SCHOOL_PUSH_TIME)
   ) {
     due.push("sabbath");
+  }
+  if (
+    row.planReminder === true &&
+    row.lastPlanLocalDate !== clock.dateKey &&
+    fallsInCurrentWindow(clock.minutes, row.verseTimeLocal || DEFAULT_VERSE_PUSH_TIME)
+  ) {
+    due.push("plan");
   }
   return due;
 }

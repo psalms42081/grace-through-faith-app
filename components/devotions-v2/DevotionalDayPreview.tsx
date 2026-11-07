@@ -24,6 +24,7 @@ import { D2, F } from "./tokens";
 import { EmptyState, ErrorState, Header, LoadingState, PrimaryButton } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { getCalendarDate } from "@/shared/calendar-date";
 
 type Day = {
   id: string;
@@ -41,12 +42,21 @@ type Day = {
   nowApplication: string | null;
   historicVoiceExcerpt: string | null;
 };
+type PaceDay = {
+  id: string;
+  dayNumber: number;
+  title: string;
+  status: "complete" | "open" | "locked";
+  canComplete: boolean;
+};
 type Today = {
   today: Day | null;
   enrollment?: { id: string; planId: string };
   completedCount?: number;
   totalDays?: number;
   planComplete?: boolean;
+  canComplete?: boolean;
+  outline?: PaceDay[];
 };
 type Passage = { verses: { id: string; verse: number; text: string }[] };
 
@@ -187,9 +197,8 @@ export default function DevotionalDayPreview() {
 
   const [journal, setJournal] = useState("");
   const [share, setShare] = useState(false);
-  const [shared, setShared] = useState(false);
-  const [complete, setComplete] = useState(false);
   const [pending, setPending] = useState(false);
+  const finishing = React.useRef(false);
 
   useEffect(() => {
     if (depthParam === "quick" || depthParam === "standard" || depthParam === "deep") {
@@ -197,9 +206,10 @@ export default function DevotionalDayPreview() {
     }
   }, [depthParam, setDepth]);
 
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const endpoint = planId
-    ? `/api/devotionals/today?userId=${userId}&planId=${planId}`
-    : `/api/devotionals/today?userId=${userId}`;
+    ? `/api/devotionals/today?userId=${userId}&planId=${planId}&tz=${encodeURIComponent(timezone)}`
+    : `/api/devotionals/today?userId=${userId}&tz=${encodeURIComponent(timezone)}`;
 
   const today = useQuery<Today>({ queryKey: [endpoint] });
   const day = today.data?.today;
@@ -221,14 +231,20 @@ export default function DevotionalDayPreview() {
     [passage.data?.verses, day?.verseStart, day?.verseEnd],
   );
 
+  const canComplete = today.data?.canComplete === true;
+  const outline = today.data?.outline ?? [];
+
   const finish = async () => {
-    if (!today.data?.enrollment || !day) return;
+    if (finishing.current || !canComplete || !today.data?.enrollment || !day) return;
+    finishing.current = true;
     setPending(true);
     try {
       await apiRequest("POST", "/api/devotionals/complete", {
         enrollmentId: today.data.enrollment.id,
         dayId: day.id,
         journalEntry: journal.trim() || null,
+        timezone,
+        localDate: getCalendarDate(new Date(), timezone).dateKey,
       });
       if (share && groupId && journal.trim()) {
         await apiRequest("POST", `/api/groups/${groupId}/share-reflection`, {
@@ -236,16 +252,16 @@ export default function DevotionalDayPreview() {
           dayTitle: day.title,
           passageLabel: day.passageLabel || null,
         });
-        setShared(true);
       }
-      setComplete(true);
       triggerMissionInvite();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast(`Day ${day.dayNumber} complete`, "success");
       queryClient.invalidateQueries({ queryKey: [endpoint] });
       queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
     } catch {
       showToast("Could not save. Your reading is still here. Please try again.", "error");
     } finally {
+      finishing.current = false;
       setPending(false);
     }
   };
@@ -307,6 +323,38 @@ export default function DevotionalDayPreview() {
           />
         </View>
         <Text style={s.progressLabel}>{count} of {total} readings complete</Text>
+        {outline.length ? (
+          <View style={s.outline} testID="devotional-day-outline">
+            {outline.map((item) => (
+              <View
+                key={item.id}
+                testID={`devotional-pace-day-${item.dayNumber}`}
+                accessibilityLabel={`Day ${item.dayNumber} ${item.status}`}
+                accessibilityState={{
+                  disabled: item.status === "locked",
+                  selected: item.status === "open",
+                }}
+                style={[
+                  s.paceRow,
+                  item.status === "locked" && s.paceLocked,
+                  item.status === "open" && s.paceOpen,
+                  item.status === "complete" && s.paceComplete,
+                ]}
+              >
+                <Text style={[s.paceNum, item.status === "locked" && s.paceMuted]}>{item.dayNumber}</Text>
+                <Text style={[s.paceTitle, item.status === "locked" && s.paceMuted]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                {item.status === "complete" ? (
+                  <Ionicons name="checkmark" size={16} color={D2.sage} />
+                ) : null}
+                {item.status === "locked" ? (
+                  <Ionicons name="lock-closed-outline" size={15} color={D2.muted} />
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
         <LightDepthSelector compact />
 
         <View style={s.titleBlock}>
@@ -433,47 +481,41 @@ export default function DevotionalDayPreview() {
           </View>
         ) : null}
 
-        {!complete ? (
-          <View style={s.card}>
-            <Text style={s.label}>JOURNAL · OPTIONAL</Text>
-            {depth !== "quick" ? (
-              <TextInput
-                value={journal}
-                onChangeText={setJournal}
-                multiline
-                placeholder="What are you taking with you today?"
-                placeholderTextColor={D2.muted}
-                style={s.journal}
-              />
-            ) : null}
-            {groupId ? (
-              <Pressable onPress={() => setShare(!share)} style={s.shareRow}>
-                <Ionicons
-                  name={share ? "checkbox" : "square-outline"}
-                  size={20}
-                  color={share ? D2.violet : D2.muted}
-                />
-                <Text style={s.shareText}>Share reflection with group</Text>
-              </Pressable>
-            ) : null}
-            <PrimaryButton
-              label={pending ? "Saving…" : "Mark day complete"}
-              onPress={finish}
-              disabled={pending}
-              testID="devotional-day-preview-complete"
+        <View style={s.card}>
+          <Text style={s.label}>JOURNAL · OPTIONAL</Text>
+          {depth !== "quick" ? (
+            <TextInput
+              value={journal}
+              onChangeText={setJournal}
+              multiline
+              placeholder="What are you taking with you today?"
+              placeholderTextColor={D2.muted}
+              style={s.journal}
+              editable={canComplete && !pending}
             />
-          </View>
-        ) : (
-          <View style={s.completed}>
-            <Ionicons name="checkmark-circle" size={28} color={D2.sage} />
-            <Text style={s.completedTitle}>Day {day.dayNumber} complete</Text>
-            <Text style={s.body}>
-              {shared
-                ? "Your reflection was shared with the group."
-                : "Come back tomorrow for your next reading."}
+          ) : null}
+          {groupId ? (
+            <Pressable onPress={() => setShare(!share)} style={s.shareRow}>
+              <Ionicons
+                name={share ? "checkbox" : "square-outline"}
+                size={20}
+                color={share ? D2.violet : D2.muted}
+              />
+              <Text style={s.shareText}>Share reflection with group</Text>
+            </Pressable>
+          ) : null}
+          <PrimaryButton
+            label={pending ? "Saving…" : "Mark day complete"}
+            onPress={finish}
+            disabled={pending || !canComplete}
+            testID="devotional-day-preview-complete"
+          />
+          {!canComplete ? (
+            <Text style={s.paceNote} testID="devotional-day-complete-wait">
+              You can mark this day complete tomorrow.
             </Text>
-          </View>
-        )}
+          ) : null}
+        </View>
       </ScrollView>
     </View>
   );
@@ -501,6 +543,53 @@ const s = StyleSheet.create({
     fontSize: 11,
     marginHorizontal: 20,
     marginTop: 7,
+  },
+  outline: {
+    marginHorizontal: 20,
+    marginTop: 14,
+    gap: 8,
+  },
+  paceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: D2.card,
+  },
+  paceOpen: {
+    borderWidth: 1,
+    borderColor: D2.ink,
+  },
+  paceComplete: {
+    backgroundColor: D2.sageSoft,
+  },
+  paceLocked: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: D2.border,
+  },
+  paceNum: {
+    width: 22,
+    fontFamily: F.interBold,
+    color: D2.ink,
+    fontSize: 13,
+  },
+  paceTitle: {
+    flex: 1,
+    fontFamily: F.interMed,
+    color: D2.ink,
+    fontSize: 14,
+  },
+  paceMuted: {
+    color: D2.muted,
+  },
+  paceNote: {
+    fontFamily: F.inter,
+    color: D2.muted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   titleBlock: {
     padding: 22,

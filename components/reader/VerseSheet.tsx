@@ -26,6 +26,7 @@ import {
   refreshVerseMapAfterGeneration,
   VerseMapGenerationGate,
 } from "@/lib/verse-map-generation";
+import { isKjvTranslation } from "@/lib/strong-map-policy";
 import {
   VERSE_SHEET_ATTRIBUTION,
   VERSE_SHEET_COLLAPSED_HEIGHT,
@@ -144,6 +145,7 @@ export function VerseSheet({
   onWordActivate,
   onOpenDeepDive,
   onOpenBookOverview,
+  onStudyInKjv,
   activeColor,
   bookmarked,
   notice,
@@ -166,6 +168,7 @@ export function VerseSheet({
   onWordActivate: (surface: string, mapping: ReaderStrongMap) => void;
   onOpenDeepDive: () => void;
   onOpenBookOverview: () => void;
+  onStudyInKjv: () => void;
   activeColor: VerseSheetHighlightKey | null;
   bookmarked: boolean;
   notice?: string | null;
@@ -555,6 +558,18 @@ export function VerseSheet({
             ) : null}
 
             <CollapsibleSection title="See also" testID="reader-verse-sheet-see-also">
+              {!isKjvTranslation(translation) && first ? (
+                <Pressable
+                  onPress={onStudyInKjv}
+                  testID="reader-study-verse-kjv"
+                  accessibilityRole="button"
+                  accessibilityLabel="Study this verse in the KJV"
+                  style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
+                >
+                  <Text style={s.linkTitle}>Study this verse in the KJV</Text>
+                  <Ionicons name="chevron-forward" size={16} color={MUTED} />
+                </Pressable>
+              ) : null}
               {first ? (
                 <Pressable
                   onPress={() =>

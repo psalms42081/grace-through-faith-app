@@ -14,6 +14,8 @@ import {
   userPlanProgress,
 } from "../../shared/schema";
 import { and, eq, sql } from "drizzle-orm";
+import { getCalendarDate, normalizeTimeZone } from "../../shared/calendar-date";
+import { pacePlanDays } from "../../lib/plan-pacing";
 import { getEffectiveUserId, optionalAuth } from "../middleware/auth";
 import { generateVerseMap, generateQuickInsight } from "../services/ai-engine";
 import {
@@ -373,7 +375,7 @@ router.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
     }
 
     const [day] = await db
-      .select({ id: devotionalDays.id })
+      .select({ id: devotionalDays.id, dayNumber: devotionalDays.dayNumber })
       .from(devotionalDays)
       .where(
         and(
@@ -387,12 +389,45 @@ router.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
       return res.status(400).json({ error: "Day does not belong to this devotional plan" });
     }
 
+    const today = getCalendarDate(new Date(), normalizeTimeZone(req.body?.timezone)).dateKey;
+    const [allDayRows, completedRows] = await Promise.all([
+      db
+        .select({ dayNumber: devotionalDays.dayNumber })
+        .from(devotionalDays)
+        .where(eq(devotionalDays.planId, enrollment.planId)),
+      db
+        .select({
+          dayNumber: devotionalDays.dayNumber,
+          localDate: userPlanProgress.completedLocalDate,
+        })
+        .from(userPlanProgress)
+        .innerJoin(devotionalDays, eq(devotionalDays.id, userPlanProgress.dayId))
+        .where(eq(userPlanProgress.enrollmentId, enrollment.id)),
+    ]);
+    const pace = pacePlanDays({
+      dayNumbers: allDayRows.map((item) => item.dayNumber),
+      completed: completedRows,
+      today,
+    });
+    const target = pace.find((item) => item.dayNumber === day.dayNumber);
+    if (!target || target.status === "locked") {
+      return res.status(409).json({ error: "This reading is still locked." });
+    }
+    if (!target.canComplete) {
+      return res.status(409).json({
+        error: target.status === "complete"
+          ? "This reading is already complete."
+          : "This reading can be marked complete tomorrow.",
+      });
+    }
+
     const progress = await db
       .insert(userPlanProgress)
       .values({
         enrollmentId: enrollment.id,
         dayId: day.id,
         journalEntry,
+        completedLocalDate: today,
       })
       .onConflictDoNothing()
       .returning();

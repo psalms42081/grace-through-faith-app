@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useSyncExternalStore } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import EmptyState from "@/components/ui/EmptyState";
+import { wordRangeExcerpt, isPartialWordRange } from "@/lib/verse-word-range";
+import {
+  getSessionHighlights,
+  removeSessionHighlight,
+  subscribeSessionHighlights,
+} from "@/lib/session-highlights";
 
 interface EnrichedNote {
   id: string;
@@ -38,6 +44,8 @@ interface EnrichedHighlight {
   userId: string;
   verseId: string;
   color: string;
+  startWord?: number | null;
+  endWord?: number | null;
   createdAt: string;
   bookId: number | null;
   chapter: number | null;
@@ -146,8 +154,19 @@ function NoteItem({ item, theme }: { item: EnrichedNote; theme: any }) {
   );
 }
 
-function HighlightItem({ item, theme }: { item: EnrichedHighlight; theme: any }) {
+function HighlightItem({
+  item,
+  theme,
+  onRemove,
+}: {
+  item: EnrichedHighlight;
+  theme: any;
+  onRemove: (id: string) => void;
+}) {
   const dotColor = HIGHLIGHT_COLORS[item.color] || HIGHLIGHT_COLORS.yellow;
+  const preview = isPartialWordRange(item) && item.verseText
+    ? wordRangeExcerpt(item.verseText, item.startWord, item.endWord)
+    : item.verseText;
   return (
     <Pressable
       onPress={() => navigateToVerse(item.bookId, item.chapter)}
@@ -166,9 +185,20 @@ function HighlightItem({ item, theme }: { item: EnrichedHighlight; theme: any })
             {formatDate(item.createdAt)}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+        <Pressable
+          onPress={(event) => {
+            event.stopPropagation?.();
+            onRemove(item.id);
+          }}
+          hitSlop={8}
+          testID={`saved-highlight-remove-${item.id}`}
+          accessibilityRole="button"
+          accessibilityLabel="Remove highlight"
+        >
+          <Text style={{ color: theme.error, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Remove</Text>
+        </Pressable>
       </View>
-      {item.verseText && (
+      {preview ? (
         <Text
           style={[
             styles.highlightText,
@@ -176,9 +206,9 @@ function HighlightItem({ item, theme }: { item: EnrichedHighlight; theme: any })
           ]}
           numberOfLines={3}
         >
-          {item.verseText}
+          {preview}
         </Text>
-      )}
+      ) : null}
     </Pressable>
   );
 }
@@ -247,7 +277,12 @@ export default function LibraryScreen() {
   useTheme(); // Path B light sweep: screen is pinned light
   const theme = LIGHT_THEME;
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
+  const { userId, isAuthenticated } = useAuth();
+  const sessionHighlights = useSyncExternalStore(
+    subscribeSessionHighlights,
+    getSessionHighlights,
+    getSessionHighlights,
+  );
   const [activeTab, setActiveTab] = useState<TabKey>("notes");
   const [search, setSearch] = useState("");
 
@@ -263,6 +298,19 @@ export default function LibraryScreen() {
 
   const { data: bookmarks = [], isLoading: bookmarksLoading } = useQuery<EnrichedBookmark[]>({
     queryKey: [`/api/bookmarks/${uid}`],
+  });
+
+  const deleteHighlight = useMutation({
+    mutationFn: async (id: string) => {
+      if (!isAuthenticated || id.startsWith("session-")) {
+        removeSessionHighlight(id);
+        return;
+      }
+      await apiRequest("DELETE", `/api/highlights/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/highlights/${uid}`] });
+    },
   });
 
   const deleteBookmark = useMutation({
@@ -285,8 +333,11 @@ export default function LibraryScreen() {
     );
   }, [notes, search]);
 
+  const highlightRows: EnrichedHighlight[] = isAuthenticated
+    ? highlights
+    : sessionHighlights.map((row) => ({ ...row, userId: "guest" }));
   const filteredHighlights = useMemo(() => {
-    if (!search.trim()) return highlights;
+    if (!search.trim()) return highlightRows;
     const q = search.toLowerCase();
     return highlights.filter(
       (h) =>
@@ -294,7 +345,7 @@ export default function LibraryScreen() {
         h.verseText?.toLowerCase().includes(q) ||
         h.color?.toLowerCase().includes(q)
     );
-  }, [highlights, search]);
+  }, [highlightRows, search]);
 
   const filteredBookmarks = useMemo(() => {
     if (!search.trim()) return bookmarks;
@@ -322,7 +373,7 @@ export default function LibraryScreen() {
 
   const tabs: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; count: number }[] = [
     { key: "notes", label: "Notes", icon: "document-text", count: notes.length },
-    { key: "highlights", label: "Highlights", icon: "color-fill", count: highlights.length },
+    { key: "highlights", label: "Highlights", icon: "color-fill", count: highlightRows.length },
     { key: "bookmarks", label: "Bookmarks", icon: "bookmark", count: bookmarks.length },
   ];
 
@@ -431,7 +482,9 @@ export default function LibraryScreen() {
           <FlatList
             data={filteredHighlights}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <HighlightItem item={item} theme={theme} />}
+            renderItem={({ item }) => (
+              <HighlightItem item={item} theme={theme} onRemove={(id) => deleteHighlight.mutate(id)} />
+            )}
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
             ListEmptyComponent={renderEmptyState}
             scrollEnabled={filteredHighlights.length > 0}
