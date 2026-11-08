@@ -9,6 +9,7 @@ import { registerRoutes } from "./routes";
 import { warnIfDevotionalCatalogIsEmpty } from "./db";
 import * as fs from "fs";
 import * as path from "path";
+import { createHash } from "crypto";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -273,8 +274,15 @@ function configureExpoAndLanding(app: express.Application) {
 
   const publicSwPath = path.resolve(process.cwd(), "public", "sw.js");
   const distSwPath = path.resolve(process.cwd(), "dist", "sw.js");
-  if (fs.existsSync(publicSwPath) && fs.existsSync(path.resolve(process.cwd(), "dist", "index.html"))) {
-    fs.copyFileSync(publicSwPath, distSwPath);
+  const distIndexPath = path.resolve(process.cwd(), "dist", "index.html");
+  if (fs.existsSync(publicSwPath) && fs.existsSync(distIndexPath)) {
+    // The build id must change with every deploy or returning browsers never install a new worker.
+    const buildId = createHash("sha256").update(fs.readFileSync(distIndexPath, "utf8")).digest("hex").slice(0, 12);
+    fs.writeFileSync(
+      distSwPath,
+      fs.readFileSync(publicSwPath, "utf8").replaceAll("__SW_BUILD_ID__", buildId),
+      "utf8",
+    );
   }
   app.get("/sw.js", (_req: Request, res: Response) => {
     const swPath = fs.existsSync(distSwPath) ? distSwPath : publicSwPath;

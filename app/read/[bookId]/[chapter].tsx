@@ -27,13 +27,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
-import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
+import { VerseSpokenText } from "@/components/reader/VerseSpokenText";
 import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
 import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/VerseSheet";
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
-import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage } from "@/lib/words-of-christ";
+import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage, wordsOfChristRanges } from "@/lib/words-of-christ";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -1920,7 +1920,14 @@ export default function VerseReaderScreen() {
                         <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
                           {v.verse}{"\u00a0"}
                         </Text>
-                        <VerseTextRuns text={v.text} />
+                        <VerseSpokenText
+                          text={v.text}
+                          spokenRanges={
+                            wordsOfChrist && isKjvTranslation(translation)
+                              ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse)
+                              : []
+                          }
+                        />
                         {isBookmarked && (
                           <Text style={{ color: RV2_INK_MUTED, fontSize: 10 }}> ◆</Text>
                         )}
@@ -2050,7 +2057,14 @@ export default function VerseReaderScreen() {
                             <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
                               {v.verse}{"\u00a0"}
                             </Text>
-                            <VerseTextRuns text={v.text} />
+                            <VerseSpokenText
+                              text={v.text}
+                              spokenRanges={
+                                wordsOfChrist && isKjvTranslation(splitTranslation)
+                                  ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse)
+                                  : []
+                              }
+                            />
                           </Text>
                         </View>
                       ))

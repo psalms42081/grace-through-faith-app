@@ -55,6 +55,36 @@ describe("words of Christ", () => {
     assert.match(spans, /VerseTextRuns[\s\S]*style=\{spoken \? \{ color: WORDS_OF_CHRIST_INK \} : undefined\}/);
   });
 
+  it("inks the words of Christ in split and verse-per-line reading", () => {
+    const reader = readFileSync(
+      path.join(process.cwd(), "app", "read", "[bookId]", "[chapter].tsx"),
+      "utf8",
+    );
+    assert.doesNotMatch(reader, /<VerseTextRuns text=\{v\.text\} \/>/);
+    assert.match(
+      reader,
+      /<VerseSpokenText[\s\S]*?wordsOfChrist && isKjvTranslation\(translation\)[\s\S]*?wordsOfChristRanges\(Number\(bookId\), chapterNum, v\.verse\)/,
+    );
+    assert.match(
+      reader,
+      /<VerseSpokenText[\s\S]*?wordsOfChrist && isKjvTranslation\(splitTranslation\)[\s\S]*?wordsOfChristRanges\(Number\(bookId\), chapterNum, v\.verse\)/,
+    );
+    const spoken = readFileSync(
+      path.join(process.cwd(), "components", "reader", "VerseSpokenText.tsx"),
+      "utf8",
+    );
+    assert.match(spoken, /SPOKEN_STYLE = \{ color: WORDS_OF_CHRIST_INK \}/);
+  });
+
+  it("serves a build-stamped service worker so returning browsers update", () => {
+    const server = readFileSync(path.join(process.cwd(), "server", "index.ts"), "utf8");
+    assert.doesNotMatch(server, /copyFileSync\(publicSwPath, distSwPath\)/);
+    assert.match(server, /replaceAll\("__SW_BUILD_ID__", buildId\)/);
+    const sw = readFileSync(path.join(process.cwd(), "dist", "sw.js"), "utf8");
+    assert.doesNotMatch(sw, /__SW_BUILD_ID__/);
+    assert.match(sw, /const BUILD_ID = "[a-f0-9]{12}";/);
+  });
+
   it("ships the KJV words-of-Christ table in the web export", () => {
     const dir = path.join(process.cwd(), "dist", "_expo", "static", "js", "web");
     const files = readdirSync(dir).filter((name) => name.endsWith(".js"));

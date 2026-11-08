@@ -256,7 +256,9 @@ describe("typography preview source contracts", () => {
     assert.match(prose, /headingQa/);
     assert.match(prose, /VerseTextRuns/);
     assert.match(reader, /providerHeadingQa/);
-    assert.match(reader, /VerseTextRuns text=\{v\.text\}/);
+    assert.match(reader, /<VerseSpokenText\s+text=\{v\.text\}/);
+    const spoken = readFileSync(new URL("../components/reader/VerseSpokenText.tsx", import.meta.url), "utf8");
+    assert.match(spoken, /<VerseTextRuns/);
     assert.match(runs, /fontVariant: \["small-caps"\]/);
     assert.match(runs, /splitDivineNameRuns/);
   });
