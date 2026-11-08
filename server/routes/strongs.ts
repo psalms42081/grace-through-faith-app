@@ -18,6 +18,7 @@ import {
   strongMapCacheHash,
 } from "../../lib/strong-map-policy";
 import { normalizeStrongId } from "../../lib/step-bible-tagged";
+import { aiScriptureTranslation } from "../../shared/youversion";
 
 export { STRONG_MAP_CACHE_VERSION, strongMapCacheHash };
 
@@ -34,7 +35,7 @@ const STRONG_MAP_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function normalizeTranslation(value: unknown): string {
   const raw = typeof value === "string" ? value.trim() : "";
-  return raw ? raw.toUpperCase() : "";
+  return raw ? aiScriptureTranslation(raw.toUpperCase()) : "";
 }
 
 /**

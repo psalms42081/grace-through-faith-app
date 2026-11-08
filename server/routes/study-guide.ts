@@ -16,6 +16,7 @@ import {
   resolveReference,
   ScriptureError,
 } from "../services/scripture-service";
+import { aiScriptureTranslation } from "../../shared/youversion";
 
 const router = Router();
 
@@ -26,7 +27,7 @@ const SCRIPTURE_CONTRACT_VERSION = "canonical-v1";
 
 function normalizeTranslation(value: unknown): string {
   const raw = typeof value === "string" ? value.trim() : "";
-  return raw ? raw.toUpperCase() : "";
+  return raw ? aiScriptureTranslation(raw.toUpperCase()) : "";
 }
 
 /**

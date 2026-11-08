@@ -18,11 +18,20 @@ import {
   searchNlt,
   discoverNkjvCapability,
   resolveChapter,
+  resolveBookRecord,
   ScriptureError,
   type ApiBibleTranslationConfig,
   type ChapterCacheHooks,
   type LocalBookRef,
 } from "../services/scripture-service";
+import {
+  getLanguageNames,
+  getYouVersionCatalog,
+  languageNameForTag,
+  resolveYouVersionChapter,
+  type ResolvedYouVersionChapter,
+} from "../services/youversion";
+import { isYouVersionCode } from "../../shared/youversion";
 
 const router = Router();
 
@@ -143,6 +152,26 @@ async function getApiBibleTranslations(
   return translations;
 }
 
+// ─── YOUVERSION (reader only) ────────────────────────────────────────────────
+
+async function resolveYouVersionForReader(
+  translation: string,
+  book: string,
+  chapter: number,
+): Promise<ResolvedYouVersionChapter> {
+  const bookRecord = await resolveBookRecord(book);
+  if (!bookRecord) {
+    throw new ScriptureError("BOOK_NOT_FOUND", `Book not found: ${book}`, 404);
+  }
+  return resolveYouVersionChapter(translation.trim().toUpperCase(), bookRecord, chapter);
+}
+
+/** YouVersion text is shown at read time only; browsers must not keep a copy. */
+function sendYouVersion(res: any, body: Record<string, unknown>) {
+  res.set("Cache-Control", "no-store");
+  return res.json(body);
+}
+
 // ─── PASSAGE ─────────────────────────────────────────────────────────────────
 
 router.get("/api/passage", async (req, res) => {
@@ -151,6 +180,20 @@ router.get("/api/passage", async (req, res) => {
 
     if (!book || !chapter) {
       return res.status(400).json({ error: "book and chapter are required" });
+    }
+
+    if (isYouVersionCode(req.query.translation as string | undefined)) {
+      const yv = await resolveYouVersionForReader(String(req.query.translation), String(book), Number(chapter));
+      return sendYouVersion(res, {
+        book: yv.book,
+        chapter: yv.chapter,
+        verses: yv.verses,
+        providerContent: yv.providerContent,
+        footnotes: yv.footnotes,
+        attribution: yv.attribution,
+        cached: yv.cached,
+        ...yv.meta,
+      });
     }
 
     const resolved = await resolveChapter({
@@ -199,7 +242,9 @@ router.get("/api/translations", async (_req, res) => {
       id: string;
       name: string;
       abbreviation: string;
+      displayAbbreviation?: string;
       language: string;
+      languageName?: string;
       source: string;
       provider: string;
       license: string;
@@ -270,6 +315,17 @@ router.get("/api/translations", async (_req, res) => {
       }
     }
 
+    try {
+      result.push(...(await getYouVersionCatalog()));
+    } catch (err: any) {
+      console.error("[youversion] catalog unavailable:", err?.message);
+    }
+
+    const languageNames = await getLanguageNames();
+    for (const entry of result) {
+      entry.languageName ??= languageNameForTag(entry.language, languageNames);
+    }
+
     return res.json(result);
   } catch (err) {
     console.error(err);
@@ -316,6 +372,20 @@ router.get("/api/verse", async (req, res) => {
     const verseNum = Number(verse);
     if (isNaN(verseNum) || verseNum < 1) {
       return res.status(400).json({ error: "verse must be a positive number" });
+    }
+
+    if (isYouVersionCode(req.query.translation as string | undefined)) {
+      const yv = await resolveYouVersionForReader(String(req.query.translation), String(book), Number(chapter));
+      const yvVerse = yv.verses.find((v) => v.verse === verseNum);
+      if (!yvVerse) {
+        return res.status(404).json({ error: "Verse not found" });
+      }
+      return sendYouVersion(res, {
+        ...yvVerse,
+        attribution: yv.attribution,
+        footnotes: yv.footnotes.filter((note) => note.verse === verseNum),
+        ...yv.meta,
+      });
     }
 
     // Resolve the whole chapter (works for DB, NLT, and API.Bible translations),

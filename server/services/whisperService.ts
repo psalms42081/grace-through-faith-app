@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execFile } from "child_process";
 import { getFFmpegPath } from "./ffmpegPath";
+import { aiRequestFetch } from "./ai-request-guard";
 
 function createWhisperClient(): OpenAI {
   const directKey = process.env.OPENAI_API_KEY;
@@ -12,6 +13,7 @@ function createWhisperClient(): OpenAI {
   return new OpenAI({
     apiKey: directKey,
     baseURL: "https://api.openai.com/v1",
+    fetch: aiRequestFetch,
   });
 }
 

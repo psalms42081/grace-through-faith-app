@@ -26,6 +26,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useTranslation } from "@/context/TranslationContext";
+import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
+import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 
 interface BibleBook {
   id: number;
@@ -59,14 +61,14 @@ export default function BookPickerScreen() {
     router.push((isBibleTabHome ? bibleTabBookPath(bookId) : `/read/${bookId}`) as any);
   };
 
-  const { data: apiTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string; available?: boolean }[]>({
+  const { data: apiTranslations } = useQuery<CatalogTranslation[]>({
     queryKey: ["/api/translations"],
   });
   // Authoritative catalog wins once loaded; only entries with available !== false
   // are selectable. Static fallback is public-domain only (never NKJV).
-  const TRANSLATIONS = apiTranslations
-    ? apiTranslations.filter((t) => t.available !== false).map((t) => ({ id: t.abbreviation, name: t.name }))
-    : DEFAULT_TRANSLATIONS;
+  const TRANSLATIONS: CatalogTranslation[] =
+    apiTranslations ??
+    DEFAULT_TRANSLATIONS.map((t) => ({ id: t.id, abbreviation: t.id, name: t.name, language: "en", languageName: "English" }));
 
   const bottomPad = (Platform.OS === "web" ? 34 : 0) + (isBibleTabHome ? 80 : 0);
 
@@ -101,7 +103,7 @@ export default function BookPickerScreen() {
           onPress={() => setShowPicker(true)}
         >
           <Text style={[styles.translationPillText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
-            {translation}
+            {translationLabel(translation, apiTranslations)}
           </Text>
           <Ionicons name="chevron-down" size={12} color={theme.accent} />
         </Pressable>
@@ -116,30 +118,12 @@ export default function BookPickerScreen() {
             <Text style={[styles.pickerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]}>
               Select Translation
             </Text>
-            <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-              {TRANSLATIONS.map((t) => {
-                const isActive = translation === t.id;
-                return (
-                  <Pressable
-                    key={t.id}
-                    onPress={() => { setTranslation(t.id); setShowPicker(false); }}
-                    style={[styles.pickerOption, isActive && { backgroundColor: theme.accent + "15" }]}
-                  >
-                    <View style={styles.pickerOptionLeft}>
-                      <Text style={[styles.pickerOptionAbbr, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_700Bold" }]}>
-                        {t.id}
-                      </Text>
-                      <View>
-                        <Text style={[styles.pickerOptionName, { color: isActive ? theme.accent : theme.text, fontFamily: "Inter_500Medium" }]}>
-                          {t.name}
-                        </Text>
-                      </View>
-                    </View>
-                    {isActive && <Ionicons name="checkmark-circle" size={22} color={theme.accent} />}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <TranslationPickerList
+              catalog={TRANSLATIONS}
+              selected={translation}
+              testID="book-picker-translation-picker"
+              onSelect={(code) => { setTranslation(code); setShowPicker(false); }}
+            />
           </View>
         </Pressable>
       </Modal>

@@ -30,6 +30,14 @@ import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewPro
 import { VerseSpokenText } from "@/components/reader/VerseSpokenText";
 import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
 import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/VerseSheet";
+import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
+import {
+  ChapterAttribution,
+  type ChapterAttributionData,
+  type ChapterFootnote,
+} from "@/components/reader/ChapterAttribution";
+import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
+import { isYouVersionCode } from "@/shared/youversion";
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
@@ -78,6 +86,12 @@ const TRANSLATION_LABELS: Record<string, string> = {
   LSG: "Louis Segond 1910",
   ARC: "Almeida Revista e Corrigida",
   TAGV: "Ang Biblia (Tagalog)",
+};
+const DEFAULT_TRANSLATION_LANGUAGES: Record<string, { tag: string; name: string }> = {
+  RV1909: { tag: "es", name: "Spanish" },
+  LSG: { tag: "fr", name: "French" },
+  ARC: { tag: "pt", name: "Portuguese" },
+  TAGV: { tag: "fil", name: "Filipino" },
 };
 
 const HIGHLIGHT_COLORS = {
@@ -152,6 +166,9 @@ interface PassageResponse {
     headings?: { text: string; beforeVerse?: number; kind?: "qa" }[];
     paragraphs?: { verseStart: number; verseEnd: number }[];
   };
+  /** YouVersion only: the copyright line the version requires, and its footnotes. */
+  attribution?: ChapterAttributionData;
+  footnotes?: ChapterFootnote[];
 }
 
 function BottomSheetToolbar({
@@ -701,7 +718,7 @@ export default function VerseReaderScreen() {
   const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
-  const { data: availableTranslations } = useQuery<{ id: string; abbreviation: string; name: string; language: string; available?: boolean }[]>({
+  const { data: availableTranslations } = useQuery<CatalogTranslation[]>({
     queryKey: ["/api/translations"],
   });
   // Authoritative catalog wins once loaded; only entries with available !== false
@@ -710,6 +727,18 @@ export default function VerseReaderScreen() {
     ? availableTranslations.filter((t) => t.available !== false).map((t) => t.abbreviation)
     : DEFAULT_TRANSLATIONS;
   const catalogLoaded = !!availableTranslations;
+  const pickerCatalog = useMemo<CatalogTranslation[]>(
+    () =>
+      availableTranslations ??
+      DEFAULT_TRANSLATIONS.map((code) => ({
+        id: code,
+        abbreviation: code,
+        name: TRANSLATION_LABELS[code] ?? code,
+        language: DEFAULT_TRANSLATION_LANGUAGES[code]?.tag ?? "en",
+        languageName: DEFAULT_TRANSLATION_LANGUAGES[code]?.name ?? "English",
+      })),
+    [availableTranslations],
+  );
 
   // Normalize the requested code (trim + uppercase) and keep it AS the request
   // identity. We never silently substitute KJV for an explicit URL translation
@@ -799,6 +828,8 @@ export default function VerseReaderScreen() {
   // If the stored split translation vanished from the authoritative catalog, do
   // NOT render another translation's text under its label — flag it unavailable.
   const splitUnavailable = catalogLoaded && !translationList.includes(splitTranslation);
+  const translationDisplay = translationLabel(translation, availableTranslations);
+  const splitTranslationLabel = translationLabel(splitTranslation, availableTranslations);
   const splitLoadFailed = !!splitError || splitUnavailable;
   const splitVerses = splitLoadFailed ? [] : (splitData?.verses ?? []);
   const splitVerseByNum = useMemo(
@@ -1241,6 +1272,7 @@ export default function VerseReaderScreen() {
     const vrs = data.verses;
 
     queryClient.prefetchQuery({ queryKey: [`/api/chapter-context/${bId}/${ch}`] });
+    if (isYouVersionCode(translation)) return;
 
     const prefetchCount = Math.min(5, vrs.length);
     for (let i = 0; i < prefetchCount; i++) {
@@ -1611,12 +1643,12 @@ export default function VerseReaderScreen() {
     <Pressable
       testID="split-translation-pill"
       accessibilityRole="button"
-      accessibilityLabel={`Second translation ${splitTranslation}, change`}
+      accessibilityLabel={`Second translation ${splitTranslationLabel}, change`}
       onPress={() => setShowSplitTranslationPicker(!showSplitTranslationPicker)}
       style={[styles.headerPill, { backgroundColor: headerPillBg, flexDirection: "row", alignItems: "center" }]}
     >
       <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
-        {splitTranslation}
+        {splitTranslationLabel}
       </Text>
       <Ionicons name="chevron-down" size={12} color={isDark ? "#666" : "#999"} style={{ marginLeft: 4 }} />
     </Pressable>
@@ -1627,37 +1659,17 @@ export default function VerseReaderScreen() {
       style={[styles.translationDropdown, { backgroundColor: isDark ? "#141416" : LIGHT_SURFACE, borderColor: isDark ? "#2A2A2A" : "#E0E0E0", position: "absolute", top: 44, left: 8, right: 8, zIndex: 100 }]}
       onStartShouldSetResponder={() => true}
     >
-      <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }} nestedScrollEnabled>
-        {translationList.filter((t) => t !== translation).map((t) => {
-          const isActiveT = splitTranslation === t;
-          return (
-            <Pressable
-              key={t}
-              onPress={() => {
-                handleSetSplitTranslation(t);
-                setShowSplitTranslationPicker(false);
-              }}
-              style={[
-                styles.translationOption,
-                isActiveT && { backgroundColor: "#1F1A12" + "10" },
-              ]}
-            >
-              <Text style={[
-                styles.translationOptionText,
-                {
-                  color: isActiveT ? "#1F1A12" : textColor,
-                  fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
-                },
-              ]}>
-                {t}
-              </Text>
-              <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <TranslationPickerList
+        catalog={pickerCatalog}
+        selected={splitTranslation}
+        exclude={translation}
+        maxHeight={360}
+        testID="split-translation-picker"
+        onSelect={(t) => {
+          handleSetSplitTranslation(t);
+          setShowSplitTranslationPicker(false);
+        }}
+      />
     </View>
   ) : null;
 
@@ -1750,11 +1762,14 @@ export default function VerseReaderScreen() {
                   hitSlop={12}
                   onPress={() => setShowTranslationPicker(!showTranslationPicker)}
                   style={[styles.headerPill, { backgroundColor: headerPillBg }]}
+                  testID="reader-translation-pill"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Translation ${translationDisplay}, change`}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons name="globe-outline" size={13} color={isDark ? "#AAAAAA" : "#777"} />
                     <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
-                      {translation}
+                      {translationDisplay}
                     </Text>
                   </View>
                 </Pressable>
@@ -1779,7 +1794,7 @@ export default function VerseReaderScreen() {
               color={theme.error}
             />
             <Text style={[styles.errorText, { color: textColor, fontFamily: "Lora_500Medium" }]}>
-              {translationUnavailable ? `${translation} unavailable` : "Unable to load passage"}
+              {translationUnavailable ? `${translationDisplay} unavailable` : "Unable to load passage"}
             </Text>
             <Text style={[styles.errorSub, { color: isDark ? DARK_MUTED : "#999", fontFamily: "Inter_400Regular" }]}>
               {translationUnavailable
@@ -1787,21 +1802,18 @@ export default function VerseReaderScreen() {
                 : (error as Error).message}
             </Text>
             {catalogLoaded && translationList.length > 0 && (
-              <View style={{ marginTop: 20, alignSelf: "stretch", paddingHorizontal: 24, gap: 8 }}>
-                {translationList.map((t) => (
-                  <Pressable
-                    key={t}
-                    onPress={() => setTranslation(t)}
-                    style={[styles.translationOption, { borderRadius: 8, backgroundColor: isDark ? "#141416" : LIGHT_SURFACE }]}
-                  >
-                    <Text style={[styles.translationOptionText, { color: textColor, fontFamily: "Inter_600SemiBold" }]}>
-                      {t}
-                    </Text>
-                    <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                      {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
-                    </Text>
-                  </Pressable>
-                ))}
+              <View
+                style={[
+                  styles.translationDropdown,
+                  { marginTop: 20, alignSelf: "stretch", marginHorizontal: 24, backgroundColor: LIGHT_SURFACE, borderColor: RV2_BORDER },
+                ]}
+              >
+                <TranslationPickerList
+                  catalog={pickerCatalog}
+                  selected={translation}
+                  maxHeight={360}
+                  onSelect={(t) => setTranslation(t)}
+                />
               </View>
             )}
           </View>
@@ -1830,37 +1842,15 @@ export default function VerseReaderScreen() {
                 ]}
                 onStartShouldSetResponder={() => true}
               >
-                <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }} nestedScrollEnabled>
-                  {translationList.map((t) => {
-                    const isActiveT = translation === t;
-                    return (
-                      <Pressable
-                        key={t}
-                        onPress={() => {
-                          if (!isActiveT) setTranslation(t);
-                          setShowTranslationPicker(false);
-                        }}
-                        style={[
-                          styles.translationOption,
-                          isActiveT && { backgroundColor: "#1F1A12" + "10" },
-                        ]}
-                      >
-                        <Text style={[
-                          styles.translationOptionText,
-                          {
-                            color: isActiveT ? "#1F1A12" : textColor,
-                            fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
-                          },
-                        ]}>
-                          {t}
-                        </Text>
-                        <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                          {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
+                <TranslationPickerList
+                  catalog={pickerCatalog}
+                  selected={translation}
+                  testID="reader-translation-picker"
+                  onSelect={(t) => {
+                    if (t !== translation) setTranslation(t);
+                    setShowTranslationPicker(false);
+                  }}
+                />
               </View>
             )}
 
@@ -1914,7 +1904,7 @@ export default function VerseReaderScreen() {
               {stackedSplit ? (
                 <View style={styles.stackedSplitBar} testID="split-stacked-bar">
                   <Text style={styles.stackedSplitBarLabel}>
-                    {splitLoadFailed ? `${splitTranslation} unavailable` : `${translation} with`}
+                    {splitLoadFailed ? `${splitTranslationLabel} unavailable` : `${translationDisplay} with`}
                   </Text>
                   {splitTranslationPill}
                   {splitTranslationDropdown}
@@ -2008,7 +1998,7 @@ export default function VerseReaderScreen() {
                     {stackedSplit && splitVerseByNum.get(v.verse) ? (
                       <View style={styles.stackedCompanion} testID={`split-stacked-verse-${v.verse}`}>
                         <Text style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
-                          <Text style={styles.stackedCompanionLabel}>{splitTranslation}{"\u00a0\u00a0"}</Text>
+                          <Text style={styles.stackedCompanionLabel}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
                           <VerseSpokenText
                             text={splitVerseByNum.get(v.verse)!.text}
                             spokenRanges={
@@ -2024,6 +2014,25 @@ export default function VerseReaderScreen() {
                   );
                 })}
               </View>
+
+              {data?.attribution ? (
+                <ChapterAttribution
+                  versionLabel={translationDisplay}
+                  chapter={chapterNum}
+                  attribution={data.attribution}
+                  footnotes={data.footnotes}
+                  testID="reader-chapter-attribution"
+                />
+              ) : null}
+              {stackedSplit && !splitLoadFailed && splitData?.attribution ? (
+                <ChapterAttribution
+                  versionLabel={splitTranslationLabel}
+                  chapter={chapterNum}
+                  attribution={splitData.attribution}
+                  footnotes={splitData.footnotes}
+                  testID="split-chapter-attribution"
+                />
+              ) : null}
 
               <Pressable onPress={handleReaderBackgroundPress} style={styles.chapterCompleteRow}>
                 <View style={[styles.chapterCompleteLine, { backgroundColor: RV2_BORDER }]} />
@@ -2084,7 +2093,7 @@ export default function VerseReaderScreen() {
                       <View style={styles.errorContainer}>
                         <Ionicons name="lock-closed-outline" size={28} color={theme.error} />
                         <Text style={[styles.errorText, { color: textColor, fontFamily: "Lora_500Medium" }]}>
-                          {splitTranslation} unavailable
+                          {splitTranslationLabel} unavailable
                         </Text>
                         <Text style={[styles.errorSub, { color: isDark ? DARK_MUTED : "#999", fontFamily: "Inter_400Regular" }]}>
                           {splitUnavailable
@@ -2111,6 +2120,15 @@ export default function VerseReaderScreen() {
                         </View>
                       ))
                     )}
+                    {!splitLoadFailed && splitData?.attribution ? (
+                      <ChapterAttribution
+                        versionLabel={splitTranslationLabel}
+                        chapter={chapterNum}
+                        attribution={splitData.attribution}
+                        footnotes={splitData.footnotes}
+                        testID="split-chapter-attribution"
+                      />
+                    ) : null}
                   </View>
                 </ScrollView>
               </View>
@@ -2505,7 +2523,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 16,
-    width: 260,
+    width: 300,
     borderRadius: 16,
     borderWidth: 1,
     overflow: "hidden",

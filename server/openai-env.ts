@@ -12,6 +12,8 @@
  * Whisper transcription in whisperService.ts still requires OPENAI_API_KEY against
  * api.openai.com — the integrations proxy may not support audio.
  */
+import { aiRequestFetch } from "./services/ai-request-guard";
+
 function firstDefined(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
     const trimmed = value?.trim();
@@ -28,8 +30,8 @@ export function getOpenAIBaseURL(): string | undefined {
   return firstDefined(process.env.OPENAI_BASE_URL, process.env.AI_INTEGRATIONS_OPENAI_BASE_URL);
 }
 
-export function openaiClientOptions(): { apiKey: string | undefined; baseURL?: string } {
+export function openaiClientOptions(): { apiKey: string | undefined; baseURL?: string; fetch: typeof fetch } {
   const apiKey = getOpenAIApiKey();
   const baseURL = getOpenAIBaseURL();
-  return baseURL ? { apiKey, baseURL } : { apiKey };
+  return baseURL ? { apiKey, baseURL, fetch: aiRequestFetch } : { apiKey, fetch: aiRequestFetch };
 }

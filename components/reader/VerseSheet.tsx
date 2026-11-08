@@ -27,6 +27,7 @@ import {
   VerseMapGenerationGate,
 } from "@/lib/verse-map-generation";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
+import { aiScriptureTranslation, isYouVersionCode } from "@/shared/youversion";
 import {
   VERSE_SHEET_ATTRIBUTION,
   VERSE_SHEET_COLLAPSED_HEIGHT,
@@ -200,7 +201,8 @@ export function VerseSheet({
       ? `Showing ${bookName} ${chapter}:${first.verse}`
       : null;
 
-  const verseMapKey = first?.id
+  const youVersionText = isYouVersionCode(translation);
+  const verseMapKey = first?.id && !youVersionText
     ? `/api/verse-map/${encodeURIComponent(first.id)}?translation=${encodeURIComponent(translation)}`
     : null;
 
@@ -580,9 +582,9 @@ export function VerseSheet({
                         bookName,
                         chapter,
                         verse: String(first.verse),
-                        verseId: first.id,
-                        text: first.text,
-                        translation,
+                        ...(youVersionText
+                          ? { translation: aiScriptureTranslation(translation) }
+                          : { verseId: first.id, text: first.text, translation }),
                       },
                     })
                   }

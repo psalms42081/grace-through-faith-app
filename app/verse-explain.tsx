@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { BIBLE_PROJECT_YOUTUBE_IDS } from "@/data/curatedYoutubeVideos";
 import { useQuery } from "@tanstack/react-query";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { aiScriptureTranslation } from "@/shared/youversion";
 
 const GOLD = "#C9933A";
 
@@ -187,19 +188,26 @@ export default function VerseExplainScreen() {
   const reference = bookName && chapter && verse
     ? `${bookName} ${chapter}:${verse}`
     : "Selected Verse";
-  const txLabel = translation || "KJV";
+  const txLabel = aiScriptureTranslation(translation || "KJV");
 
   const {
     data: explainData,
     isLoading: isExplaining,
     isError: explainError,
-  } = useQuery<{ explanation?: string }>({
+  } = useQuery<{ explanation?: string; verseText?: string }>({
     queryKey: [
       `/api/ai/explain?bookName=${encodeURIComponent(bookName || "")}&chapter=${chapter}&verse=${verse}&translation=${encodeURIComponent(txLabel)}`,
     ],
     enabled: !!bookName && !!chapter && !!verse,
   });
   const aiExplanation = explainData?.explanation?.trim() || "";
+  const { data: kjvVerse } = useQuery<{ text?: string }>({
+    queryKey: [
+      `/api/verse?book=${encodeURIComponent(bookId || bookName || "")}&chapter=${chapter}&verse=${verse}&translation=${encodeURIComponent(txLabel)}`,
+    ],
+    enabled: !text && !!(bookId || bookName) && !!chapter && !!verse,
+  });
+  const verseDisplayText = text || kjvVerse?.text || explainData?.verseText || "";
 
   const bookVideos = useMemo(() => {
     if (!bookName) return [];
@@ -207,12 +215,12 @@ export default function VerseExplainScreen() {
   }, [bookName]);
 
   const themeVideos = useMemo(() => {
-    if (!text) return [];
-    const lower = text.toLowerCase();
+    if (!verseDisplayText) return [];
+    const lower = verseDisplayText.toLowerCase();
     return THEME_VIDEOS.filter(tv =>
       tv.keywords.some(kw => lower.includes(kw))
     ).slice(0, 3);
-  }, [text]);
+  }, [verseDisplayText]);
 
   const allVideos = useMemo(() => {
     const seen = new Set<string>();
@@ -259,7 +267,7 @@ export default function VerseExplainScreen() {
           </View>
           <Pressable
             onPress={() => {
-              router.push({ pathname: "/verse-actions" as any, params: { bookId, bookName, chapter, verse, verseId, text, translation } });
+              router.push({ pathname: "/verse-actions" as any, params: { bookId, bookName, chapter, verse, verseId, text: verseDisplayText, translation: txLabel } });
             }}
             hitSlop={12}
             style={styles.actionsBtn}
@@ -275,7 +283,7 @@ export default function VerseExplainScreen() {
         >
           <View style={[styles.verseCard, { backgroundColor: cardBg, borderColor }]}>
             <Text style={[styles.verseRef, { color: GOLD }]}>{reference}</Text>
-            <Text style={[styles.verseText, { color: textColor }]}>{text}</Text>
+            <Text style={[styles.verseText, { color: textColor }]}>{verseDisplayText}</Text>
             <View style={[styles.translationTag, { backgroundColor: GOLD + "12" }]}>
               <Text style={[styles.translationText, { color: GOLD }]}>{txLabel}</Text>
             </View>

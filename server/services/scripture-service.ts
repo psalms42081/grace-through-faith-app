@@ -12,6 +12,7 @@ import { db } from "../db";
 import { bibleBooks, bibleVerses, bibleTranslations } from "../../shared/schema";
 import { eq, and, ilike } from "drizzle-orm";
 import { withKjvProviderContent, KJV_STRUCTURE_VERSION } from "./kjv-structure";
+import { aiScriptureTranslation } from "../../shared/youversion";
 
 // ─── Book maps ────────────────────────────────────────────────────────────────
 
@@ -153,13 +154,15 @@ export interface NormalizeResult {
  * Normalize a translation query param.
  * - If omitted/empty → default to "KJV", wasDefaulted = true
  * - Otherwise uppercase and trim; wasDefaulted = false
+ * - YouVersion codes become KJV: only the reader routes may serve YouVersion
+ *   text, and they check for those codes before calling this.
  * Does NOT validate existence — caller does that.
  */
 export function normalizeTranslationParam(raw: string | undefined | null): NormalizeResult {
   if (!raw || String(raw).trim() === "") {
     return { abbreviation: "KJV", wasDefaulted: true };
   }
-  return { abbreviation: String(raw).trim().toUpperCase(), wasDefaulted: false };
+  return { abbreviation: aiScriptureTranslation(String(raw).trim().toUpperCase()), wasDefaulted: false };
 }
 
 /**
@@ -1302,7 +1305,7 @@ async function getRuntimeApiBibleTranslations(
 }
 
 /** Resolve a book by numeric id or name via the DB. */
-async function resolveBookRecord(book: string | number): Promise<ResolvedBook | null> {
+export async function resolveBookRecord(book: string | number): Promise<ResolvedBook | null> {
   const bookNum = Number(book);
   let rows;
   if (!isNaN(bookNum) && String(book).trim() !== "") {

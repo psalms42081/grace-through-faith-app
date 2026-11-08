@@ -24,6 +24,8 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
+import { isSearchableTranslation } from "@/lib/translation-catalog";
+import { isYouVersionCode } from "@/shared/youversion";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -150,19 +152,21 @@ export default function DiscoverV2Screen() {
   const availableTranslations = useMemo(
     () =>
       (translationsData ?? [])
-        .filter((t) => t.available !== false && !!t.abbreviation)
+        .filter((t) => t.available !== false && !!t.abbreviation && isSearchableTranslation(t.abbreviation))
         .map((t) => t.abbreviation.toUpperCase()),
     [translationsData]
   );
+  // YouVersion versions have no search, so searches made while reading one run in the KJV.
+  const readingYouVersion = isYouVersionCode(contextTranslation);
   // Is the globally-selected translation actually serveable right now?
   const selectedIsAvailable =
-    availableTranslations.length === 0 // list not loaded yet: don't block
+    availableTranslations.length === 0 || readingYouVersion // list not loaded yet: don't block
       ? true
       : availableTranslations.includes(contextTranslation.toUpperCase());
   // The translation we actually query with. Keep the global value if available;
   // otherwise DO NOT silently switch — we gate search below with an explicit
   // unavailable state instead.
-  const translation = contextTranslation.toUpperCase();
+  const translation = readingYouVersion ? "KJV" : contextTranslation.toUpperCase();
   const setTranslation = (t: string) => setContextTranslation(t);
 
   const { data: refData } = useQuery<ReferenceResponse>({

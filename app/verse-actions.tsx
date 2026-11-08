@@ -19,6 +19,12 @@ import { useTranslation } from "@/context/TranslationContext";
 import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import {
+  ChapterAttribution,
+  type ChapterAttributionData,
+  type ChapterFootnote,
+} from "@/components/reader/ChapterAttribution";
+import { isYouVersionCode } from "@/shared/youversion";
 
 const TEAL = "#2A8B8B";
 
@@ -75,6 +81,9 @@ export default function VerseActionsSheet() {
     text: string;
     translation: string;
     translationName?: string;
+    displayAbbreviation?: string;
+    attribution?: ChapterAttributionData;
+    footnotes?: ChapterFootnote[];
   }>({
     queryKey: [
       `/api/verse?book=${encodeURIComponent(sourceBook || "")}&chapter=${encodeURIComponent(chapter || "")}&verse=${encodeURIComponent(verse || "")}&translation=${encodeURIComponent(translation)}`,
@@ -87,8 +96,10 @@ export default function VerseActionsSheet() {
   const canonicalVerseId = canonicalVerse?.id ?? null;
   const canonicalText = canonicalVerse?.text ?? "";
   const txLabel = canonicalVerse?.translation || translation;
+  const txDisplay = canonicalVerse?.displayAbbreviation || txLabel;
   const txName = canonicalVerse?.translationName || "";
-  const fullText = canonicalText ? `${canonicalText}\n\u2014 ${reference} (${txLabel})` : reference;
+  const youVersionText = isYouVersionCode(txLabel);
+  const fullText = canonicalText ? `${canonicalText}\n\u2014 ${reference} (${txDisplay})` : reference;
 
   const [copiedTx, setCopiedTx] = useState<string | null>(null);
 
@@ -114,7 +125,10 @@ export default function VerseActionsSheet() {
     if (!catalogTranslations) return [] as CatalogTranslation[];
     const currentCode = (txLabel || "").trim().toUpperCase();
     return catalogTranslations.filter(
-      (t) => t.available !== false && t.abbreviation.trim().toUpperCase() !== currentCode
+      (t) =>
+        t.available !== false &&
+        !isYouVersionCode(t.abbreviation) &&
+        t.abbreviation.trim().toUpperCase() !== currentCode
     );
   }, [catalogTranslations, txLabel]);
 
@@ -123,7 +137,7 @@ export default function VerseActionsSheet() {
     // per translation server-side, so the GET key must carry the active label.
     // The key uses the CANONICAL verse id (never the route verseId).
     queryKey: [`/api/verse-map/${canonicalVerseId}?translation=${encodeURIComponent(txLabel)}`],
-    enabled: !!canonicalVerseId,
+    enabled: !!canonicalVerseId && !youVersionText,
     retry: false,
     select: (raw: any) => {
       const refs = raw?.relatedVerses ?? raw?.crossReferences ?? [];
@@ -180,7 +194,7 @@ export default function VerseActionsSheet() {
               <ActivityIndicator size="small" color={PathB.coralInk} style={{ paddingVertical: 8, alignSelf: "flex-start" }} />
             ) : sourceError ? (
               <Text style={[styles.verseText, { color: "#EF4444", fontFamily: "Inter_500Medium" }]}>
-                Could not load this verse in {txLabel}. Please try again later.
+                Could not load this verse in {txDisplay}. Please try again later.
               </Text>
             ) : (
               <Text style={[styles.verseText, { color: textColor, fontFamily: "Lora_400Regular" }]}>
@@ -189,9 +203,18 @@ export default function VerseActionsSheet() {
             )}
             <View style={[styles.translationTag, { backgroundColor: PathB.coralInk + "12" }]}>
               <Text style={[styles.translationText, { color: PathB.coralInk, fontFamily: "Inter_600SemiBold" }]}>
-                {txName ? `${txLabel} \u00B7 ${txName}` : txLabel}
+                {txName ? `${txDisplay} \u00B7 ${txName}` : txDisplay}
               </Text>
             </View>
+            {canonicalVerse?.attribution ? (
+              <ChapterAttribution
+                versionLabel={txDisplay}
+                chapter={chapter || ""}
+                attribution={canonicalVerse.attribution}
+                footnotes={canonicalVerse.footnotes}
+                testID="verse-actions-attribution"
+              />
+            ) : null}
           </View>
 
           <View style={styles.sectionHeader}>

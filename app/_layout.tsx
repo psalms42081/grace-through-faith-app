@@ -11,6 +11,7 @@ import { Platform, View } from "react-native";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PathB } from "@/constants/colors";
 import { queryClient, asyncStoragePersister, QUERY_PERSIST_BUSTER } from "@/lib/query-client";
+import { isYouVersionScriptureQueryKey } from "@/shared/youversion";
 import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -351,6 +352,7 @@ useEffect(() => {
             shouldDehydrateQuery: (query) => {
               const key = String(query.queryKey[0] ?? "");
               if (key.includes("/api/odb/")) return false;
+              if (isYouVersionScriptureQueryKey(key)) return false;
               return defaultShouldDehydrateQuery(query);
             },
           },
