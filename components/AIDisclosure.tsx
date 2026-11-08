@@ -7,14 +7,13 @@ type DisclosureLevel = "inline" | "banner" | "notice";
 
 interface AIDisclosureProps {
   level?: DisclosureLevel;
-  context?: "study" | "kids" | "devotional" | "general";
+  context?: "study" | "devotional" | "general";
   showLearnMore?: boolean;
   onLearnMore?: () => void;
 }
 
 const MESSAGES = {
   study: "AI-assisted study aid based on Scripture and SDA theology. Always verify with your Bible and local church.",
-  kids: "AI-assisted content reviewed for age-appropriateness and biblical accuracy.",
   devotional: "AI-assisted reflection to support your personal study. Not a substitute for Scripture or pastoral guidance.",
   general: "AI-assisted content aligned with SDA beliefs. Always compare with Scripture.",
 };

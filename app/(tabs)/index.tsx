@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Dimensions,
   Image,
-  Modal,
-  TextInput,
-  StatusBar,
 } from "react-native";
 import type { ImageSourcePropType } from "react-native";
 import { router } from "expo-router";
@@ -20,27 +16,16 @@ import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import { useTranslation as useBibleTranslation } from "@/context/TranslationContext";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSpring,
-  Easing,
-} from "react-native-reanimated";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors, { getSabbathTheme } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { useKidsMode } from "@/context/KidsModeContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
-import { getApiUrl, apiRequest } from "@/lib/query-client";
+import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeLocalDay, getTodaysReflection } from "@/components/home-v2/home-data";
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { useToast } from "@/contexts/ToastContext";
 import { useSabbath } from "@/lib/sabbath";
 import SpiritualRings from "@/components/SpiritualRings";
-import type { AgeGroup } from "@/context/KidsModeContext";
 import AnimatedSection from "@/components/AnimatedSection";
 import GoldDivider from "@/components/home/GoldDivider";
 import VotdHeroCard from "@/components/home/VotdHeroCard";
@@ -55,13 +40,7 @@ import SabbathOverlay from "@/components/home/SabbathOverlay";
 import SabbathSchoolCard from "@/components/home/SabbathSchoolCard";
 import WeeklyCalendar from "@/components/home/WeeklyCalendar";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
-import ChildPickerModal from "@/components/home/ChildPickerModal";
 import TodaysPath from "@/components/home/TodaysPath";
-import { DAILY_QUEST_STAR_REWARD, DAILY_CHAMPION_BONUS } from "@/constants/kids-shop";
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const DAILY_VERSE_REFERENCES = [
   "John 3:16",
@@ -72,13 +51,6 @@ const DAILY_VERSE_REFERENCES = [
   "Isaiah 40:31",
   "Romans 8:28",
 ];
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 function getTodaysVerse() {
   const dayOfYear = Math.floor(
@@ -98,86 +70,6 @@ interface TodayResponse {
   planComplete?: boolean;
 }
 
-const KIDS_VERSE_REFERENCES = [
-  "1 John 4:8",
-  "Ephesians 4:32",
-  "Psalm 23:1",
-  "Philippians 4:13",
-  "Psalm 118:24",
-  "Psalm 27:1",
-  "Joshua 1:9",
-];
-
-function useImageBaseUrl() {
-  return useMemo(() => {
-    try {
-      return getApiUrl().replace(/\/$/, "");
-    } catch {
-      return "";
-    }
-  }, []);
-}
-
-function PulsingFlame({ size, color }: { size: number; color: string }) {
-  const pulseScale = useSharedValue(1);
-
-  useEffect(() => {
-    pulseScale.value = withRepeat(
-      withTiming(1.25, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-  }, [pulseScale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
-
-  return (
-    <Animated.View style={animatedStyle}>
-      <Ionicons name="flame" size={size} color={color} />
-    </Animated.View>
-  );
-}
-
-function BouncyActionCard({
-  onPress,
-  style,
-  children,
-  testID,
-}: {
-  onPress: () => void;
-  style: any;
-  children: React.ReactNode;
-  testID?: string;
-}) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-  }, [scale]);
-
-  const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, [scale]);
-
-  return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[style, animatedStyle]}
-      testID={testID}
-    >
-      {children}
-    </AnimatedPressable>
-  );
-}
-
 const VERSE_BACKGROUNDS = [
   "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80",
   "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80",
@@ -188,36 +80,126 @@ const VERSE_BACKGROUNDS = [
   "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
 ];
 
-const KIDS_TOOLTIP_KEY = "@grace-through-faith/kids-tooltip-shown";
+function ReadingPlansCard({ theme, isDark }: { theme: any; isDark: boolean }) {
+  return (
+    <Pressable
+      onPress={() => router.push("/(tabs)/plans" as any)}
+      style={({ pressed }) => [
+        readingPlanStyles.card,
+        { transform: [{ scale: pressed ? 0.98 : 1 }] },
+      ]}
+      testID="home-reading-plans-card"
+    >
+      <Image
+        source={require("@/assets/home-cards/read.png")}
+        style={readingPlanStyles.bgImage}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={["rgba(5,5,7,0.10)", "rgba(5,5,7,0.44)", "rgba(5,5,7,0.74)"]}
+        locations={[0, 0.5, 1]}
+        style={readingPlanStyles.overlay}
+      >
+        <View style={readingPlanStyles.contentBottom}>
+          <View style={readingPlanStyles.labelRow}>
+            <Ionicons name="calendar" size={14} color="#C9933A" />
+            <Text style={[readingPlanStyles.labelText, { fontFamily: "Inter_500Medium" }]}>
+              Reading Plans
+            </Text>
+          </View>
+          <Text style={[readingPlanStyles.title, { fontFamily: "Lora_700Bold" }]}>
+            Guided Daily Scripture
+          </Text>
+          <Text style={[readingPlanStyles.subtitle, { fontFamily: "Inter_400Regular" }]}>
+            Follow a structured path through the Bible
+          </Text>
+          <View style={readingPlanStyles.ctaRow}>
+            <LinearGradient
+              colors={["#C9933A", "#A87828"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={readingPlanStyles.ctaButton}
+            >
+              <Text style={[readingPlanStyles.ctaText, { fontFamily: "Inter_600SemiBold" }]}>Browse Plans</Text>
+              <Ionicons name="arrow-forward" size={14} color="#fff" />
+            </LinearGradient>
+          </View>
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+const readingPlanStyles = StyleSheet.create({
+  card: {
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 20,
+    height: 160,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFill,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: "flex-end",
+    padding: 22,
+    borderRadius: 20,
+  },
+  contentBottom: {
+    gap: 4,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
+  labelText: {
+    fontSize: 11,
+    color: "#C9933A",
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+  },
+  title: {
+    color: "#F5F0E8",
+    fontSize: 20,
+  },
+  subtitle: {
+    color: "rgba(245,240,232,0.5)",
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    marginTop: 4,
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  ctaText: {
+    color: "#fff",
+    fontSize: 13,
+  },
+});
 
 export default function AdultHomeScreen() {
   const { theme: baseTheme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { enterKidsMode, lastActiveChildId } = useKidsMode();
   const { userId, user } = useAuth();
   const { selectedTrack } = useSabbathSchoolTrack();
   const sabbath = useSabbath();
   const { t } = useTranslation();
   const { translation: bibleTranslation } = useBibleTranslation();
   const theme = sabbath.isSabbath ? getSabbathTheme(baseTheme, isDark) : baseTheme;
-  const [showChildPicker, setShowChildPicker] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const seen = await AsyncStorage.getItem(KIDS_TOOLTIP_KEY);
-        if (!seen) {
-          setShowTooltip(true);
-          setTimeout(() => {
-            setShowTooltip(false);
-            AsyncStorage.setItem(KIDS_TOOLTIP_KEY, "true").catch(() => {});
-          }, 5000);
-        }
-      } catch {}
-    })();
-  }, []);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -475,42 +457,7 @@ export default function AdultHomeScreen() {
             Read · Reflect · Pray · Practice · Grow
           </Text>
         </View>
-        <View style={{ flexShrink: 0 }}>
-          {showTooltip && (
-            <View style={[s.tooltip, { backgroundColor: theme.accent }]}>
-              <View style={[s.tooltipArrow, { borderBottomColor: theme.accent }]} />
-              <Text style={s.tooltipText}>Switch to Kids Mode</Text>
-            </View>
-          )}
-          <Pressable
-            onPress={() => {
-              if (showTooltip) {
-                setShowTooltip(false);
-                AsyncStorage.setItem(KIDS_TOOLTIP_KEY, "true").catch(() => {});
-              }
-              setShowChildPicker(true);
-            }}
-            style={[s.kidsModeBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)" }]}
-            testID="enter-kids-mode"
-            accessibilityLabel="Switch to Kids Mode"
-            accessibilityRole="button"
-          >
-            <Ionicons name="people" size={16} color={theme.accent} style={{ opacity: 0.8 }} />
-            <Text style={[s.kidsModeBtnLabel, { color: theme.accent, opacity: 0.8 }]}>Kids</Text>
-          </Pressable>
-        </View>
       </View>
-
-      <ChildPickerModal
-        visible={showChildPicker}
-        onClose={() => setShowChildPicker(false)}
-        onSelectChild={(child) => {
-          setShowChildPicker(false);
-          enterKidsMode(child.id, child.name, child.ageGroup as AgeGroup);
-        }}
-        userId={userId}
-        lastActiveChildId={lastActiveChildId}
-      />
 
       <View style={{ marginHorizontal: -20 }}>
         <VotdHeroCard
@@ -754,49 +701,6 @@ const s = StyleSheet.create({
   greeting: { fontSize: 13, letterSpacing: 0.3, marginBottom: 3 },
   headerTitle: { fontSize: 22, letterSpacing: -0.3, marginBottom: 1 },
   headerTagline: { fontSize: 12, letterSpacing: 0.2, marginTop: 3 },
-  kidsModeBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 2,
-  },
-  kidsModeBtnLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.3,
-  },
-  tooltip: {
-    position: "absolute",
-    top: "100%" as any,
-    right: 0,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    zIndex: 10,
-    minWidth: 140,
-    alignItems: "center",
-  },
-  tooltipText: {
-    color: "#fff",
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
-  },
-  tooltipArrow: {
-    position: "absolute",
-    top: -6,
-    right: 16,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderBottomWidth: 6,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
   streakCard: {
     borderRadius: 20,
     overflow: "hidden",

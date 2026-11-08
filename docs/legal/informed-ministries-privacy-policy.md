@@ -19,8 +19,6 @@ Informed Ministries (ABN 39 741 036 497) ("we", "us", "our") operates the Inform
 
 **Notification subscriptions.** If you turn on a Daily verse, Sabbath School, Reading plan, or Times of prayer reminder, we store the push endpoint for that browser or device, the time you chose, and your time zone. We use these only to send the reminder you asked for.
 
-**Kids mode.** Kids mode runs inside a parent's or guardian's account. We do not create a profile for the child, do not ask the child for personal information, and do not make community features available in kids mode. Progress in kids mode is stored against the parent's account.
-
 We do not collect payment information (the App is free), precise location, contacts, or photos unless you choose to share one within a group.
 
 ## 2. Why we collect it
@@ -74,7 +72,7 @@ We protect personal information with measures including encrypted connections, h
 
 ## 8. Children
 
-The App is not directed at children under 13 for account creation. Kids mode is designed for children to use under a parent's or guardian's supervision within the parent's account, and we do not knowingly collect personal information directly from a child. If you believe a child has provided us personal information without a parent's consent, contact us and we will delete it.
+The App is not directed at children under 13. We do not knowingly collect personal information directly from a child. If you believe a child has provided us personal information without a parent's consent, contact us and we will delete it.
 
 ## 9. Changes
 

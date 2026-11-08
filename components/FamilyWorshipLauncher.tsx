@@ -7,12 +7,9 @@ import {
   Modal,
   ScrollView,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { useSabbath } from "@/lib/sabbath";
 
 interface ThemeColors {
@@ -24,22 +21,6 @@ interface ThemeColors {
   border: string;
   accent: string;
   divider: string;
-}
-
-interface SSLesson {
-  title: string;
-  storySummary: string;
-  memoryVerse: string;
-  memoryVerseRef: string;
-  thinkAboutIt: string;
-  prayer: string;
-  linkedStory: { id: string; title: string } | null;
-}
-
-interface SSData {
-  lesson: SSLesson;
-  weekNumber: number;
-  ageGroup: string;
 }
 
 const FAMILY_PROMPTS = [
@@ -62,20 +43,13 @@ function getWeeklyPrompt(): string {
 interface Props {
   theme: ThemeColors;
   isDark: boolean;
-  ageGroup?: string;
   onScrollToPrayerWall?: () => void;
 }
 
-export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "little_lambs", onScrollToPrayerWall }: Props) {
+export default function FamilyWorshipLauncher({ theme, isDark, onScrollToPrayerWall }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const sabbath = useSabbath();
-
-  const { data: ssData, isLoading: ssLoading } = useQuery<SSData>({
-    queryKey: [`/api/kids/sabbath-school/current?ageGroup=${ageGroup}`],
-    staleTime: 0,
-  });
 
   const isSabbath = sabbath.isSabbath;
 
@@ -107,21 +81,12 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
   const handleOpenSheet = useCallback(() => setSheetOpen(true), []);
   const handleCloseSheet = useCallback(() => setSheetOpen(false), []);
 
-  const handleOpenStory = useCallback(() => {
-    if (ssData?.lesson?.linkedStory?.id) {
-      setSheetOpen(false);
-      router.push(`/kids/story/${ssData.lesson.linkedStory.id}`);
-    }
-  }, [ssData, router]);
-
   const handleOpenPrayerWall = useCallback(() => {
     setSheetOpen(false);
     if (onScrollToPrayerWall) {
       setTimeout(() => onScrollToPrayerWall(), 350);
     }
   }, [onScrollToPrayerWall]);
-
-  const lesson = ssData?.lesson;
 
   return (
     <>
@@ -278,135 +243,6 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
                 </Text>
               </View>
 
-              {ssLoading && (
-                <View style={styles.loadingWrap}>
-                  <ActivityIndicator size="large" color={cardContent.accentColor} />
-                </View>
-              )}
-
-              {lesson && (
-                <View
-                  style={[
-                    styles.stepCard,
-                    {
-                      backgroundColor: theme.backgroundCard,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.stepHeader}>
-                    <View
-                      style={[
-                        styles.stepBadge,
-                        { backgroundColor: "#4A90D9" + "20" },
-                      ]}
-                    >
-                      <Ionicons name="book" size={16} color="#4A90D9" />
-                    </View>
-                    <Text
-                      style={[
-                        styles.stepLabel,
-                        { color: "#4A90D9", fontFamily: "Inter_600SemiBold" },
-                      ]}
-                    >
-                      Story of the Week
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.stepTitle,
-                      { color: theme.text, fontFamily: "Lora_600SemiBold" },
-                    ]}
-                  >
-                    {lesson.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.stepBody,
-                      {
-                        color: theme.textSecondary,
-                        fontFamily: "Inter_400Regular",
-                      },
-                    ]}
-                  >
-                    {lesson.storySummary}
-                  </Text>
-                  {lesson.linkedStory ? (
-                    <Pressable
-                      onPress={handleOpenStory}
-                      style={[
-                        styles.stepAction,
-                        { backgroundColor: "#4A90D9" },
-                      ]}
-                      testID="family-worship-open-story"
-                    >
-                      <Ionicons name="play" size={14} color="#fff" />
-                      <Text
-                        style={[
-                          styles.stepActionText,
-                          { fontFamily: "Inter_600SemiBold" },
-                        ]}
-                      >
-                        Read: {lesson.linkedStory.title}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              )}
-
-              {lesson && (
-                <View
-                  style={[
-                    styles.stepCard,
-                    {
-                      backgroundColor: theme.backgroundCard,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.stepHeader}>
-                    <View
-                      style={[
-                        styles.stepBadge,
-                        { backgroundColor: "#E8A838" + "20" },
-                      ]}
-                    >
-                      <Ionicons name="bookmark" size={16} color="#E8A838" />
-                    </View>
-                    <Text
-                      style={[
-                        styles.stepLabel,
-                        { color: "#E8A838", fontFamily: "Inter_600SemiBold" },
-                      ]}
-                    >
-                      Memory Verse
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.verseText,
-                      {
-                        color: theme.text,
-                        fontFamily: "Lora_400Regular_Italic",
-                      },
-                    ]}
-                  >
-                    "{lesson.memoryVerse}"
-                  </Text>
-                  <Text
-                    style={[
-                      styles.verseRef,
-                      {
-                        color: theme.textMuted,
-                        fontFamily: "Inter_500Medium",
-                      },
-                    ]}
-                  >
-                    {lesson.memoryVerseRef}
-                  </Text>
-                </View>
-              )}
-
               <View
                 style={[
                   styles.stepCard,
@@ -447,7 +283,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
                     },
                   ]}
                 >
-                  {lesson?.thinkAboutIt || familyPrompt}
+                  {familyPrompt}
                 </Text>
               </View>
 
@@ -487,8 +323,7 @@ export default function FamilyWorshipLauncher({ theme, isDark, ageGroup = "littl
                     },
                   ]}
                 >
-                  {lesson?.prayer ||
-                    "Dear God, thank You for our family. Help us grow closer to You and to each other. Amen."}
+                  {"Dear God, thank You for our family. Help us grow closer to You and to each other. Amen."}
                 </Text>
                 <Pressable
                   onPress={handleOpenPrayerWall}

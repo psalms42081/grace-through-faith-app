@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
-import { useKidsMode } from "@/context/KidsModeContext";
 import { givingBankRows, givingOnlineUrl, type GivingBankRow } from "@/lib/giving";
 
 const C = {
@@ -36,18 +35,11 @@ function openSystemBrowser(url: string) {
 
 export default function GivingScreen() {
   const insets = useSafeAreaInsets();
-  const { isKidsMode } = useKidsMode();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [copiedId, setCopiedId] = useState<GivingBankRow["id"] | null>(null);
   const onlineUrl = givingOnlineUrl();
   const bankRows = givingBankRows();
-
-  useEffect(() => {
-    if (isKidsMode) router.replace("/(tabs)/profile" as never);
-  }, [isKidsMode]);
-
-  if (isKidsMode) return null;
 
   const copyRow = async (row: GivingBankRow) => {
     await Clipboard.setStringAsync(row.value);

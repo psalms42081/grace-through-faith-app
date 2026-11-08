@@ -43,7 +43,6 @@ const CATEGORIES = [
   { key: "prophecy", label: "Prophecy" },
   { key: "doctrine", label: "Doctrine" },
   { key: "spiritual-growth", label: "Growth" },
-  { key: "kids", label: "Kids" },
 ];
 
 const TYPE_LABELS: Record<string, string> = {

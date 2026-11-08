@@ -17,7 +17,6 @@ import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
-import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { joinApiPath } from "@/lib/join-api-path";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -993,7 +992,6 @@ export default function BibleGroupLiveScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { isAuthenticated, token, user } = useAuth();
-  const { isKidsMode } = useKidsMode();
   const qc = useQueryClient();
   const [webViewLoading, setWebViewLoading] = useState(true);
 
@@ -1003,7 +1001,7 @@ export default function BibleGroupLiveScreen() {
       const res = await apiRequest("GET", withDeviceTimeZone(`/api/bible-groups/${id}`));
       return res.json();
     },
-    enabled: isAuthenticated && !!id && !isKidsMode,
+    enabled: isAuthenticated && !!id,
   });
 
   const { data: liveData, isLoading: liveLoading, refetch: refetchLive } = useQuery<LiveResponse>({
@@ -1012,7 +1010,7 @@ export default function BibleGroupLiveScreen() {
       const res = await apiRequest("GET", `/api/bible-groups/${id}/live`);
       return res.json();
     },
-    enabled: isAuthenticated && !!id && !isKidsMode,
+    enabled: isAuthenticated && !!id,
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -1025,14 +1023,10 @@ export default function BibleGroupLiveScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isAuthenticated || !id || isKidsMode) return;
+      if (!isAuthenticated || !id) return;
       void refetchLive();
-    }, [isAuthenticated, id, isKidsMode, refetchLive]),
+    }, [isAuthenticated, id, refetchLive]),
   );
-
-  useEffect(() => {
-    if (isKidsMode) goToProfile();
-  }, [isKidsMode]);
 
   useEffect(() => {
     if (!isHost || !liveSession || !id) return;
@@ -1071,10 +1065,6 @@ export default function BibleGroupLiveScreen() {
     },
     [endMutation, leaveToGroup],
   );
-
-  if (isKidsMode) {
-    return <View style={{ flex: 1, backgroundColor: C.surface }} />;
-  }
 
   if (!isAuthenticated) {
     return (

@@ -25,7 +25,6 @@ import deepStudyRoutes from "./routes/deep-study";
 import searchRoutes from "./routes/search";
 import devotionalRoutes from "./routes/devotionals";
 import ttsRoutes from "./routes/tts";
-import kidsRoutes from "./routes/kids";
 import communityRoutes from "./routes/community";
 import pushRoutes from "./routes/push";
 import familyDashboardRoutes from "./routes/family-dashboard";
@@ -152,7 +151,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(searchRoutes);
   app.use(devotionalRoutes);
   app.use(ttsRoutes);
-  app.use(kidsRoutes);
   app.use(communityRoutes);
   app.use(pushRoutes);
   app.use(familyDashboardRoutes);

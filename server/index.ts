@@ -231,11 +231,6 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
-  app.use("/assets/kids-scenes", express.static(path.resolve(process.cwd(), "assets", "kids-scenes"), {
-    maxAge: "1h",
-    etag: true,
-  }));
-
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets"), {
     maxAge: "1h",
     etag: true,
@@ -539,30 +534,6 @@ function setupErrorHandler(app: express.Application) {
         initOdbRefresh();
       } catch (err) {
         console.error("[ODB] refresh init failed:", err);
-      }
-
-      try {
-        const { db: startupDb } = await import("./db");
-        const { kidsStoryScenes } = await import("../shared/schema");
-        const { eq } = await import("drizzle-orm");
-        const scene = await startupDb.select({ imageUrl: kidsStoryScenes.imageUrl }).from(kidsStoryScenes).where(eq(kidsStoryScenes.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1")).limit(1);
-        if (scene.length && scene[0].imageUrl === "/assets/kids-scenes/creation-animals-scene-2.png") {
-          await startupDb.update(kidsStoryScenes).set({ imageUrl: "/assets/kids-scenes/creation-animals-scene-2.png?v=2" }).where(eq(kidsStoryScenes.id, "9abff9f2-d84e-456b-a6ca-86e12e1328b1"));
-          console.log("[startup] Updated creation-animals-scene-2 image URL with cache buster");
-        }
-        const relScene3 = await startupDb.select({ imageUrl: kidsStoryScenes.imageUrl }).from(kidsStoryScenes).where(eq(kidsStoryScenes.id, "48fb7e67-db7c-47cc-b00e-3770045df83a")).limit(1);
-        if (relScene3.length && relScene3[0].imageUrl === "/assets/kids-scenes/teen-relationships-scene-3.png") {
-          await startupDb.update(kidsStoryScenes).set({ imageUrl: "/assets/kids-scenes/teen-relationships-scene-3.png?v=2" }).where(eq(kidsStoryScenes.id, "48fb7e67-db7c-47cc-b00e-3770045df83a"));
-          console.log("[startup] Updated teen-relationships-scene-3 image URL with cache buster");
-        }
-        const { like } = await import("drizzle-orm");
-        const whoseScenes = await startupDb.select({ id: kidsStoryScenes.id, narration: kidsStoryScenes.narration }).from(kidsStoryScenes).where(like(kidsStoryScenes.narration, "%knowing exactly whose you are%"));
-        for (const s of whoseScenes) {
-          await startupDb.update(kidsStoryScenes).set({ narration: s.narration!.replace("knowing exactly whose you are", "knowing exactly who you are") }).where(eq(kidsStoryScenes.id, s.id));
-          console.log("[startup] Fixed 'whose' -> 'who' in scene", s.id);
-        }
-      } catch (err) {
-        console.error("[startup] Scene image URL fix failed:", err);
       }
 
       setTimeout(async () => {

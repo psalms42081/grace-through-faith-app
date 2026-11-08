@@ -17,7 +17,6 @@ export type TutorialId =
   | "home_daily_rhythm"
   | "home_for_you"
   | "home_formation_rings"
-  | "home_kids_button"
   | "read_verse_tap"
   | "read_translation_picker"
   | "connect_tab"

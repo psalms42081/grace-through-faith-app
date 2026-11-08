@@ -24,7 +24,6 @@ import ListItem from "@/components/ui/ListItem";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useProStatus } from "@/contexts/ProContext";
-import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { displayInitials } from "@/lib/user-initials";
@@ -105,7 +104,6 @@ function ProfileScreenInner() {
 
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated } = useAuth();
-  const { isKidsMode } = useKidsMode();
   const { showToast } = useToast();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -336,18 +334,16 @@ function ProfileScreenInner() {
           </View>
           <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Prayer</Text>
         </Pressable>
-        {!isKidsMode ? (
-          <Pressable
-            style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push("/giving" as never)}
-            testID="profile-giving"
-          >
-            <View style={[st.tileIcon, { backgroundColor: C.pill }]}>
-              <Ionicons name="heart" size={22} color={C.inkMuted} />
-            </View>
-            <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
-          </Pressable>
-        ) : null}
+        <Pressable
+          style={({ pressed }) => [st.tile, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.push("/giving" as never)}
+          testID="profile-giving"
+        >
+          <View style={[st.tileIcon, { backgroundColor: C.pill }]}>
+            <Ionicons name="heart" size={22} color={C.inkMuted} />
+          </View>
+          <Text style={[st.tileLabel, { color: C.ink, fontFamily: "Inter_600SemiBold" }]}>Giving</Text>
+        </Pressable>
       </View>
 
       <Pressable
@@ -440,7 +436,7 @@ function ProfileScreenInner() {
               </Pressable>
             </View>
           )}
-          {!isKidsMode && <ProfileGroupsSection />}
+          <ProfileGroupsSection />
         </View>
       )}
 
@@ -731,10 +727,9 @@ function ProfileScreenInner() {
       )}
       </>)}
 
-      {isAuthenticated && !isKidsMode ? <NotificationSettings /> : null}
+      {isAuthenticated ? <NotificationSettings /> : null}
 
-      {!isKidsMode && (
-        <View style={st.sectionPad} testID="profile-about-section">
+      <View style={st.sectionPad} testID="profile-about-section">
           <Text style={{ color: C.inkMuted, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
             About
           </Text>
@@ -775,7 +770,6 @@ function ProfileScreenInner() {
             testID="profile-privacy-policy"
           />
         </View>
-      )}
 
     </ScrollView>
 

@@ -36,14 +36,12 @@ describe("giving details", () => {
 });
 
 describe("giving screen", () => {
-  it("replaces the profile coming-soon toast and stays out of kids mode", () => {
+  it("replaces the profile coming-soon toast", () => {
     const profile = readFileSync(path.join(root, "app", "(tabs)", "profile.tsx"), "utf8");
     assert.doesNotMatch(profile, /Giving features coming soon/);
     assert.match(profile, /testID="profile-giving"/);
     assert.match(profile, /router\.push\("\/giving"/);
-    const tileAt = profile.indexOf('testID="profile-giving"');
-    const gateAt = profile.lastIndexOf("{!isKidsMode ?", tileAt);
-    assert.ok(gateAt >= 0 && gateAt < tileAt);
+    assert.doesNotMatch(profile, /isKidsMode/);
     const screen = readFileSync(path.join(root, "app", "giving.tsx"), "utf8");
     assert.match(screen, /Support Informed Ministries/);
     assert.match(screen, /Informed Ministries is independent and free to use/);
@@ -53,7 +51,7 @@ describe("giving screen", () => {
     assert.match(screen, /Bank transfer/);
     assert.match(screen, /Please use 'App gift' as the reference\./);
     assert.match(screen, /Giving isn't set up yet\./);
-    assert.match(screen, /if \(isKidsMode\) router\.replace/);
+    assert.doesNotMatch(screen, /isKidsMode/);
     assert.match(screen, /Linking\.openURL/);
     assert.match(screen, /window\.open\(url, "_blank"/);
     assert.doesNotMatch(screen, /openBrowserAsync|WebBrowser|card number|Card number|amount/i);

@@ -21,7 +21,6 @@
     "test:devotional-catalog-coordinator": "tsx server/tests/devotional-catalog-coordinator.test.ts",
     "test:devotional-authorship": "npm run test:devotional-catalog && npm run test:devotional-catalog-coordinator && node server/tests/devotional-authorship.test.mjs && npm run test:devotional-authorship-api",
     "test:devotional-authorship-api": "tsx server/tests/devotional-authorship-api.test.ts",
-    "test:kids-story-illustrations": "tsx tests/kids-story-scene-illustration-request.test.ts && tsx server/tests/kids-scene-image-in-flight.test.ts",
     "test:sabbath-school-audio": "tsx --test server/tests/sabbath-school-audio-metadata.test.ts tests/sabbath-school-audio-player.test.ts",
     "test:sabbath-school-date": "tsx --test server/tests/sabbath-school-date.test.ts",
     "test:sabbath-school-quarter-theme": "tsx --test tests/sabbath-school-quarter-theme.test.ts",

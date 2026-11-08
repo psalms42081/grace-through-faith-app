@@ -110,7 +110,7 @@ describe("live room client", () => {
     assert.doesNotMatch(tabs, /bible-group-live/);
     const room = read("app/bible-group-live/[id].tsx");
     assert.doesNotMatch(room, /#C9933A/);
-    assert.match(room, /isKidsMode/);
+    assert.doesNotMatch(room, /isKidsMode/);
     assert.match(room, /livekit-client/);
     assert.match(room, /adaptiveStream: false/);
     assert.match(room, /data-track-key/);

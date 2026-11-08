@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import Colors, { KidsColors, getSabbathTheme, PathB } from "../constants/colors";
+import Colors, { getSabbathTheme, PathB } from "../constants/colors";
 
 function read(rel: string) {
   return readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
@@ -47,11 +47,10 @@ describe("Path B sweep Batch 1", () => {
     assert.doesNotMatch(chapter, /const GOLD/);
   });
 
-  it("Batch 4 flipped Colors.light.accent to coral; Kids gold stays; Sabbath chrome inherits coral", () => {
+  it("Batch 4 flipped Colors.light.accent to coral; Sabbath chrome inherits coral", () => {
     assert.equal(Colors.light.accent, PathB.coral);
     assert.equal(Colors.light.tabIconSelected, PathB.coral);
     assert.equal(PathB.coral, "#E8604C");
-    assert.equal(KidsColors.light.starGold, "#F5A623");
     assert.equal(getSabbathTheme(Colors.light, false).accent, PathB.coral);
     assert.equal(getSabbathTheme(Colors.dark, true).accent, Colors.dark.accent);
   });

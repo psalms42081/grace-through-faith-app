@@ -11,7 +11,6 @@ import { Platform, View } from "react-native";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PathB } from "@/constants/colors";
 import { queryClient, asyncStoragePersister, QUERY_PERSIST_BUSTER } from "@/lib/query-client";
-import { KidsModeProvider } from "@/context/KidsModeContext";
 import { TranslationProvider } from "@/context/TranslationContext";
 import { ProProvider } from "@/contexts/ProContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -124,8 +123,23 @@ if (!rejectionHandlerGlobal.__rejectionHandlerSet) {
   }
 }
 
+const RETIRED_KIDS_MODE_KEYS = [
+  "@grace-through-faith/kids-mode",
+  "@grace-through-faith/kids-pin",
+  "@grace-through-faith/kids-age-group",
+  "@grace-through-faith/kids-active-child-id",
+  "@grace-through-faith/kids-active-child-name",
+  "@grace-through-faith/kids-tooltip-shown",
+  "@grace-kids/narrator-voice",
+  "@grace_kids_quiet_mode",
+];
+
 function RootLayoutNav() {
   const { theme, isDark } = useTheme();
+
+  useEffect(() => {
+    AsyncStorage.multiRemove(RETIRED_KIDS_MODE_KEYS).catch(() => {});
+  }, []);
 
   return (
     <Stack
@@ -184,7 +198,6 @@ function RootLayoutNav() {
       <Stack.Screen name="bible-group/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="bible-group-live/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="how-it-works" options={{ headerShown: false }} />
-      <Stack.Screen name="parent-controls" options={{ headerShown: false }} />
       <Stack.Screen name="study-path/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="study-paths" options={{ headerShown: false }} />
       <Stack.Screen name="lesson/[id]" options={{ headerShown: false }} />
@@ -203,7 +216,6 @@ function RootLayoutNav() {
       <Stack.Screen name="sermon-player" options={{ headerShown: false }} />
       <Stack.Screen name="evangelism-videos" options={{ headerShown: false }} />
       <Stack.Screen name="study-category" options={{ headerShown: false }} />
-      <Stack.Screen name="kids" options={{ headerShown: false }} />
       <Stack.Screen name="touchpoints" options={{ headerShown: false }} />
       {/* Discover v2 (Brief 05) — live; also rendered by the Discover tab ((tabs)/search) */}
       <Stack.Screen name="discover-v2" options={{ headerShown: false }} />
@@ -347,7 +359,6 @@ useEffect(() => {
         <AuthProvider>
           <TranslationProvider>
             <ContentLanguageProvider>
-              <KidsModeProvider>
                 <ProProvider>
                   <StudyDepthProvider>
                     <TutorialProvider>
@@ -366,7 +377,6 @@ useEffect(() => {
                     </TutorialProvider>
                   </StudyDepthProvider>
                 </ProProvider>
-              </KidsModeProvider>
             </ContentLanguageProvider>
           </TranslationProvider>
         </AuthProvider>

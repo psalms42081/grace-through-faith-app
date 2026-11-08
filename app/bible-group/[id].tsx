@@ -20,7 +20,6 @@ import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
-import { useKidsMode } from "@/context/KidsModeContext";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -178,7 +177,6 @@ export default function BibleGroupHomeScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const { userId, isAuthenticated } = useAuth();
-  const { isKidsMode } = useKidsMode();
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
@@ -202,7 +200,7 @@ export default function BibleGroupHomeScreen() {
       const res = await apiRequest("GET", `/api/bible-groups/${id}/live`);
       return res.json();
     },
-    enabled: isAuthenticated && !!id && !isKidsMode,
+    enabled: isAuthenticated && !!id,
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -213,9 +211,9 @@ export default function BibleGroupHomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isAuthenticated || !id || isKidsMode) return;
+      if (!isAuthenticated || !id) return;
       void refetchLive();
-    }, [isAuthenticated, id, isKidsMode, refetchLive]),
+    }, [isAuthenticated, id, refetchLive]),
   );
 
   const curriculum = data?.group.curriculum === "inverse" ? "inverse" : "adult";
@@ -358,17 +356,16 @@ export default function BibleGroupHomeScreen() {
   });
 
   const isHost = data?.group.role === "host";
-  const showLiveUi = !isKidsMode;
 
   useEffect(() => {
-    if (!showLiveUi || !isHost || !liveSession || !id) return;
+    if (!isHost || !liveSession || !id) return;
     const ping = () => {
       apiRequest("POST", `/api/bible-groups/${id}/live/heartbeat`).catch(() => {});
     };
     ping();
     const timer = setInterval(ping, 60_000);
     return () => clearInterval(timer);
-  }, [showLiveUi, isHost, liveSession?.id, id]);
+  }, [isHost, liveSession?.id, id]);
 
   const continueLabel = continueDay
     ? weekdayNameForSabbathSchoolDay({
@@ -476,7 +473,7 @@ export default function BibleGroupHomeScreen() {
               : "This week's lesson"}
           </Text>
           <Text style={s.lessonMeta}>Open {continueLabel} in Sabbath School</Text>
-          {showLiveUi && liveSession != null && liveSession.endedAt == null && (
+          {liveSession != null && liveSession.endedAt == null && (
             <Pressable
               onPress={() => router.push(`/bible-group-live/${id}` as any)}
               testID="bible-group-join-live"
@@ -487,7 +484,7 @@ export default function BibleGroupHomeScreen() {
           )}
         </Pressable>
 
-        {showLiveUi && isHost && (
+        {isHost && (
           <Pressable
             style={[s.outlineBtn, (startLiveMutation.isPending || endLiveMutation.isPending) && { opacity: 0.55 }]}
             disabled={startLiveMutation.isPending || endLiveMutation.isPending}

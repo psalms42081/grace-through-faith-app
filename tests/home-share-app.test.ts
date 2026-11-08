@@ -55,7 +55,7 @@ describe("Home share-app card", () => {
     assert.match(card, /onDismiss\(\)/);
   });
 
-  it("is wired on adult Home and gated out of kids mode", () => {
+  it("is wired on Home", () => {
     const home = readFileSync(
       new URL("../app/(tabs)/home-v2.tsx", import.meta.url),
       "utf8",
@@ -69,7 +69,8 @@ describe("Home share-app card", () => {
       "utf8",
     );
     assert.match(home, /ShareAppCard/);
-    assert.match(home, /!isKidsMode && showShareCard/);
+    assert.match(home, /\{showShareCard && \(/);
+    assert.doesNotMatch(home, /isKidsMode/);
     assert.match(card, /plan-family\.png/);
     assert.match(card, /Link copied/);
     assert.match(shareHelper, /navigator\.share/);
@@ -90,7 +91,7 @@ describe("Home share-app card", () => {
       "utf8",
     );
     assert.match(profile, /Share Informed Ministries/);
-    assert.match(profile, /!isKidsMode && \(/);
+    assert.doesNotMatch(profile, /isKidsMode/);
     assert.match(profile, /shareInformedMinistries/);
     assert.match(profile, /profile-share-app/);
     assert.match(profile, /profile-about-section/);

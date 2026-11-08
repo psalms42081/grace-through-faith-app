@@ -47,11 +47,11 @@ describe("problem report payload", () => {
 });
 
 describe("problem report surfaces", () => {
-  it("shows the report row and Beta chip only in adult Profile About", () => {
+  it("shows the report row and Beta chip in Profile About", () => {
     const profile = readFileSync(path.join(root, "app", "(tabs)", "profile.tsx"), "utf8");
     const aboutAt = profile.indexOf('testID="profile-about-section"');
-    const kidsGate = profile.lastIndexOf("{!isKidsMode && (", aboutAt);
-    assert.ok(aboutAt > kidsGate && kidsGate >= 0);
+    assert.ok(aboutAt >= 0);
+    assert.doesNotMatch(profile, /isKidsMode/);
     const about = profile.slice(aboutAt);
     assert.match(about, /Informed Ministries/);
     assert.match(about, /profile-beta-chip/);

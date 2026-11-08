@@ -5,86 +5,67 @@ import { Ionicons } from "@expo/vector-icons";
 import { House, BookOpen, CalendarDays, Compass, User } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { KidsColors, PathB } from "@/constants/colors";
+import { PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
-import { useKidsMode } from "@/context/KidsModeContext";
 import { isSabbathSchoolTabPath } from "@/lib/sabbath-school-route-containment";
 
 function ClassicTabLayout() {
-  const { isKidsMode } = useKidsMode();
-  const { theme, isDark } = useTheme(isKidsMode);
+  const { theme, isDark } = useTheme();
   const { t } = useTranslation();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
-  const kidsTheme = isDark ? KidsColors.dark : KidsColors.light;
   const pathname = usePathname();
   const isSabbathSchoolRoute = isSabbathSchoolTabPath(pathname);
-  const homeTabColor =
-    !isKidsMode && isSabbathSchoolRoute ? PathB.coral : undefined;
+  const homeTabColor = isSabbathSchoolRoute ? PathB.coral : undefined;
 
-  // Path B Phase 1: keep the visible Home in sync with kids mode.
-  // Adults use home-v2; kids keep the legacy index Home. href:null only hides
-  // a tab, so redirect explicitly when the mode flips while Home is selected.
   useEffect(() => {
-    if (isKidsMode && pathname === "/home-v2") {
-      router.replace("/" as any);
-    } else if (!isKidsMode && pathname === "/") {
+    if (pathname === "/") {
       router.replace("/home-v2" as any);
     }
-  }, [isKidsMode, pathname]);
+  }, [pathname]);
   return (
     <Tabs
       backBehavior="firstRoute"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: isKidsMode ? theme.accent : PathB.coral,
-        tabBarInactiveTintColor: isKidsMode ? theme.tabIconDefault : PathB.inkMuted,
+        tabBarActiveTintColor: PathB.coral,
+        tabBarInactiveTintColor: PathB.inkMuted,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS
             ? "transparent"
             : isWeb
-            ? (isKidsMode ? kidsTheme.tabBarBg : theme.surface)
-            : (isKidsMode ? kidsTheme.tabBarBg : theme.background),
-          borderTopWidth: isWeb ? 1 : (isKidsMode ? 1 : 0),
-          borderTopColor: isKidsMode ? kidsTheme.tabBarBorder : theme.border,
+            ? theme.surface
+            : theme.background,
+          borderTopWidth: isWeb ? 1 : 0,
+          borderTopColor: theme.border,
           elevation: 0,
-          ...(isWeb ? { height: isKidsMode ? 90 : 84 } : {}),
-          ...(isKidsMode ? {
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            overflow: "hidden" as const,
-          } : {}),
+          ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
               intensity={80}
               tint={isDark ? "dark" : "light"}
-              style={[
-                StyleSheet.absoluteFill,
-                isKidsMode ? { borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" } : {},
-              ]}
+              style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (
             <View
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  backgroundColor: isKidsMode ? kidsTheme.tabBarBg : theme.surface,
+                  backgroundColor: theme.surface,
                   borderTopWidth: 1,
-                  borderTopColor: isKidsMode ? kidsTheme.tabBarBorder : theme.border,
-                  ...(isKidsMode ? { borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" } : {}),
+                  borderTopColor: theme.border,
                 },
               ]}
             />
           ) : null,
         tabBarLabelStyle: {
-          fontFamily: isKidsMode ? "Inter_600SemiBold" : "Inter_500Medium",
-          fontSize: isKidsMode ? 11 : 10,
+          fontFamily: "Inter_500Medium",
+          fontSize: 10,
           marginBottom: 2,
         },
-        tabBarIconStyle: isKidsMode ? { marginTop: 4 } : undefined,
         sceneStyle: isWeb ? styles.webScene : undefined,
       }}
     >
@@ -94,8 +75,7 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: t("tabs.home"),
-          // Kids mode keeps the legacy Home (kids UI lives in index.tsx)
-          href: isKidsMode ? undefined : null,
+          href: null,
           tabBarIcon: ({ color, size }) => (
             <House size={size} color={color} />
           ),
@@ -105,7 +85,7 @@ function ClassicTabLayout() {
         name="home-v2"
         options={{
           title: t("tabs.home"),
-          href: isKidsMode ? null : undefined,
+          href: undefined,
           tabBarIcon: ({ color, size }) => (
             <House size={size} color={homeTabColor ?? color} />
           ),
@@ -127,7 +107,7 @@ function ClassicTabLayout() {
         name="read"
         options={{
           title: t("tabs.bible"),
-          href: isKidsMode ? null : undefined,
+          href: undefined,
           tabBarIcon: ({ color, size }) => (
             <BookOpen size={size} color={color} />
           ),
@@ -183,7 +163,7 @@ function ClassicTabLayout() {
         name="devotions"
         options={{
           title: t("tabs.devotions"),
-          href: isKidsMode ? null : undefined,
+          href: undefined,
           tabBarIcon: ({ color, size }) => (
             <CalendarDays size={size} color={color} />
           ),
@@ -199,7 +179,7 @@ function ClassicTabLayout() {
         name="search"
         options={{
           title: t("tabs.discover"),
-          href: isKidsMode ? null : undefined,
+          href: undefined,
           tabBarIcon: ({ color, size }) => (
             <Compass size={size} color={color} />
           ),
@@ -209,7 +189,7 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: t("tabs.profile"),
-          href: isKidsMode ? null : undefined,
+          href: undefined,
           tabBarIcon: ({ color, size }) => (
             <User size={size} color={color} />
           ),
@@ -232,36 +212,6 @@ function ClassicTabLayout() {
           href: null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="kids-stories"
-        options={{
-          title: "Stories",
-          href: isKidsMode ? undefined : null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="kids-learn"
-        options={{
-          title: "Learn",
-          href: isKidsMode ? undefined : null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="school-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="kids-stars"
-        options={{
-          title: "My Stars",
-          href: isKidsMode ? undefined : null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star-outline" size={size} color={color} />
           ),
         }}
       />

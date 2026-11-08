@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import Colors, { KidsColors, getSabbathTheme, PathB } from "../constants/colors";
+import Colors, { getSabbathTheme, PathB } from "../constants/colors";
 import { ENABLE_PREMIUM, ENABLE_ORG_TOOLS } from "../lib/feature-flags";
 
 function read(rel: string) {
@@ -130,11 +130,10 @@ describe("Path B sweep Batch 3", () => {
     }
   });
 
-  it("Batch 4 flipped Colors.light.accent to coral; Kids gold stays; org tools stay off", () => {
+  it("Batch 4 flipped Colors.light.accent to coral; org tools stay off", () => {
     assert.equal(Colors.light.accent, PathB.coral);
     assert.equal(Colors.light.tabIconSelected, PathB.coral);
     assert.equal(PathB.coral, "#E8604C");
-    assert.equal(KidsColors.light.starGold, "#F5A623");
     assert.equal(getSabbathTheme(Colors.light, false).accent, PathB.coral);
     assert.equal(ENABLE_ORG_TOOLS, false);
   });

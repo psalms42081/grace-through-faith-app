@@ -43,12 +43,6 @@ const SECTIONS = [
     title: "Church & Community",
     body: "Use this app alongside your local church, Sabbath School class, or small group. Join prayer circles, study together, and stay connected to your church family.",
   },
-  {
-    icon: "happy" as const,
-    color: "#F59E0B",
-    title: "Kids Club",
-    body: "Age-appropriate Bible stories with interactive scenes, illustrations, and guided questions\u2014designed to make Scripture come alive for young readers.",
-  },
 ];
 
 export default function HowItWorksScreen() {

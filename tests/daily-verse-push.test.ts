@@ -209,13 +209,14 @@ describe("daily verse push wiring", () => {
     assert.doesNotMatch(native, /is24Hour/);
   });
 
-  it("hides notification settings in kids mode and states the blocked message", () => {
+  it("shows notification settings for a signed-in member and states the blocked message", () => {
     const profile = readFileSync(path.join(root, "app", "(tabs)", "profile.tsx"), "utf8");
     const settings = readFileSync(
       path.join(root, "components", "profile", "NotificationSettings.tsx"),
       "utf8",
     );
-    assert.match(profile, /isAuthenticated && !isKidsMode \? <NotificationSettings \/> : null/);
+    assert.match(profile, /isAuthenticated \? <NotificationSettings \/> : null/);
+    assert.doesNotMatch(profile, /isKidsMode/);
     const subscribe = readFileSync(path.join(root, "lib", "push-subscribe.ts"), "utf8");
     assert.match(settings, /NOTIFICATIONS_BLOCKED_MESSAGE/);
     assert.equal(

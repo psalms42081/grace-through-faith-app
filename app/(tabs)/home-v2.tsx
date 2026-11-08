@@ -9,9 +9,6 @@ import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useKidsMode } from "@/context/KidsModeContext";
-import type { AgeGroup } from "@/context/KidsModeContext";
-import ChildPickerModal from "@/components/home/ChildPickerModal";
 import type { WeeklyStreakData } from "@/components/home/WeeklyCalendar";
 
 import { HV2 } from "@/components/home-v2/theme";
@@ -62,8 +59,6 @@ export default function HomeV2Screen() {
   const { t } = useTranslation();
   const { userId, user, isAuthenticated } = useAuth();
   const { selectedTrack } = useSabbathSchoolTrack();
-  const { enterKidsMode, lastActiveChildId, isKidsMode } = useKidsMode();
-  const [showChildPicker, setShowChildPicker] = useState(false);
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
   const [showShareCard, setShowShareCard] = useState(false);
   const [clock, setClock] = useState(() => new Date());
@@ -79,10 +74,6 @@ export default function HomeV2Screen() {
   }, []);
 
   useEffect(() => {
-    if (isKidsMode) {
-      setShowShareCard(false);
-      return;
-    }
     let cancelled = false;
     readHomeShareDismissedAt().then((dismissedAt) => {
       if (cancelled) return;
@@ -91,7 +82,7 @@ export default function HomeV2Screen() {
     return () => {
       cancelled = true;
     };
-  }, [isKidsMode]);
+  }, []);
 
   const localDay = useMemo(() => getHomeLocalDay(clock), [clock]);
   const { dateLine, dayLabel } = localDay;
@@ -295,7 +286,7 @@ export default function HomeV2Screen() {
       const res = await apiRequest("GET", withDeviceTimeZone("/api/bible-groups"));
       return res.json();
     },
-    enabled: isAuthenticated && !isKidsMode,
+    enabled: isAuthenticated,
   });
   const myGroups = myGroupsData?.groups ?? [];
 
@@ -400,7 +391,6 @@ export default function HomeV2Screen() {
         greetingBase={greetingBase}
         displayName={user?.displayName}
         streak={streak}
-        onKidsPress={() => setShowChildPicker(true)}
       />
 
       <HeroCard
@@ -433,7 +423,7 @@ export default function HomeV2Screen() {
         showWatch={hasLessonVideo}
       />
 
-      {!isKidsMode && myGroups.length > 0 && (
+      {myGroups.length > 0 && (
         <HomeBibleGroupCard
           groups={myGroups}
           onOpen={(groupId) => router.push(`/bible-group/${groupId}` as any)}
@@ -443,7 +433,7 @@ export default function HomeV2Screen() {
       <DailyRhythm rows={rhythmRows} />
       <TopicChips />
 
-      {!isKidsMode && showShareCard && (
+      {showShareCard && (
         <ShareAppCard
           onDismiss={() => {
             const now = Date.now();
@@ -453,18 +443,6 @@ export default function HomeV2Screen() {
         />
       )}
 
-      <ChildPickerModal
-        visible={showChildPicker}
-        onClose={() => setShowChildPicker(false)}
-        onSelectChild={(child: { id: string; name: string; ageGroup: string }) => {
-          setShowChildPicker(false);
-          enterKidsMode(child.id, child.name, child.ageGroup as AgeGroup);
-          // Kids Home lives in the legacy index route
-          router.replace("/" as any);
-        }}
-        userId={userId}
-        lastActiveChildId={lastActiveChildId}
-      />
     </ScrollView>
   );
 }

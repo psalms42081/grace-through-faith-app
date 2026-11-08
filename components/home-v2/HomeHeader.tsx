@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { formatGreeting, greetingThatFits } from "./home-data";
 import { HV2, F } from "./theme";
 
@@ -8,7 +8,6 @@ interface Props {
   greetingBase: string;
   displayName?: string | null;
   streak: number;
-  onKidsPress: () => void;
 }
 
 function nodeWidth(node: unknown): number {
@@ -17,7 +16,7 @@ function nodeWidth(node: unknown): number {
   return Number.isFinite(width) ? width : 0;
 }
 
-export default function HomeHeader({ dateLine, greetingBase, displayName, streak, onKidsPress }: Props) {
+export default function HomeHeader({ dateLine, greetingBase, displayName, streak }: Props) {
   const measureRef = useRef<Text>(null);
   const slotRef = useRef<View>(null);
   const [slotWidth, setSlotWidth] = useState(0);
@@ -46,16 +45,6 @@ export default function HomeHeader({ dateLine, greetingBase, displayName, streak
       <View style={s.row}>
         <Text style={s.date}>{dateLine}</Text>
         <View style={s.right}>
-        <Pressable
-          style={s.pill}
-          onPress={onKidsPress}
-          testID="enter-kids-mode"
-          accessibilityLabel="Switch to Kids Mode"
-          accessibilityRole="button"
-        >
-          <Text style={s.pillEmoji}>🧒</Text>
-          <Text style={s.pillLabel}>Kids</Text>
-        </Pressable>
         <View style={s.pill} accessibilityLabel={`${streak} day reading streak`}>
           {/* Gold appears exactly once on this screen: the streak flame (§1.3) */}
           <Text style={s.pillEmoji}>🔥</Text>
@@ -121,6 +110,5 @@ const s = StyleSheet.create({
     ...HV2.rowShadow,
   },
   pillEmoji: { fontSize: 14 },
-  pillLabel: { fontFamily: F.interSemi, fontSize: 13, color: HV2.ink },
   streakCount: { fontFamily: F.interBold, fontSize: 13.5, color: HV2.ink },
 });

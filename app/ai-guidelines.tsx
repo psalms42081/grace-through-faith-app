@@ -117,7 +117,6 @@ export default function AIGuidelinesScreen() {
           title="Human Connection"
           points={[
             "AI complements human discipleship. We encourage discussing insights with your small group or pastor.",
-            "Kids features like Dinner Table Topics bring families together around Scripture.",
           ]}
           theme={theme}
         />
@@ -128,7 +127,6 @@ export default function AIGuidelinesScreen() {
           title="Privacy & Safety"
           points={[
             "We do not train AI models on your personal data, prayers, or journal entries.",
-            "Kids Mode has additional safety review. Parent controls keep children within safe boundaries.",
           ]}
           theme={theme}
         />

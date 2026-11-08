@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import Colors, { KidsColors, getSabbathTheme, PathB } from "../constants/colors";
+import Colors, { getSabbathTheme, PathB } from "../constants/colors";
 
 function read(rel: string) {
   return readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
@@ -16,30 +16,10 @@ describe("Path B sweep Batch 4 FINAL", () => {
     assert.equal(PathB.gold, "#C9933A");
   });
 
-  it("leaves Kids celebratory gold and kids accent untouched", () => {
-    assert.equal(KidsColors.light.starGold, "#F5A623");
-    assert.equal(KidsColors.dark.starGold, "#F5A623");
-    assert.equal(KidsColors.light.accent, "#4A90D9");
-    assert.notEqual(KidsColors.light.accent, PathB.coral);
-    const kidsStars = read("app/(tabs)/kids-stars.tsx");
-    const kidsLearn = read("app/(tabs)/kids-learn.tsx");
-    const storyFlow = read("components/kids/StoryCompletionFlow.tsx");
-    const kidsShop = read("constants/kids-shop.ts");
-    assert.match(kidsStars, /starGold/);
-    assert.match(kidsLearn, /starGold/);
-    assert.match(kidsLearn, /#FFD700|#F5A623/);
-    assert.match(storyFlow, /#C9933A|#F5A623|#FFD700/);
-    assert.match(kidsShop, /#C9933A|#F5A623/);
-  });
-
-  it("insulates kids from the adult accent flip via useTheme(true) → KidsColors", () => {
+  it("keeps useTheme on the adult light palette", () => {
     const useThemeSource = read("hooks/useTheme.ts");
-    assert.match(useThemeSource, /isKidsMode\s*\n\s*\? KidsColors\.light\s*\n\s*: Colors\.light/);
-    assert.match(read("app/(tabs)/kids-stars.tsx"), /useTheme\(true\)/);
-    assert.match(read("app/(tabs)/kids-learn.tsx"), /useTheme\(true\)/);
-    assert.match(read("app/(tabs)/kids-stories.tsx"), /useTheme\(true\)/);
-    assert.match(read("app/kids/story/[id].tsx"), /useTheme\(true\)/);
-    assert.match(read("app/kids/sabbath-school.tsx"), /useTheme\(true\)/);
+    assert.match(useThemeSource, /theme: Colors\.light/);
+    assert.doesNotMatch(useThemeSource, /KidsColors|isKidsMode/);
   });
 
   it("drops gold from Sabbath UI chrome; iconographic gold remains on glyphs", () => {

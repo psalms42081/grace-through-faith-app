@@ -102,21 +102,15 @@ describe("private groups only", () => {
   });
 });
 
-describe("kids mode hides groups", () => {
-  it("gates Profile and Home on isKidsMode and never renders groups in Kids Home", () => {
+describe("groups stay on the adult Home and Profile", () => {
+  it("shows My Groups and the Home group card without a kids-mode gate", () => {
     const profile = read("app/(tabs)/profile.tsx");
     const home = read("app/(tabs)/home-v2.tsx");
-    const kidsHome = read("app/(tabs)/index.tsx");
-    const kidsSs = read("app/kids/sabbath-school.tsx");
-    assert.match(profile, /isKidsMode/);
-    assert.match(profile, /!isKidsMode && <ProfileGroupsSection/);
-    assert.match(home, /isKidsMode/);
-    assert.match(home, /enabled: isAuthenticated && !isKidsMode/);
-    assert.match(home, /!isKidsMode && myGroups\.length > 0/);
-    assert.doesNotMatch(kidsHome, /bible-group/);
-    assert.doesNotMatch(kidsHome, /\/api\/bible-groups/);
-    assert.doesNotMatch(kidsSs, /bible-group/);
-    assert.doesNotMatch(kidsSs, /\/api\/bible-groups/);
+    assert.match(profile, /<ProfileGroupsSection/);
+    assert.doesNotMatch(profile, /isKidsMode/);
+    assert.match(home, /enabled: isAuthenticated,/);
+    assert.match(home, /myGroups\.length > 0/);
+    assert.doesNotMatch(home, /isKidsMode/);
   });
 });
 

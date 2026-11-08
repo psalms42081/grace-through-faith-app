@@ -21,8 +21,6 @@ The App is also not an official service of the Seventh-day Adventist Church or t
 
 You must be at least 13 years old to create an account. If you are under 18, you may use the App only with the consent and supervision of a parent or guardian, and your parent or guardian agrees to these Terms on your behalf.
 
-**Kids mode** is a restricted experience for younger children within a parent's or guardian's account. It does not create a separate account for the child, does not provide access to community features, and does not collect information from the child beyond what is described in the Privacy Policy. The parent or guardian is responsible for supervising a child's use of the App.
-
 **Small groups and video rooms are for adults only.** You must be 18 or over to create or join a small group, and you confirm this when you do so. We may remove any person from a group, or close a group, if we reasonably believe this requirement is not met.
 
 ## 3. Your account

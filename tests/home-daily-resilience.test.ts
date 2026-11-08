@@ -64,8 +64,8 @@ describe("daily Home and theme resilience", () => {
 
   it("keeps shared member screens light-first", () => {
     assert.match(themeSource, /const isDark = false/);
-    assert.match(themeSource, /KidsColors\.light/);
     assert.match(themeSource, /Colors\.light/);
+    assert.doesNotMatch(themeSource, /KidsColors|isKidsMode/);
     assert.doesNotMatch(themeSource, /const isDark = true/);
     assert.doesNotMatch(authLayoutSource, /#050507/);
     assert.doesNotMatch(loginSource, /backgroundColor:\s*"#050507"/);

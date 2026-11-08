@@ -236,23 +236,16 @@ describe("external tester navigation feedback", () => {
   it("keeps profile avatars out of non-Profile headers", () => {
     assert.match(
       homeHeaderSource,
-      /accessibilityLabel="Switch to Kids Mode"[\s\S]*?accessibilityLabel=\{`\$\{streak\} day reading streak`\}/,
+      /accessibilityLabel=\{`\$\{streak\} day reading streak`\}/,
     );
-    assert.doesNotMatch(homeHeaderSource, /avatar|initial|Profile/);
-    assert.doesNotMatch(homeV2Source, /onAvatarPress=|initial=\{/);
+    assert.doesNotMatch(homeHeaderSource, /Switch to Kids Mode|avatar|initial|Profile/);
+    assert.doesNotMatch(homeV2Source, /onAvatarPress=|initial=\{|enter-kids-mode/);
 
     assert.match(
       discoverV2Source,
       /<Text style=\{s\.title\}>Discover<\/Text>[\s\S]*?<View style=\{\{ flex: 1 \}\} \/>[\s\S]*?<View style=\{s\.streakPill\}/,
     );
     assert.doesNotMatch(discoverV2Source, /s\.avatar|avatarInitial|Open profile/);
-
-    const kidsHomeSource = legacyHomeSource.slice(
-      legacyHomeSource.indexOf("function KidsHomeScreen()"),
-      legacyHomeSource.indexOf("export default function HomeScreen()"),
-    );
-    assert.match(kidsHomeSource, /accessibilityLabel="Switch child"/);
-    assert.match(kidsHomeSource, /accessibilityLabel="Exit Kids Mode"/);
-    assert.doesNotMatch(kidsHomeSource, /avatar|Open profile/);
+    assert.doesNotMatch(legacyHomeSource, /Kids Mode|enter-kids-mode/);
   });
 });
