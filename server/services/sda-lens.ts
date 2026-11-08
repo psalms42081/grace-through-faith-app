@@ -20,6 +20,14 @@
 
 export const SDA_LENS_VERSION = "sda-v2";
 
+/**
+ * Doctrinal frame for Ask the Bible, the Sabbath School Study Tutor, the
+ * study generator, and Explain This Verse. Kept out of SDA_SYSTEM_PROMPT so
+ * the lens version stays put and cached studies are not purged.
+ */
+export const SDA_BELIEF_FRAMING =
+  "Answer within the Seventh-day Adventist 28 Fundamental Beliefs, including the doctrine of the Trinity. Do not present non-Trinitarian views, or any other position outside those 28 beliefs, as the church's teaching.";
+
 export const SDA_SYSTEM_PROMPT = `THEOLOGICAL LENS (Seventh-day Adventist — applies to everything you write):
 All biblical and spiritual content must be doctrinally sound from a Seventh-day Adventist perspective:
 - Uphold the authority of Scripture as the inspired Word of God.

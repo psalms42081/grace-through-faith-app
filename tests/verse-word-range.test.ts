@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { isSaturdayDate } from "../scripts/publish-pioneer-reading";
+import {
+  isSaturdayDate,
+  parsePublishPioneerReadingArgs,
+} from "../scripts/publish-pioneer-reading";
 import {
   isPartialWordRange,
   normalizeWordRange,
@@ -49,5 +52,36 @@ describe("publish pioneer reading", () => {
     assert.equal(isSaturdayDate("2026-09-05"), true);
     assert.equal(isSaturdayDate("2026-09-06"), false);
     assert.equal(isSaturdayDate("09-05-2026"), false);
+  });
+
+  it("takes a chapter, an editor note, an optional context note, and a Saturday", () => {
+    assert.deepEqual(
+      parsePublishPioneerReadingArgs([
+        "chapter-1",
+        "notes/editor.txt",
+        "2026-11-14",
+      ]),
+      {
+        chapterId: "chapter-1",
+        editorNoteFile: "notes/editor.txt",
+        contextNoteFile: null,
+        weekStart: "2026-11-14",
+      },
+    );
+    assert.deepEqual(
+      parsePublishPioneerReadingArgs([
+        "chapter-1",
+        "notes/editor.txt",
+        "notes/context.txt",
+        "2026-11-14",
+      ]),
+      {
+        chapterId: "chapter-1",
+        editorNoteFile: "notes/editor.txt",
+        contextNoteFile: "notes/context.txt",
+        weekStart: "2026-11-14",
+      },
+    );
+    assert.throws(() => parsePublishPioneerReadingArgs(["chapter-1", "notes/editor.txt"]));
   });
 });

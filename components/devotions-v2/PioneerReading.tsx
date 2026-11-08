@@ -67,6 +67,7 @@ export default function PioneerReading() {
 
   const portrait = getPioneerPortrait(reading.chapter.authorSlug);
   const note = reading.editorNote.trim();
+  const contextNote = reading.contextNote?.trim() ?? "";
 
   return (
     <View style={s.root}>
@@ -109,6 +110,13 @@ export default function PioneerReading() {
           <View style={s.note} testID="pioneer-reading-editor-note">
             <Text style={s.noteLabel}>A note from Informed Ministries</Text>
             <Text style={s.noteBody}>{note}</Text>
+          </View>
+        ) : null}
+
+        {contextNote ? (
+          <View style={s.context} testID="pioneer-reading-context-note">
+            <Text style={s.contextLabel}>Historical context</Text>
+            <Text style={s.contextBody}>{contextNote}</Text>
           </View>
         ) : null}
 
@@ -217,6 +225,28 @@ const s = StyleSheet.create({
   noteBody: {
     fontFamily: F.inter,
     color: D2.ink,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  context: {
+    marginHorizontal: 20,
+    marginTop: 18,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: "rgba(31,26,18,0.04)",
+    borderWidth: 1,
+    borderColor: D2.border,
+    gap: 6,
+  },
+  contextLabel: {
+    fontFamily: F.interBold,
+    color: D2.muted,
+    fontSize: 10,
+    letterSpacing: 1.1,
+  },
+  contextBody: {
+    fontFamily: F.inter,
+    color: D2.muted,
     fontSize: 14,
     lineHeight: 21,
   },

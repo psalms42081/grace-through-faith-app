@@ -1,10 +1,11 @@
 /**
  * Queue a published Voice of the Week row.
  *
- *   npx tsx --env-file=.env scripts/publish-pioneer-reading.ts <chapterId> <editorNoteFile> <weekStart>
+ *   npx tsx --env-file=.env scripts/publish-pioneer-reading.ts <chapterId> <editorNoteFile> [contextNoteFile] <weekStart>
  *
- * weekStart is YYYY-MM-DD and must be a Saturday. The editor note is read
- * from the file; this script does not write note text.
+ * weekStart is YYYY-MM-DD and must be a Saturday. The editor note, and the
+ * optional historical context note, are read from files. This script does
+ * not write note text and does not choose a chapter.
  * The Devotions card shows the published row whose week_start is the most
  * recent Saturday on or before today. Later Saturdays stay queued.
  */
@@ -36,6 +37,32 @@ function loadEnvFile() {
   }
 }
 
+const USAGE =
+  "Usage: npx tsx --env-file=.env scripts/publish-pioneer-reading.ts <chapterId> <editorNoteFile> [contextNoteFile] <weekStart>";
+
+export function parsePublishPioneerReadingArgs(argv: string[]): {
+  chapterId: string;
+  editorNoteFile: string;
+  contextNoteFile: string | null;
+  weekStart: string;
+} {
+  if (argv.length !== 3 && argv.length !== 4) {
+    throw new Error(USAGE);
+  }
+  const [chapterId, editorNoteFile, third, fourth] = argv;
+  const weekStart = argv.length === 4 ? fourth : third;
+  const contextNoteFile = argv.length === 4 ? third : null;
+  if (!chapterId || !editorNoteFile || !weekStart) {
+    throw new Error(USAGE);
+  }
+  return {
+    chapterId,
+    editorNoteFile,
+    contextNoteFile: contextNoteFile ?? null,
+    weekStart,
+  };
+}
+
 export function isSaturdayDate(weekStart: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return false;
   const [year, month, day] = weekStart.split("-").map(Number);
@@ -48,17 +75,16 @@ export function isSaturdayDate(weekStart: string): boolean {
 }
 
 async function main() {
-  const [chapterId, noteFile, weekStart] = process.argv.slice(2);
-  if (!chapterId || !noteFile || !weekStart) {
-    throw new Error(
-      "Usage: npx tsx --env-file=.env scripts/publish-pioneer-reading.ts <chapterId> <editorNoteFile> <weekStart>",
-    );
-  }
+  const { chapterId, editorNoteFile, contextNoteFile, weekStart } =
+    parsePublishPioneerReadingArgs(process.argv.slice(2));
   if (!isSaturdayDate(weekStart)) {
     throw new Error(`week_start must be a Saturday in YYYY-MM-DD form. Received ${weekStart}.`);
   }
 
-  const editorNote = readFileSync(path.resolve(process.cwd(), noteFile), "utf8").trim();
+  const editorNote = readFileSync(path.resolve(process.cwd(), editorNoteFile), "utf8").trim();
+  const contextNote = contextNoteFile
+    ? readFileSync(path.resolve(process.cwd(), contextNoteFile), "utf8").trim() || null
+    : null;
   loadEnvFile();
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -79,10 +105,10 @@ async function main() {
     const paragraphEnd = Math.max(1, Number(row.paragraph_count) || 1);
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO public.pioneer_readings
-         (chapter_id, paragraph_start, paragraph_end, editor_note, week_start, sort_order, published)
-       VALUES ($1, 1, $2, $3, $4, 0, true)
+         (chapter_id, paragraph_start, paragraph_end, editor_note, context_note, week_start, sort_order, published)
+       VALUES ($1, 1, $2, $3, $4, $5, 0, true)
        RETURNING id`,
-      [row.id, paragraphEnd, editorNote, weekStart],
+      [row.id, paragraphEnd, editorNote, contextNote, weekStart],
     );
     const id = inserted.rows[0]?.id;
     console.log(`[pioneer-publish] Published ${id} for chapter ${row.id} starting ${weekStart}.`);

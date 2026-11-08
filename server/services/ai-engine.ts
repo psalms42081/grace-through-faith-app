@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { withSdaLens } from "./sda-lens";
+import { SDA_BELIEF_FRAMING, withSdaLens } from "./sda-lens";
 import { buildSabbathSchoolTutorRequest } from "./sensitive-ai-prompts";
 import { getTimeout } from "./api-client";
 import { withAIConcurrency } from "./ai-semaphore";
@@ -1385,7 +1385,9 @@ export async function generateSemanticSearch(
     messages: [
       {
         role: "system",
-        content: withSdaLens(`You are a Seventh-day Adventist Bible search engine. Given a natural language query, identify the most relevant Bible passages. Return 8-12 results ranked by relevance.
+        content: withSdaLens(`${SDA_BELIEF_FRAMING}
+
+You are a Seventh-day Adventist Bible search engine. Given a natural language query, identify the most relevant Bible passages. Return 8-12 results ranked by relevance.
 
 The reader is using the ${translation} translation. Do NOT quote, paraphrase, or reproduce any Scripture wording. Only identify WHICH passage is relevant. The application resolves the exact ${translation} text itself; any verse text you produce would be discarded.
 

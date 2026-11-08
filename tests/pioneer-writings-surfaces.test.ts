@@ -107,6 +107,13 @@ describe("Pioneer writings surfaces stay source-only", () => {
     assert.match(chapter, /displayPioneerChapterTitle/);
     assert.match(reading, /A note from Informed Ministries/);
     assert.match(reading, /Read the whole book/);
+    assert.match(reading, /Historical context/);
+    assert.match(reading, /pioneer-reading-context-note/);
+    assert.ok(
+      reading.indexOf("Historical context") < reading.indexOf("<PioneerProse"),
+      "Historical context sits above the passage",
+    );
+    assert.match(readFileSync(files[0], "utf8"), /A new reading is coming soon/);
   });
 
   it("opens the shelf from Discover after Daily Devotionals and from the Bible menu", () => {

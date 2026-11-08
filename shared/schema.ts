@@ -2805,6 +2805,7 @@ export const pioneerReadings = pgTable(
     paragraphStart: integer("paragraph_start").notNull(),
     paragraphEnd: integer("paragraph_end").notNull(),
     editorNote: text("editor_note").notNull().default(""),
+    contextNote: text("context_note"),
     weekStart: date("week_start", { mode: "string" }),
     sortOrder: integer("sort_order").notNull().default(0),
     published: boolean("published").notNull().default(false),

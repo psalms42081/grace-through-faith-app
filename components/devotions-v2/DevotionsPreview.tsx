@@ -807,14 +807,14 @@ function VoiceOfTheWeekCard({ week }: { week?: PioneerWeekResponse }) {
         )}
         <View style={{ flex: 1 }}>
           <Text style={s.metaBible}>VOICE OF THE WEEK</Text>
-          <Text style={s.cardTitle} numberOfLines={2}>
-            {reading ? reading.chapter.author : "A pioneer voice each Sabbath"}
+          <Text style={s.cardTitle} numberOfLines={reading ? 2 : 3}>
+            {reading ? reading.chapter.author : "A new reading is coming soon"}
           </Text>
-          <Text style={s.cardSub} numberOfLines={2}>
-            {reading
-              ? `${reading.chapter.book} (${reading.chapter.year})`
-              : "Published readings will appear here."}
-          </Text>
+          {reading ? (
+            <Text style={s.cardSub} numberOfLines={2}>
+              {`${reading.chapter.book} (${reading.chapter.year})`}
+            </Text>
+          ) : null}
           {excerpt ? (
             <Text style={s.votwExcerpt} numberOfLines={2}>
               {excerpt}

@@ -99,3 +99,13 @@ export function getSabbathDateKey(
   const daysUntilSaturday = (6 - calendarDate.weekday + 7) % 7;
   return addCalendarDays(calendarDate.dateKey, daysUntilSaturday);
 }
+
+/** Saturday of the local calendar day, or the Saturday just before it. */
+export function mostRecentSaturdayOnOrBefore(
+  instant: Date,
+  timeZone: unknown
+): string {
+  const calendarDate = getCalendarDate(instant, timeZone);
+  const daysSinceSaturday = (calendarDate.weekday + 1) % 7;
+  return addCalendarDays(calendarDate.dateKey, -daysSinceSaturday);
+}

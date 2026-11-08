@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { getSabbathDateKey } from "../../shared/calendar-date";
+import { mostRecentSaturdayOnOrBefore } from "../../shared/calendar-date";
 import { publicDomainLine } from "../../shared/pioneer-authors";
 import {
   paragraphEndForWordBudget,
@@ -9,24 +9,31 @@ import {
 } from "../../shared/pioneer-passage";
 
 describe("Sabbath-week selection for Voice of the Week", () => {
-  it("uses the Saturday that ends the Melbourne week containing today", () => {
+  it("uses the most recent Saturday on or before the Melbourne calendar day", () => {
     // Friday 4 Sep 2026 08:00 Melbourne = Thursday 3 Sep 22:00 UTC
     const fridayMorning = new Date("2026-09-03T22:00:00.000Z");
     assert.equal(
-      getSabbathDateKey(fridayMorning, "Australia/Melbourne"),
-      "2026-09-05",
+      mostRecentSaturdayOnOrBefore(fridayMorning, "Australia/Melbourne"),
+      "2026-08-29",
     );
 
     const saturdayMorning = new Date("2026-09-04T22:00:00.000Z");
     assert.equal(
-      getSabbathDateKey(saturdayMorning, "Australia/Melbourne"),
+      mostRecentSaturdayOnOrBefore(saturdayMorning, "Australia/Melbourne"),
       "2026-09-05",
     );
 
     const sundayMorning = new Date("2026-09-05T22:00:00.000Z");
     assert.equal(
-      getSabbathDateKey(sundayMorning, "Australia/Melbourne"),
-      "2026-09-12",
+      mostRecentSaturdayOnOrBefore(sundayMorning, "Australia/Melbourne"),
+      "2026-09-05",
+    );
+
+    // Sunday 8 Nov 2026 12:00 Melbourne
+    const sundayNoon = new Date("2026-11-08T01:00:00.000Z");
+    assert.equal(
+      mostRecentSaturdayOnOrBefore(sundayNoon, "Australia/Melbourne"),
+      "2026-11-07",
     );
   });
 
@@ -45,8 +52,8 @@ describe("Sabbath-week selection for Voice of the Week", () => {
       selectPioneerWeekReading(
         rows.filter((row) => !row.weekStart),
         "2026-09-05",
-      )?.id,
-      "undated",
+      ),
+      null,
     );
     assert.equal(selectPioneerWeekReading([], "2026-09-05"), null);
   });

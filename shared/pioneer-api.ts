@@ -20,6 +20,7 @@ export type PioneerReadingPayload = {
   id: string;
   weekStart: string | null;
   editorNote: string;
+  contextNote: string | null;
   paragraphStart: number;
   paragraphEnd: number;
   published: boolean;

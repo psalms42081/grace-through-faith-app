@@ -16,7 +16,7 @@ import {
   selectPioneerWeekReading,
   slicePioneerParagraphs,
 } from "../../shared/pioneer-passage";
-import { getSabbathDateKey } from "../../shared/calendar-date";
+import { mostRecentSaturdayOnOrBefore } from "../../shared/calendar-date";
 import { pioneerChapters, pioneerReadings } from "../../shared/schema";
 
 export const PIONEER_WEEK_TIME_ZONE = "Australia/Melbourne";
@@ -67,6 +67,7 @@ function readingPayload(
     id: reading.id,
     weekStart: reading.weekStart,
     editorNote: reading.editorNote,
+    contextNote: reading.contextNote?.trim() || null,
     paragraphStart: reading.paragraphStart,
     paragraphEnd: reading.paragraphEnd,
     published: reading.published,
@@ -95,7 +96,7 @@ function isMissingRelation(error: unknown): boolean {
 }
 
 export function pioneerSabbathDate(instant = new Date()): string {
-  return getSabbathDateKey(instant, PIONEER_WEEK_TIME_ZONE);
+  return mostRecentSaturdayOnOrBefore(instant, PIONEER_WEEK_TIME_ZONE);
 }
 
 export async function getPioneerWeekReading(

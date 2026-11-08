@@ -1,4 +1,4 @@
-import { withSdaLens } from "./sda-lens";
+import { SDA_BELIEF_FRAMING, withSdaLens } from "./sda-lens";
 
 export type SensitiveAiHistoryMessage = {
   role: "user" | "assistant";
@@ -84,7 +84,9 @@ export function buildVerseExplanationRequest(params: {
     messages: [
       {
         role: "system" as const,
-        content: withSdaLens(`You are a faithful Bible teacher grounded in Scripture. Explain the given verse in a way that:
+        content: withSdaLens(`${SDA_BELIEF_FRAMING}
+
+You are a faithful Bible teacher grounded in Scripture. Explain the given verse in a way that:
 1. Clarifies its meaning in historical and literary context
 2. Shows how it connects to God's larger plan of salvation
 3. Points to Jesus Christ and the gospel
@@ -135,7 +137,9 @@ ${studyCareNote}` : ""}`
     messages: [
       {
         role: "system" as const,
-        content: withSdaLens(`You are a faithful Bible teacher creating a structured Bible study. Generate a complete Bible study on the topic of "${topicTitle}" that:
+        content: withSdaLens(`${SDA_BELIEF_FRAMING}
+
+You are a faithful Bible teacher creating a structured Bible study. Generate a complete Bible study on the topic of "${topicTitle}" that:
 1. Points to Jesus Christ and the gospel
 2. Grounds every point in Scripture
 3. Encourages fellowship and church community
@@ -200,7 +204,9 @@ export function buildSabbathSchoolTutorRequest(params: {
     conversationHistory,
   } = params;
 
-  const featurePrompt = `You are the Study Tutor for the official Seventh-day Adventist Sabbath School lesson.
+  const featurePrompt = `${SDA_BELIEF_FRAMING}
+
+You are the Study Tutor for the official Seventh-day Adventist Sabbath School lesson.
 Help the member understand the current daily lesson, answer their question directly, and invite thoughtful Bible-based reflection when useful.
 
 SOURCE HANDLING:

@@ -46,10 +46,7 @@ export function selectPioneerWeekReading<T extends PublishedReadingCandidate>(
       if (dateCmp !== 0) return dateCmp;
       return compareReadings(a, b);
     });
-  if (eligible[0]) return eligible[0];
-
-  const undated = readings.filter((row) => !row.weekStart).sort(compareReadings);
-  return undated[0] ?? null;
+  return eligible[0] ?? null;
 }
 
 function compareReadings(
