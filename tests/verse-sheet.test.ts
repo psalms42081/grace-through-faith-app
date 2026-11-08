@@ -7,6 +7,10 @@ import {
   firstThreeLines,
   formatSheetReference,
   isAiGeneratedSource,
+  KJV_JOEL_CHAPTERS,
+  KJV_MALACHI_CHAPTERS,
+  ORIGINAL_WORDS_UNAVAILABLE,
+  planOriginalWordsLookup,
 } from "../lib/verse-sheet";
 import { wordStudyChipsForVerse } from "../lib/reader-word-study";
 
@@ -144,6 +148,29 @@ describe("verse sheet wiring", () => {
     assert.match(reader, /showStripToast\("Highlight removed"\)/);
   });
 
+  it("puts Original words under the highlight colours and opens STEP rows in the word-study sheet", () => {
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
+    const list = readFileSync(new URL("../components/reader/OriginalWordsSheet.tsx", import.meta.url), "utf8");
+    const highlight = sheet.indexOf("reader-verse-highlight-remove");
+    const original = sheet.indexOf("reader-verse-original-words");
+    const expanded = sheet.indexOf("reader-verse-sheet-expanded");
+    assert.ok(highlight >= 0 && original > highlight, "Original words sits under the highlight colours");
+    assert.ok(expanded > original, "Original words is on the collapsed sheet, above the expanded scroll");
+    assert.match(sheet, /minHeight: 44/);
+    assert.match(sheet, /originalWordsFromStepMaps\(sheetMaps\)/);
+    assert.match(sheet, /originalWordsFromStepMaps\(fetchedStepMaps\)/);
+    assert.match(sheet, /translation=KJV/);
+    assert.match(sheet, /\/api\/verse\?book=/);
+    assert.match(sheet, /\/api\/strong\/verse\//);
+    assert.doesNotMatch(sheet, /originalWordsFromStepMaps\(\s*first\.text/);
+    assert.match(sheet, /title="Words"/);
+    assert.match(sheet, /onWordActivate=\{onWordActivate\}/);
+    assert.match(list, /reader-original-words-sheet/);
+    assert.match(list, /const surface = row\.gloss \|\| row\.original/);
+    assert.match(list, /onPress=\{\(\) => onWordActivate\(surface, mapping\)\}/);
+    assert.doesNotMatch(list, /verseText|first\.text/);
+  });
+
   it("toasts Bookmarked and Sign in to save, and fills the bookmark icon", () => {
     const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
@@ -151,5 +178,79 @@ describe("verse sheet wiring", () => {
     assert.match(reader, /showStripToast\("Bookmarked"\)/);
     assert.match(reader, /showStripToast\("Sign in to save"\)/);
     assert.match(reader, /POST", "\/api\/bookmarks"/);
+  });
+});
+
+describe("original words versification guard", () => {
+  it("refuses Joel and Malachi when the open translation's chapter count differs from the KJV", () => {
+    assert.equal(KJV_JOEL_CHAPTERS, 3);
+    assert.equal(KJV_MALACHI_CHAPTERS, 4);
+
+    const joel = planOriginalWordsLookup({
+      translation: "YV111",
+      bookName: "Joel",
+      translationChapterCount: 4,
+      kjvVerseExists: null,
+    });
+    assert.equal(joel.message, ORIGINAL_WORDS_UNAVAILABLE);
+    assert.equal(joel.requestKjvVerse, false);
+
+    const malachi = planOriginalWordsLookup({
+      translation: "NASB",
+      bookName: "Malachi",
+      bookId: 39,
+      translationChapterCount: 3,
+      kjvVerseExists: null,
+    });
+    assert.equal(malachi.message, ORIGINAL_WORDS_UNAVAILABLE);
+    assert.equal(malachi.requestKjvVerse, false);
+
+    const sameNumbering = planOriginalWordsLookup({
+      translation: "WEB",
+      bookName: "Joel",
+      translationChapterCount: KJV_JOEL_CHAPTERS,
+      kjvVerseExists: null,
+    });
+    assert.equal(sameNumbering.requestKjvVerse, true);
+    assert.equal(sameNumbering.message, null);
+  });
+
+  it("refuses a missing KJV verse and still loads Psalm 23 and John 3", () => {
+    const missing = planOriginalWordsLookup({
+      translation: "WEB",
+      bookName: "Obadiah",
+      translationChapterCount: 1,
+      kjvVerseExists: false,
+    });
+    assert.equal(missing.message, ORIGINAL_WORDS_UNAVAILABLE);
+    assert.equal(missing.requestKjvVerse, false);
+
+    const psalm = planOriginalWordsLookup({
+      translation: "WEB",
+      bookName: "Psalms",
+      translationChapterCount: 150,
+      kjvVerseExists: true,
+    });
+    assert.equal(psalm.requestKjvVerse, true);
+    assert.equal(psalm.message, null);
+
+    const john = planOriginalWordsLookup({
+      translation: "NET",
+      bookName: "John",
+      bookId: 43,
+      translationChapterCount: 21,
+      kjvVerseExists: true,
+    });
+    assert.equal(john.requestKjvVerse, true);
+    assert.equal(john.message, null);
+  });
+
+  it("gates the KJV verse request on that plan in the verse sheet", () => {
+    const sheet = readFileSync(new URL("../components/reader/VerseSheet.tsx", import.meta.url), "utf8");
+    assert.match(sheet, /planOriginalWordsLookup/);
+    assert.match(sheet, /enabled: lookupKjvStep/);
+    assert.match(sheet, /const lookupKjvStep = originalPlan\.requestKjvVerse && !!first/);
+    assert.match(sheet, /ORIGINAL_WORDS_UNAVAILABLE/);
+    assert.match(sheet, /enabled: lookupKjvStep && !!kjvVerseId/);
   });
 });

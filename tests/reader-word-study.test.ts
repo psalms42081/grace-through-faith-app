@@ -4,8 +4,17 @@ import { describe, it } from "node:test";
 import {
   alignMapsToSurface,
   formatStrongId,
+  originalWordsFromStepMaps,
   tokenizeVerseSurface,
+  type ReaderStrongMap,
 } from "../lib/reader-word-study";
+import {
+  WORD_STUDY_HINT_GREEK,
+  WORD_STUDY_HINT_HEBREW,
+  WORD_STUDY_HINT_HIDE_MS,
+  wordStudyHintCopy,
+  wordStudyHintReturns,
+} from "../lib/word-study-hint";
 
 describe("formatStrongId", () => {
   it("strips zero-padding", () => {
@@ -130,6 +139,115 @@ describe("alignMapsToSurface", () => {
   });
 });
 
+function stepMap(
+  partial: {
+    strongId: string;
+    wordPosition: number;
+    originalWord: string;
+    translatedWord: string;
+    transliteration?: string | null;
+    source?: string | null;
+    isAiGenerated?: boolean;
+  },
+): ReaderStrongMap {
+  return {
+    map: {
+      strongId: partial.strongId,
+      wordPosition: partial.wordPosition,
+      originalWord: partial.originalWord,
+      translatedWord: partial.translatedWord,
+      source: partial.source ?? "step",
+      isAiGenerated: partial.isAiGenerated ?? false,
+    },
+    entry: {
+      id: partial.strongId,
+      language: partial.strongId.startsWith("G") ? "gr" : "he",
+      lemma: partial.originalWord,
+      transliteration: partial.transliteration ?? null,
+      pronunciation: null,
+      definition: "lexicon article that must not become the row gloss",
+      kjvUsage: "KJV usage that must not become the row gloss",
+    },
+  };
+}
+
+describe("originalWordsFromStepMaps", () => {
+  it("builds rows from STEP glosses in original order, not from the English verse", () => {
+    const englishVerse = "He maketh me to lie down in green pastures.";
+    const rows = originalWordsFromStepMaps([
+      stepMap({
+        strongId: "H01877",
+        wordPosition: 3,
+        originalWord: "דֶּשֶׁא",
+        translatedWord: "grass",
+        transliteration: "deshe",
+      }),
+      stepMap({
+        strongId: "H7257",
+        wordPosition: 1,
+        originalWord: "יַרְבִּיצֵנִי",
+        translatedWord: "he makes lie down",
+        transliteration: "yarbitseni",
+      }),
+      stepMap({
+        strongId: "H4999",
+        wordPosition: 2,
+        originalWord: "נָאָה",
+        translatedWord: "pastures of",
+        transliteration: "na'ah",
+      }),
+    ]);
+    assert.deepEqual(
+      rows.map((row) => [row.original, row.transliteration, row.gloss, row.strongId]),
+      [
+        ["יַרְבִּיצֵנִי", "yarbitseni", "he makes lie down", "H7257"],
+        ["נָאָה", "na'ah", "pastures of", "H4999"],
+        ["דֶּשֶׁא", "deshe", "grass", "H1877"],
+      ],
+    );
+    assert.deepEqual(rows.map((row) => row.mapIndex), [1, 2, 0]);
+    assert.equal(rows.map((row) => row.gloss).join("|"), "he makes lie down|pastures of|grass");
+    const labels = rows.map((row) => `${row.original} ${row.gloss}`).join(" ");
+    assert.equal(labels.includes("maketh"), false);
+    assert.equal(labels.includes("green"), false);
+    assert.equal(labels.includes(englishVerse), false);
+  });
+
+  it("drops AI and non-STEP rows and does not take the function a verse string", () => {
+    const rows = originalWordsFromStepMaps([
+      stepMap({
+        strongId: "G0025",
+        wordPosition: 1,
+        originalWord: "ἠγάπησεν",
+        translatedWord: "loved",
+        transliteration: "ēgapēsen",
+        source: "ai",
+        isAiGenerated: true,
+      }),
+      stepMap({
+        strongId: "G2316",
+        wordPosition: 2,
+        originalWord: "Θεός",
+        translatedWord: "God",
+        transliteration: "theos",
+        source: "legacy",
+      }),
+      stepMap({
+        strongId: "G0026",
+        wordPosition: 3,
+        originalWord: "ἀγάπη",
+        translatedWord: "love",
+        transliteration: "agapē",
+      }),
+    ]);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.original, "ἀγάπη");
+    assert.equal(rows[0]?.gloss, "love");
+    assert.equal(rows[0]?.strongId, "G26");
+    assert.equal(originalWordsFromStepMaps.length, 1);
+  });
+});
+
 describe("reader word-study chrome", () => {
   it("uses a Word study chip instead of the Languages icon", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
@@ -142,6 +260,11 @@ describe("reader word-study chrome", () => {
     const words = readFileSync(new URL("../components/reader/ReaderVerseWords.tsx", import.meta.url), "utf8");
     assert.doesNotMatch(words, /textDecoration/);
     assert.doesNotMatch(words, /rgba\(91, 107, 122/);
+    assert.doesNotMatch(words, /WORD_STUDY_UNTAPPABLE_INK/);
+    assert.doesNotMatch(words, /0\.45/);
+    assert.match(words, /WORD_STUDY_PULSE_MS = 600/);
+    assert.match(words, /openOriginalWords = wordStudyMode && !tagged/);
+    assert.match(words, /untaggedRef\.current\?\.\(\)/);
     assert.match(words, /WORD_TAP_TINT = "#F1EBDD"/);
     assert.match(words, /WORD_TAP_TINT_MS = 300/);
     assert.match(words, /tappedIndex === index \? tappedStyle : null/);
@@ -198,11 +321,46 @@ describe("reader word-study chrome", () => {
     assert.match(strongs, /\/api\/strong\/search/);
   });
 
+  it("opens the Original words sheet when an untagged word is tapped", () => {
+    const words = readFileSync(new URL("../components/reader/ReaderVerseWords.tsx", import.meta.url), "utf8");
+    const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(words, /else if \(openOriginalWords\) untaggedRef\.current\?\.\(\)/);
+    assert.match(prose, /onUntaggedWord=\{onUntaggedWord \? \(\) => onUntaggedWord\(v\) : undefined\}/);
+    assert.match(reader, /setOriginalWordsVerse\(\{ id: verse\.id, verse: verse\.verse \}\)/);
+    assert.match(reader, /<OriginalWordsSheet/);
+    assert.match(reader, /originalWordsFromStepMaps\(originalWordsMaps\)/);
+  });
+
   it("passes book, chapter, and verse into the word sheet", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
     assert.match(reader, /bookName: bookName/);
     assert.match(reader, /chapter: chapterNum/);
     assert.match(reader, /verse: verseNum/);
     assert.match(reader, /verseText:/);
+  });
+
+  it("shows a dismissible Hebrew or Greek hint and skips the word pulse when motion is reduced", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    const hint = readFileSync(new URL("../lib/use-reduced-motion.ts", import.meta.url), "utf8");
+    assert.equal(wordStudyHintCopy(1), WORD_STUDY_HINT_HEBREW);
+    assert.equal(wordStudyHintCopy(25), WORD_STUDY_HINT_HEBREW);
+    assert.equal(wordStudyHintCopy(39), WORD_STUDY_HINT_HEBREW);
+    assert.equal(wordStudyHintCopy(40), WORD_STUDY_HINT_GREEK);
+    assert.equal(wordStudyHintCopy(43), WORD_STUDY_HINT_GREEK);
+    assert.equal(WORD_STUDY_HINT_HIDE_MS, 7 * 24 * 60 * 60 * 1000);
+    const hiddenAt = 1_700_000_000_000;
+    assert.equal(wordStudyHintReturns(null, hiddenAt), true);
+    assert.equal(wordStudyHintReturns(hiddenAt, hiddenAt + WORD_STUDY_HINT_HIDE_MS - 1), false);
+    assert.equal(wordStudyHintReturns(hiddenAt, hiddenAt + WORD_STUDY_HINT_HIDE_MS), true);
+    assert.match(reader, /word-study-hint-hidden-at/);
+    assert.match(reader, /wordStudyHintReturns\(hintHiddenAt, Date\.now\(\)\)/);
+    assert.match(reader, /wordStudyWasOn/);
+    assert.match(reader, /testID="word-study-hint"/);
+    assert.match(reader, /if \(!motion\.reduced\) setWordStudyPulse/);
+    assert.match(reader, /showStripToast\("Word study is available in the KJV"\)/);
+    assert.match(hint, /AccessibilityInfo\.isReduceMotionEnabled/);
+    assert.match(hint, /prefers-reduced-motion/);
+    assert.match(hint, /reduceMotionChanged/);
   });
 });

@@ -22,6 +22,7 @@ import {
   setApiBibleCallRecorder,
   resolveChapter,
   resolveBookRecord,
+  storedTranslationChapterCount,
   ScriptureError,
   type ApiBibleTranslationConfig,
   type ChapterCacheHooks,
@@ -32,8 +33,10 @@ import {
   getYouVersionCatalog,
   languageNameForTag,
   resolveYouVersionChapter,
+  youVersionBookChapterCount,
   type ResolvedYouVersionChapter,
 } from "../services/youversion";
+import { isKjvTranslation } from "../../lib/strong-map-policy";
 import { isYouVersionCode } from "../../shared/youversion";
 import { stripAcrosticMarker } from "../../shared/acrostic-markers";
 import {
@@ -193,6 +196,31 @@ function localNoticeFor(meta: { translation: string; source: string }): Translat
   return meta.source === "db" ? localTranslationNotice(meta.translation) : null;
 }
 
+/**
+ * Chapter count of the open translation for Joel and Malachi.
+ * Omitted for the KJV and for every other book. A failed lookup is omitted
+ * so the reader keeps the canonical count and does not block original words.
+ */
+async function openTranslationChapterCount(
+  book: { id: number; name: string },
+  translation: string,
+  source: string,
+): Promise<number | undefined> {
+  if (isKjvTranslation(translation)) return undefined;
+  if (book.name !== "Joel" && book.name !== "Malachi") return undefined;
+  try {
+    if (source === "youversion") {
+      return (await youVersionBookChapterCount(translation, book.name)) ?? undefined;
+    }
+    if (source === "db") {
+      return (await storedTranslationChapterCount(book.id, translation)) ?? undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
 /** YouVersion text is shown at read time only; browsers must not keep a copy. */
 function sendYouVersion(res: any, body: Record<string, unknown>) {
   res.set("Cache-Control", "no-store");
@@ -211,6 +239,11 @@ router.get("/api/passage", async (req, res) => {
 
     if (isYouVersionCode(req.query.translation as string | undefined)) {
       const yv = await resolveYouVersionForReader(String(req.query.translation), String(book), Number(chapter));
+      const translationChapterCount = await openTranslationChapterCount(
+        yv.book,
+        yv.meta.translation,
+        yv.meta.source,
+      );
       return sendYouVersion(res, {
         book: yv.book,
         chapter: yv.chapter,
@@ -220,6 +253,7 @@ router.get("/api/passage", async (req, res) => {
         attribution: yv.attribution,
         cached: yv.cached,
         ...yv.meta,
+        ...(translationChapterCount ? { translationChapterCount } : {}),
       });
     }
 
@@ -231,12 +265,18 @@ router.get("/api/passage", async (req, res) => {
     });
 
     const notice = localNoticeFor(resolved.meta);
+    const translationChapterCount = await openTranslationChapterCount(
+      resolved.book,
+      resolved.meta.translation,
+      resolved.meta.source,
+    );
     return res.json({
       book: resolved.book,
       chapter: resolved.chapter,
       verses: resolved.verses,
       ...(resolved.providerContent ? { providerContent: resolved.providerContent } : {}),
       ...(notice ? { attribution: notice } : {}),
+      ...(translationChapterCount ? { translationChapterCount } : {}),
       cached: resolved.cached,
       ...resolved.meta,
     });

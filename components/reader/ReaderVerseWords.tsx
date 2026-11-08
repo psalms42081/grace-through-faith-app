@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Text, type TextStyle } from "react-native";
+import { Animated, Platform, Text, type TextStyle } from "react-native";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import {
   alignMapsToSurface,
@@ -27,6 +27,9 @@ const webInline: TextStyle | undefined = IS_WEB
 export const WORD_TAP_TINT = "#F1EBDD";
 export const WORD_TAP_TINT_MS = 300;
 
+/** One faint wash when Word study is switched on. */
+export const WORD_STUDY_PULSE_MS = 600;
+
 const tappedStyle: TextStyle = {
   backgroundColor: WORD_TAP_TINT,
   borderRadius: 4,
@@ -41,7 +44,9 @@ export function ReaderVerseWords({
   onVerseTap,
   onVerseLongPress,
   onWordActivate,
+  onUntaggedWord,
   spokenRanges = [],
+  pulseToken = 0,
 }: {
   verseId: string;
   verseNum: number;
@@ -51,7 +56,11 @@ export function ReaderVerseWords({
   onVerseTap: () => void;
   onVerseLongPress: () => void;
   onWordActivate: (surface: string, mapping: ReaderStrongMap) => void;
+  /** Word study: a word with no Strong's tag opens the verse's Original words list. */
+  onUntaggedWord?: () => void;
   spokenRanges?: WordRange[];
+  /** Increments once when Word study is switched on, unless motion is reduced. */
+  pulseToken?: number;
 }) {
   const tokens = useMemo(
     () =>
@@ -66,6 +75,8 @@ export function ReaderVerseWords({
   );
   const activateRef = useRef(onWordActivate);
   activateRef.current = onWordActivate;
+  const untaggedRef = useRef(onUntaggedWord);
+  untaggedRef.current = onUntaggedWord;
   const verseLongRef = useRef(onVerseLongPress);
   verseLongRef.current = onVerseLongPress;
   const mapsRef = useRef(maps);
@@ -91,9 +102,27 @@ export function ReaderVerseWords({
   const webLongPress = webLongPressRef.current;
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => () => {
     if (tapTimer.current) clearTimeout(tapTimer.current);
   }, []);
+  useEffect(() => {
+    if (!pulseToken) return;
+    pulse.setValue(1);
+    const anim = Animated.timing(pulse, {
+      toValue: 0,
+      duration: WORD_STUDY_PULSE_MS,
+      useNativeDriver: false,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [pulseToken, pulse]);
+  const pulseStyle = {
+    backgroundColor: pulse.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["rgba(31, 26, 18, 0)", "rgba(31, 26, 18, 0.12)"],
+    }),
+  };
 
   let spokenOrdinal = -1;
   return (
@@ -160,29 +189,16 @@ export function ReaderVerseWords({
           );
         }
 
-        if (wordStudyMode && !tagged) {
-          return (
-            <Text
-              key={`${verseId}-w-${index}`}
-              pointerEvents="none"
-              style={[webInline, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
-            >
-              <VerseTextRuns
-                text={token.surface}
-                style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
-              />
-            </Text>
-          );
-        }
-
+        const openOriginalWords = wordStudyMode && !tagged;
         return (
-          <Text
+          <Animated.Text
             key={`${verseId}-w-${index}`}
             testID={testId}
             nativeID={testId}
             onPress={() => {
               if (IS_WEB && webLongPress.consumeSuppressedClick()) return;
               if (pressOpensSheet) tapThenActivate();
+              else if (openOriginalWords) untaggedRef.current?.();
               else onVerseTap();
             }}
             {...webHandlers}
@@ -190,12 +206,17 @@ export function ReaderVerseWords({
             selectable={false}
             style={[
               webInline,
+              pulseStyle,
               tappedIndex === index ? tappedStyle : null,
-              IS_WEB && tagged ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
+              IS_WEB && (tagged || openOriginalWords) ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
               spoken ? { color: WORDS_OF_CHRIST_INK } : null,
             ]}
             accessibilityLabel={
-              tagged ? `Word study ${token.surface}` : `Verse ${verseNum}`
+              tagged
+                ? `Word study ${token.surface}`
+                : openOriginalWords
+                  ? `Original words for verse ${verseNum}`
+                  : `Verse ${verseNum}`
             }
           >
             {tagged ? (
@@ -206,7 +227,7 @@ export function ReaderVerseWords({
                 style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
               />
             )}
-          </Text>
+          </Animated.Text>
         );
       })}
     </>

@@ -16,8 +16,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { apiRequest } from "@/lib/query-client";
+import { OriginalWordsSheet } from "@/components/reader/OriginalWordsSheet";
 import {
   formatStrongId,
+  originalWordsFromStepMaps,
   wordStudyChipsForVerse,
   type ReaderStrongMap,
 } from "@/lib/reader-word-study";
@@ -29,10 +31,12 @@ import {
 import { isKjvTranslation } from "@/lib/strong-map-policy";
 import { aiScriptureTranslation, isYouVersionCode } from "@/shared/youversion";
 import {
+  ORIGINAL_WORDS_UNAVAILABLE,
   VERSE_SHEET_ATTRIBUTION,
   VERSE_SHEET_COLLAPSED_HEIGHT,
   VERSE_SHEET_HIGHLIGHTS,
   formatSheetReference,
+  planOriginalWordsLookup,
   type VerseSheetHighlightKey,
 } from "@/lib/verse-sheet";
 
@@ -150,6 +154,7 @@ export function VerseSheet({
   activeColor,
   bookmarked,
   notice,
+  translationChapterCount,
 }: {
   verses: { id: string; verse: number; text: string }[];
   bookName: string;
@@ -173,8 +178,11 @@ export function VerseSheet({
   activeColor: VerseSheetHighlightKey | null;
   bookmarked: boolean;
   notice?: string | null;
+  /** Chapter count of the translation on screen. Joel and Malachi are compared with the KJV. */
+  translationChapterCount?: number | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [originalOpen, setOriginalOpen] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
@@ -227,6 +235,60 @@ export function VerseSheet({
     () => (first ? wordStudyChipsForVerse(first.text, sheetMaps) : []),
     [first, sheetMaps],
   );
+
+  const originalFromProps = useMemo(() => originalWordsFromStepMaps(sheetMaps), [sheetMaps]);
+  const lookupIdentity = `${translation}:${bookId}:${chapter}:${first?.verse ?? ""}`;
+  const [missingKjvFor, setMissingKjvFor] = useState<string | null>(null);
+  const kjvVerseMissing = missingKjvFor === lookupIdentity;
+  const originalPlan = planOriginalWordsLookup({
+    translation,
+    bookName,
+    bookId,
+    translationChapterCount,
+    kjvVerseExists: kjvVerseMissing ? false : null,
+    hasStepRows: originalFromProps.length > 0,
+  });
+  const lookupKjvStep = originalPlan.requestKjvVerse && !!first;
+  const kjvVerseQuery = useQuery<{ id?: string }>({
+    queryKey: [
+      `/api/verse?book=${encodeURIComponent(bookId)}&chapter=${encodeURIComponent(chapter)}&verse=${encodeURIComponent(String(first?.verse ?? ""))}&translation=KJV`,
+    ],
+    enabled: lookupKjvStep,
+    retry: false,
+  });
+  const kjvVerseId = typeof kjvVerseQuery.data?.id === "string" ? kjvVerseQuery.data.id : "";
+  useEffect(() => {
+    if (!lookupKjvStep || kjvVerseId || !kjvVerseQuery.isFetched || kjvVerseQuery.isFetching) return;
+    const errorText = kjvVerseQuery.error instanceof Error ? kjvVerseQuery.error.message : "";
+    if (kjvVerseQuery.isSuccess || errorText.startsWith("404")) {
+      setMissingKjvFor(lookupIdentity);
+    }
+  }, [
+    lookupKjvStep,
+    kjvVerseId,
+    kjvVerseQuery.isFetched,
+    kjvVerseQuery.isFetching,
+    kjvVerseQuery.isSuccess,
+    kjvVerseQuery.error,
+    lookupIdentity,
+  ]);
+  const kjvStepQuery = useQuery<ReaderStrongMap[]>({
+    queryKey: [`/api/strong/verse/${encodeURIComponent(kjvVerseId)}?translation=KJV`],
+    enabled: lookupKjvStep && !!kjvVerseId,
+  });
+  const fetchedStepMaps = Array.isArray(kjvStepQuery.data) ? kjvStepQuery.data : [];
+  const originalMaps = originalFromProps.length > 0 ? sheetMaps : fetchedStepMaps;
+  const originalRows = useMemo(
+    () => (originalFromProps.length > 0 ? originalFromProps : originalWordsFromStepMaps(fetchedStepMaps)),
+    [originalFromProps, fetchedStepMaps],
+  );
+  const originalLoading =
+    lookupKjvStep &&
+    originalRows.length === 0 &&
+    (kjvVerseQuery.isLoading || kjvVerseQuery.isFetching || kjvStepQuery.isLoading || kjvStepQuery.isFetching);
+  const originalReference = first
+    ? formatSheetReference(bookName, chapter, [first.verse])
+    : reference;
 
   const pan = useRef(
     PanResponder.create({
@@ -397,6 +459,17 @@ export function VerseSheet({
           <SheetAction icon="copy-outline" label="Copy" onPress={onCopy} />
           <SheetAction icon="share-outline" label="Share" onPress={onShare} />
         </View>
+
+        <Pressable
+          onPress={() => setOriginalOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Original words"
+          testID="reader-verse-original-words"
+          style={({ pressed }) => [s.originalRow, { opacity: pressed ? 0.65 : 1 }]}
+        >
+          <Text style={s.originalLabel}>Original words</Text>
+          <Ionicons name="chevron-forward" size={16} color={MUTED} />
+        </Pressable>
 
         {showNote ? (
           <View style={s.noteBox} testID="reader-verse-sheet-note">
@@ -621,6 +694,16 @@ export function VerseSheet({
           </ScrollView>
         ) : null}
       </View>
+      <OriginalWordsSheet
+        visible={originalOpen}
+        reference={originalReference}
+        rows={originalRows}
+        maps={originalMaps}
+        loading={originalLoading && !originalPlan.message}
+        emptyMessage={originalPlan.message ? ORIGINAL_WORDS_UNAVAILABLE : null}
+        onClose={() => setOriginalOpen(false)}
+        onWordActivate={onWordActivate}
+      />
     </>
   );
 }
@@ -735,6 +818,22 @@ const s = StyleSheet.create({
   actionLabelActive: {
     color: PathB.coral,
     fontFamily: "Inter_600SemiBold",
+  },
+  originalRow: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
+  },
+  originalLabel: {
+    flex: 1,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: INK,
   },
   noteBox: {
     marginHorizontal: 16,

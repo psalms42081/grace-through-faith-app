@@ -1,5 +1,4 @@
 import {
-  DISCOVER_FEATURED_SERIES,
   DISCOVER_WATCH_RAIL,
   PROPHECY_TEACHING_VIDEOS,
 } from "../../data/curatedYoutubeVideos";
@@ -32,14 +31,6 @@ function collectTouchpointResourceReferences(): CuratedYoutubeVideoReference[] {
 
 function collectDiscoverReferences(): CuratedYoutubeVideoReference[] {
   return [
-    {
-      surface: "Discover featured series",
-      cardId: "great-controversy-featured-series",
-      title: DISCOVER_FEATURED_SERIES.title,
-      youtubeId: DISCOVER_FEATURED_SERIES.firstYoutubeId,
-      url: youtubeUrl(DISCOVER_FEATURED_SERIES.firstYoutubeId),
-      sourceFile: "data/curatedYoutubeVideos.ts",
-    },
     ...DISCOVER_WATCH_RAIL.map((video) => ({
       surface: "Discover watch rail",
       cardId: video.id,

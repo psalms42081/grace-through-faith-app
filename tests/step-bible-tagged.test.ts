@@ -85,6 +85,30 @@ describe("parseStepRef", () => {
     assert.equal(parseStepRef("Psa.3.0#01=L"), null);
   });
 
+  it("stores Psalm titles, Joel 2–3, and Malachi 3–4 on the KJV verse number", () => {
+    assert.equal(parseStepRef("Psa.23.0#01=L"), null);
+    const psalm = parseStepRef("Psa.23.1(Heb.23.2)#01=L");
+    assert.equal(psalm?.bookName, "Psalms");
+    assert.equal(psalm?.chapter, 23);
+    assert.equal(psalm?.verse, 1);
+
+    const joelEnglish = parseStepRef("Jol.2.28(Heb.3.1)#01=L");
+    assert.equal(joelEnglish?.bookName, "Joel");
+    assert.equal(joelEnglish?.chapter, 2);
+    assert.equal(joelEnglish?.verse, 28);
+    const joelChapter = parseStepRef("Jol.3.1(Heb.4.1)#01=L");
+    assert.equal(joelChapter?.chapter, 3);
+    assert.equal(joelChapter?.verse, 1);
+
+    const malachiEnd = parseStepRef("Mal.3.18#01=L");
+    assert.equal(malachiEnd?.bookName, "Malachi");
+    assert.equal(malachiEnd?.chapter, 3);
+    assert.equal(malachiEnd?.verse, 18);
+    const malachiFour = parseStepRef("Mal.4.1(Heb.3.19)#01=L");
+    assert.equal(malachiFour?.chapter, 4);
+    assert.equal(malachiFour?.verse, 1);
+  });
+
   it("keeps the English verse when a curly alternate ref is present", () => {
     const rom = parseStepRef("Rom.16.25{14.24}#01=NKO");
     assert.equal(rom?.bookName, "Romans");

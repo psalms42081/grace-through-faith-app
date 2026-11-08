@@ -28,6 +28,7 @@ import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import { VerseSpokenText } from "@/components/reader/VerseSpokenText";
+import { OriginalWordsSheet } from "@/components/reader/OriginalWordsSheet";
 import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
 import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/VerseSheet";
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
@@ -36,7 +37,9 @@ import {
   type ChapterAttributionData,
   type ChapterFootnote,
 } from "@/components/reader/ChapterAttribution";
+import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
+import { formatSheetReference } from "@/lib/verse-sheet";
 import { READER_VERSION_CHIP_MAX_WIDTH, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
@@ -68,6 +71,8 @@ import {
 import { scriptureOverlayHref } from "@/lib/scripture-nav";
 import { scrollDomToVerse } from "@/lib/reader-verse-anchor";
 import { VERSE_SHEET_HIGHLIGHTS, type VerseSheetHighlightKey } from "@/lib/verse-sheet";
+import { wordStudyHintCopy, wordStudyHintReturns } from "@/lib/word-study-hint";
+import { usePrefersReducedMotion } from "@/lib/use-reduced-motion";
 import { isPartialWordRange } from "@/lib/verse-word-range";
 import {
   addSessionHighlight,
@@ -78,6 +83,7 @@ import {
 import type { VerseWordRangeHighlight } from "@/components/reader/VerseWordSpans";
 
 const VERSE_TAP_HINT_KEY = "@grace-through-faith/verse-tap-hint-dismissed";
+const WORD_STUDY_HINT_KEY = "@grace-through-faith/word-study-hint-hidden-at";
 const DEFAULT_TRANSLATIONS = ["KJV", "ASV", "WEB", "BBE", "YLT", "RV1909", "LSG", "ARC", "TAGV"];
 const TRANSLATION_LABELS: Record<string, string> = {
   KJV: "King James Version",
@@ -172,6 +178,8 @@ interface PassageResponse {
   /** YouVersion only: the copyright line the version requires, and its footnotes. */
   attribution?: ChapterAttributionData;
   footnotes?: ChapterFootnote[];
+  /** Chapter count of this translation when it is known apart from KJV metadata. */
+  translationChapterCount?: number;
 }
 
 function BottomSheetToolbar({
@@ -877,6 +885,7 @@ export default function VerseReaderScreen() {
   const [bookmarkOverride, setBookmarkOverride] = useState<boolean | null>(null);
   const [wordStudyMode, setWordStudyMode] = useState(false);
   const [wordStudyTarget, setWordStudyTarget] = useState<WordStudySheetTarget | null>(null);
+  const [originalWordsVerse, setOriginalWordsVerse] = useState<{ id: string; verse: number } | null>(null);
   const verseInteractedAt = useRef(0);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -888,6 +897,7 @@ export default function VerseReaderScreen() {
     setSelectedVerseNums([]);
     setSheetOpen(false);
     setWordStudyTarget(null);
+    setOriginalWordsVerse(null);
     setLocalHighlightMap(new Map());
     setBookmarkOverride(null);
   }, [bookId, chapter]);
@@ -969,6 +979,38 @@ export default function VerseReaderScreen() {
     setShowVerseTapHint(false);
     AsyncStorage.setItem(VERSE_TAP_HINT_KEY, "1");
   }, []);
+
+  const motion = usePrefersReducedMotion();
+  const [hintHiddenAt, setHintHiddenAt] = useState<number | null | undefined>(undefined);
+  const [wordStudyHintOn, setWordStudyHintOn] = useState(false);
+  const [wordStudyPulse, setWordStudyPulse] = useState(0);
+  const wordStudyWasOn = useRef(false);
+  useEffect(() => {
+    AsyncStorage.getItem(WORD_STUDY_HINT_KEY)
+      .then((val) => {
+        const stored = val == null || val === "" ? NaN : Number(val);
+        setHintHiddenAt(Number.isFinite(stored) ? stored : null);
+      })
+      .catch(() => setHintHiddenAt(null));
+  }, []);
+  useEffect(() => {
+    if (hintHiddenAt === undefined || !motion.ready) return;
+    const turnedOn = wordStudyMode && !wordStudyWasOn.current;
+    if (!wordStudyMode) {
+      setWordStudyHintOn(false);
+    } else if (turnedOn) {
+      setWordStudyHintOn(wordStudyHintReturns(hintHiddenAt, Date.now()));
+      if (!motion.reduced) setWordStudyPulse((n) => n + 1);
+    }
+    wordStudyWasOn.current = wordStudyMode;
+  }, [wordStudyMode, hintHiddenAt, motion.ready, motion.reduced]);
+  const dismissWordStudyHint = useCallback(() => {
+    const hiddenAt = Date.now();
+    setWordStudyHintOn(false);
+    setHintHiddenAt(hiddenAt);
+    AsyncStorage.setItem(WORD_STUDY_HINT_KEY, String(hiddenAt)).catch(() => {});
+  }, []);
+  const wordStudyHint = wordStudyHintCopy(Number(bookId));
 
 
   useFocusEffect(
@@ -1064,6 +1106,7 @@ export default function VerseReaderScreen() {
 
   const bookName = data?.book?.name ?? "";
   const totalChapters = data?.book?.chapterCount ?? 0;
+  const translationChapterCount = data?.translationChapterCount ?? totalChapters;
   const chapterNum = Number(chapter);
 
   const canGoPrev = chapterNum > 1;
@@ -1181,6 +1224,17 @@ export default function VerseReaderScreen() {
     });
     return map;
   }, [kjvWordStudy, verses, strongMapQueries]);
+  const originalWordsMaps = useMemo(
+    () => (originalWordsVerse ? mapsByVerseId.get(originalWordsVerse.id) ?? [] : []),
+    [originalWordsVerse, mapsByVerseId],
+  );
+  const originalWordsRows = useMemo(
+    () => originalWordsFromStepMaps(originalWordsMaps),
+    [originalWordsMaps],
+  );
+  const originalWordsLoading = !!originalWordsVerse
+    && !mapsByVerseId.has(originalWordsVerse.id)
+    && strongMapQueries.some((query) => query.isLoading || query.isFetching);
   const selectedVerseSet = useMemo(() => new Set(selectedVerseNums), [selectedVerseNums]);
   const selectedVerseObjs = useMemo(
     () => verses.filter((v) => selectedVerseSet.has(v.verse)).sort((a, b) => a.verse - b.verse),
@@ -1898,6 +1952,21 @@ export default function VerseReaderScreen() {
               showsVerticalScrollIndicator={false}
             >
 
+              {wordStudyMode && wordStudyHintOn && wordStudyHint ? (
+                <View style={styles.wordStudyHint} testID="word-study-hint">
+                  <Text style={styles.wordStudyHintText}>{wordStudyHint}</Text>
+                  <Pressable
+                    onPress={dismissWordStudyHint}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Hide word study hint"
+                    testID="word-study-hint-dismiss"
+                  >
+                    <Text style={styles.wordStudyHintDismiss}>×</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
               <Pressable onPress={handleReaderBackgroundPress} style={styles.chapterHeader}>
                 <Text style={[styles.bookNameLabel, { color: RV2_INK_MUTED }]}>
                   {bookName?.toUpperCase()}
@@ -1907,7 +1976,7 @@ export default function VerseReaderScreen() {
                 </Text>
               </Pressable>
 
-              {showVerseTapHint && verses.length > 0 && (
+              {showVerseTapHint && verses.length > 0 && !wordStudyMode && (
                 <Pressable
                   onPress={dismissVerseTapHint}
                   style={[styles.verseTapHint, { backgroundColor: RV2_PILL }]}
@@ -1915,9 +1984,7 @@ export default function VerseReaderScreen() {
                 >
                   <Ionicons name="hand-left-outline" size={14} color={RV2_INK_MUTED} />
                   <Text style={[styles.verseTapHintText, { color: RV2_INK_MUTED }]}>
-                    {wordStudyMode
-                      ? "Tap a word for its Strong's entry."
-                      : "Tap a verse to select. Tap more to add. Drag down to dismiss."}
+                    Tap a verse to select. Tap more to add. Drag down to dismiss.
                   </Text>
                   <Ionicons name="close" size={12} color={RV2_INK_MUTED} />
                 </Pressable>
@@ -1944,9 +2011,18 @@ export default function VerseReaderScreen() {
                         ? (verse, surface, mapping) => handleWordActivate(surface, mapping, verse.verse, verse.text)
                         : undefined
                     }
+                    onUntaggedWord={
+                      kjvWordStudy
+                        ? (verse) => {
+                            setSheetOpen(false);
+                            setOriginalWordsVerse({ id: verse.id, verse: verse.verse });
+                          }
+                        : undefined
+                    }
                     wordRanges={wordRanges}
                     onWordRange={(verseId, start, end) => void handleWordRange(verseId, start, end)}
                     wordsOfChrist={wordsOfChrist && isKjvTranslation(translation)}
+                    pulseToken={wordStudyPulse}
                   />
                 ) : verses.map((v, i) => {
                   const isActive = selectedVerseSet.has(v.verse);
@@ -2208,6 +2284,7 @@ export default function VerseReaderScreen() {
                   } as any)
                 }
                 onStudyInKjv={handleStudyInKjv}
+                translationChapterCount={translationChapterCount}
                 onOpenBookOverview={() =>
                   router.push({
                     pathname: "/passage-context",
@@ -2479,6 +2556,22 @@ export default function VerseReaderScreen() {
           } as any);
         }}
       />
+      <OriginalWordsSheet
+        visible={!!originalWordsVerse}
+        reference={
+          originalWordsVerse
+            ? formatSheetReference(bookName ?? "", String(chapterNum), [originalWordsVerse.verse])
+            : ""
+        }
+        rows={originalWordsRows}
+        maps={originalWordsMaps}
+        loading={originalWordsLoading}
+        onClose={() => setOriginalWordsVerse(null)}
+        onWordActivate={(surface, mapping) => {
+          const verse = verses.find((item) => item.id === originalWordsVerse?.id);
+          handleWordActivate(surface, mapping, verse?.verse, verse?.text);
+        }}
+      />
       {stripToast && useNewTypography ? (
         <View
           pointerEvents="none"
@@ -2623,6 +2716,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_500Medium",
     lineHeight: 17,
+  },
+  wordStudyHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingTop: 6,
+    paddingHorizontal: 8,
+  },
+  wordStudyHintText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "Inter_400Regular",
+    color: RV2_INK_MUTED,
+  },
+  wordStudyHintDismiss: {
+    fontSize: 14,
+    lineHeight: 16,
+    fontFamily: "Inter_400Regular",
+    color: RV2_INK_MUTED,
   },
   proseContainer: {
     paddingBottom: 24,

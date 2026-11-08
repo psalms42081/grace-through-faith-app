@@ -312,6 +312,39 @@ export function youVersionAttribution(bible: YouVersionBible): YouVersionAttribu
 // ─── Read-time chapter fetch ──────────────────────────────────────────────────
 
 const chapterCache = new Map<string, { data: YouVersionChapter; expires: number }>();
+const bookChapterCountCache = new Map<string, { count: number; expires: number }>();
+
+/**
+ * Chapter count of Joel or Malachi in one YouVersion edition.
+ * A count that differs from the KJV (Joel 3, Malachi 4) is Hebrew numbering.
+ * Null when the edition does not say.
+ */
+export async function youVersionBookChapterCount(code: string, bookName: string): Promise<number | null> {
+  if (bookName !== "Joel" && bookName !== "Malachi") return null;
+  const bibleId = youVersionBibleId(code);
+  if (bibleId === null || YOUVERSION_EXCLUDED_BIBLES.has(bibleId)) return null;
+  const usfm = bookName === "Joel" ? "JOL" : "MAL";
+  const cacheKey = `${bibleId}:${usfm}`;
+  const cached = bookChapterCountCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) return cached.count;
+  try {
+    const { bible } = sdk();
+    const detail = await youVersionCall(() => bible.getBook(bibleId, usfm));
+    let count = detail.chapters?.length ?? 0;
+    if (count < 1) {
+      const chapters = await youVersionCall(() => bible.getChapters(bibleId, usfm));
+      if (chapters.next_page_token && typeof chapters.total_size !== "number") return null;
+      count = typeof chapters.total_size === "number" && chapters.total_size > 0
+        ? chapters.total_size
+        : chapters.data.length;
+    }
+    if (count < 1) return null;
+    bookChapterCountCache.set(cacheKey, { count, expires: Date.now() + TEXT_TTL_MS });
+    return count;
+  } catch {
+    return null;
+  }
+}
 
 export interface ResolvedYouVersionChapter extends YouVersionChapter {
   book: ResolvedBook;

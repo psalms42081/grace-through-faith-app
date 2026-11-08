@@ -2590,3 +2590,24 @@ export const pushSubscriptions = pgTable(
 );
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+// ─── WATCH THIS WEEK ─────────────────────────────────────────────────────────
+// One row per featured YouTube video. featured_week is the Saturday (Sydney)
+// that opened the week. hidden = true makes the Saturday job skip that video.
+
+export const featuredVideos = pgTable(
+  "featured_video",
+  {
+    youtubeId: varchar("youtube_id", { length: 11 }).primaryKey(),
+    title: text("title").notNull(),
+    channel: text("channel").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
+    featuredWeek: date("featured_week", { mode: "string" }).notNull(),
+    hidden: boolean("hidden").default(false).notNull(),
+  },
+  (table) => ({
+    weekIdx: index("featured_video_week_idx").on(table.featuredWeek),
+  }),
+);
+
+export type FeaturedVideo = typeof featuredVideos.$inferSelect;

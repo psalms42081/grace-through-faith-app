@@ -62,9 +62,11 @@ export function TypographyPreviewProse({
   wordStudyMode = false,
   mapsByVerseId,
   onWordActivate,
+  onUntaggedWord,
   wordRanges = [],
   onWordRange,
   wordsOfChrist = false,
+  pulseToken = 0,
 }: {
   verses: PreviewVerse[];
   headingsByVerse: Map<number, ReaderHeading[]>;
@@ -80,9 +82,11 @@ export function TypographyPreviewProse({
   wordStudyMode?: boolean;
   mapsByVerseId?: Map<string, ReaderStrongMap[]>;
   onWordActivate?: (verse: PreviewVerse, surface: string, mapping: ReaderStrongMap) => void;
+  onUntaggedWord?: (verse: PreviewVerse) => void;
   wordRanges?: VerseWordRangeHighlight[];
   onWordRange?: (verseId: string, start: number, end: number) => void;
   wordsOfChrist?: boolean;
+  pulseToken?: number;
 }) {
   const groups = groupVersesByParagraphStarts(verses, paragraphStarts);
   const indexById = useMemo(() => {
@@ -207,6 +211,8 @@ export function TypographyPreviewProse({
                           onVerseTap={() => onVerseTap(v)}
                           onVerseLongPress={() => onVerseLongPress(v)}
                           onWordActivate={(surface, mapping) => onWordActivate(v, surface, mapping)}
+                          onUntaggedWord={onUntaggedWord ? () => onUntaggedWord(v) : undefined}
+                          pulseToken={pulseToken}
                         />
                       ) : wordStudyMode ? (
                         <>

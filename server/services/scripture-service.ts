@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { db } from "../db";
 import { bibleBooks, bibleVerses, bibleTranslations } from "../../shared/schema";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, sql } from "drizzle-orm";
 import { withKjvProviderContent, KJV_STRUCTURE_VERSION } from "./kjv-structure";
 import { aiScriptureTranslation } from "../../shared/youversion";
 import { extractAcrosticHeadings } from "../../shared/acrostic-markers";
@@ -927,6 +927,19 @@ function evictOldest(cache: Map<string, { data: any; expires: number }>, maxSize
 }
 
 // ─── Chapter fetchers ─────────────────────────────────────────────────────────
+
+/** Distinct stored chapters for one local translation of a book. */
+export async function storedTranslationChapterCount(
+  bookId: number,
+  translationId: string,
+): Promise<number | null> {
+  const rows = await db
+    .select({ n: sql<number>`count(distinct ${bibleVerses.chapter})::int` })
+    .from(bibleVerses)
+    .where(and(eq(bibleVerses.bookId, bookId), eq(bibleVerses.translationId, translationId)));
+  const n = Number(rows[0]?.n);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
 
 export async function fetchNltChapter(
   bookName: string,

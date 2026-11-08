@@ -239,7 +239,6 @@ describe("pastoral topic video availability contract", () => {
     assert.deepEqual(
       [...surfaces].sort(),
       [
-        "Discover featured series",
         "Discover watch rail",
         "Great Controversy teacher rail",
         "Pastoral topic videos",

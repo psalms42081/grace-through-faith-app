@@ -156,7 +156,7 @@ export default function SermonPlayerScreen() {
         </Pressable>
         <View style={st.headerCenter}>
           <Text style={[st.headerTitle, { color: theme.text, fontFamily: "Lora_700Bold" }]} numberOfLines={1}>
-            {title || "Sermon"}
+            Watch
           </Text>
         </View>
         <Pressable onPress={handleOpenInYouTube} hitSlop={12}>

@@ -1,7 +1,6 @@
-// Discover v2 — Path B Brief 05. Hidden route, reached only via the preview
-// pill on the interim search screen until Joe approves the swap.
-// Colour discipline (§A.3): ONE gradient (Featured Series). No coral except
-// active tab. Category tokens carry the colour story — no freelance colours.
+// Discover v2 — Path B Brief 05. The Discover tab renders this screen.
+// Colour discipline: light surfaces, coral accent on Watch this week.
+// Category tokens carry the rest of the colour story.
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   View,
@@ -18,8 +17,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { LinearGradient } from "expo-linear-gradient";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HV2, F } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
@@ -29,10 +26,7 @@ import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
-import {
-  DISCOVER_FEATURED_SERIES as FEATURED_SERIES,
-  DISCOVER_WATCH_RAIL as WATCH_RAIL,
-} from "@/data/curatedYoutubeVideos";
+import { DISCOVER_WATCH_RAIL as WATCH_RAIL } from "@/data/curatedYoutubeVideos";
 import {
   DEVOTIONAL_CATALOG_QUERY_KEY,
   isApprovedHumanDevotionalPlan,
@@ -86,10 +80,6 @@ const TOPIC_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 // Top-8 quick-access chip rail above the grid (§A.2.3, optional rail — included).
 const TOP_TOPIC_IDS = ["anxiety", "hope", "prayer", "forgiveness", "grief", "sabbath", "purpose", "gods-grace"];
 
-// Featured Series (§A.2.2) — the screen's ONE gradient. The Great Controversy
-// set is NOT SS-linked, so it uses its own category token (Adventist Doctrines
-// plum), not teal.
-const FEATURED_GRADIENT = ["#5E2F68", "#7A3E86"] as const;
 // Watch rail (§A.2.4) — existing video assignments only. CANONICAL SOURCE:
 // server/data/bibleProjectVideos.ts — ids/youtubeIds/durations copied from
 // there; if that catalog changes, update this curated rail to match.
@@ -119,8 +109,14 @@ interface TouchpointsResponse {
   topics: { id: string; title: string; category: string; questionCount?: number }[];
 }
 interface OdbDevotional { id: number; title: string; date: string; author: string }
-
-const SAVED_SERIES_KEY = "gtf-discover-saved-series";
+interface WatchThisWeekVideo {
+  youtubeId: string;
+  title: string;
+  channel: string;
+  publishedAt: string;
+  featuredWeek: string;
+}
+interface WatchThisWeekResponse { video: WatchThisWeekVideo | null }
 
 export default function DiscoverV2Screen() {
   const insets = useSafeAreaInsets();
@@ -207,18 +203,15 @@ export default function DiscoverV2Screen() {
     enabled: !!userId,
   });
   const streak = weeklyStreak?.currentStreak ?? 0;
-
-  const [seriesSaved, setSeriesSaved] = useState(false);
-  useEffect(() => {
-    AsyncStorage.getItem(SAVED_SERIES_KEY).then((v) => setSeriesSaved(v === "1")).catch(() => {});
-  }, []);
-  const toggleSaveSeries = useCallback(() => {
-    setSeriesSaved((prev) => {
-      const next = !prev;
-      AsyncStorage.setItem(SAVED_SERIES_KEY, next ? "1" : "0").catch(() => {});
-      return next;
-    });
-  }, []);
+  const { data: watchThisWeek } = useQuery<WatchThisWeekResponse>({
+    queryKey: ["/api/watch-this-week"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/watch-this-week");
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+  const watchVideo = watchThisWeek?.video ?? null;
 
   const topics = useMemo(() => touchpoints?.topics ?? [], [touchpoints?.topics]);
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
@@ -260,8 +253,11 @@ export default function DiscoverV2Screen() {
   const openTopic = useCallback((topicId: string) => {
     router.push(`/touchpoint-topic?topicId=${topicId}` as any);
   }, []);
-  const openVideo = useCallback(async (youtubeId: string) => {
-    // Existing rule: videos open on YouTube (touchpoint-topic behaviour).
+  const openVideo = useCallback(async (youtubeId: string, title?: string, speaker?: string) => {
+    if (title || speaker) {
+      await openYouTubeVideo(youtubeId, { title, speaker });
+      return;
+    }
     await openYouTubeVideo(youtubeId);
   }, []);
 
@@ -441,35 +437,31 @@ export default function DiscoverV2Screen() {
           </View>
         ) : (
           <>
-            {/* ---- Featured Series — the ONE gradient (§A.2.2) ---- */}
-            <View style={s.featuredWrap}>
-              <LinearGradient colors={[...FEATURED_GRADIENT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.featured}>
-                <Text style={s.featuredEyebrow}>FEATURED SERIES</Text>
-                <View style={s.episodeChip}>
-                  <Text style={s.episodeChipText}>{FEATURED_SERIES.episodes} EPISODES</Text>
-                </View>
-                <Text style={s.featuredTitle}>{FEATURED_SERIES.title}</Text>
-                <Text style={s.featuredSub}>{FEATURED_SERIES.oneLiner}</Text>
-                <View style={s.featuredBtnRow}>
+            {watchVideo ? (
+              <View style={s.watchWrap}>
+                <View style={s.watchCard}>
+                  <Text style={s.watchEyebrow}>WATCH THIS WEEK</Text>
+                  <Image
+                    source={{ uri: `https://img.youtube.com/vi/${watchVideo.youtubeId}/hqdefault.jpg` }}
+                    style={s.watchThumb}
+                    resizeMode="cover"
+                    accessibilityLabel=""
+                  />
+                  <Text style={s.watchTitle} numberOfLines={3}>{watchVideo.title}</Text>
+                  <Text style={s.watchChannel} numberOfLines={1}>{watchVideo.channel}</Text>
                   <Pressable
-                    onPress={() => openVideo(FEATURED_SERIES.firstYoutubeId)}
-                    style={({ pressed }) => [s.featuredBtn, { opacity: pressed ? 0.85 : 1 }]}
-                    testID="discover2-featured-watch"
+                    onPress={() => openVideo(watchVideo.youtubeId, watchVideo.title, watchVideo.channel)}
+                    style={({ pressed }) => [s.watchBtn, { opacity: pressed ? 0.85 : 1 }]}
+                    testID="discover-watch-this-week"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Watch ${watchVideo.title}`}
                   >
-                    <Ionicons name="play" size={14} color="#7A3E86" />
-                    <Text style={s.featuredBtnText}>Watch</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={toggleSaveSeries}
-                    style={({ pressed }) => [s.featuredBtnGhost, { opacity: pressed ? 0.85 : 1 }]}
-                    testID="discover2-featured-save"
-                  >
-                    <Ionicons name={seriesSaved ? "bookmark" : "bookmark-outline"} size={14} color="#FFFFFF" />
-                    <Text style={s.featuredBtnGhostText}>{seriesSaved ? "Saved" : "Save"}</Text>
+                    <Ionicons name="play" size={14} color="#FFFFFF" />
+                    <Text style={s.watchBtnText}>Watch</Text>
                   </Pressable>
                 </View>
-              </LinearGradient>
-            </View>
+              </View>
+            ) : null}
 
             {/* ---- Connect — directory church finder ---- */}
             <View style={[s.section, { marginTop: 18 }]}>
@@ -744,28 +736,52 @@ const s = StyleSheet.create({
   quickRefLabel: { fontFamily: F.interSemi, fontSize: 14, color: D.ink },
   quickRefSub: { fontFamily: F.inter, fontSize: 12.5, color: D.inkMuted, marginTop: 2 },
 
-  // Featured
-  featuredWrap: { paddingHorizontal: 20, marginTop: 22, borderRadius: 28, ...HV2.cardShadow },
-  featured: { borderRadius: 28, padding: 22, overflow: "hidden" },
-  featuredEyebrow: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.2, color: "rgba(255,255,255,0.85)" },
-  episodeChip: {
-    alignSelf: "flex-start", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 999,
-    paddingHorizontal: 10, paddingVertical: 4, marginTop: 10,
+  watchWrap: { paddingHorizontal: 20, marginTop: 22 },
+  watchCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    padding: 16,
+    overflow: "hidden",
+    ...HV2.cardShadow,
   },
-  episodeChipText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF", letterSpacing: 0.6 },
-  featuredTitle: { fontFamily: F.loraBold, fontSize: 24, color: "#FFFFFF", marginTop: 8 },
-  featuredSub: { fontFamily: F.inter, fontSize: 13.5, lineHeight: 19, color: "rgba(255,255,255,0.92)", marginTop: 6 },
-  featuredBtnRow: { flexDirection: "row", gap: 10, marginTop: 16 },
-  featuredBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFFFFF",
-    borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10,
+  watchEyebrow: {
+    fontFamily: F.interBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: "#C24431",
   },
-  featuredBtnText: { fontFamily: F.interSemi, fontSize: 13.5, color: "#7A3E86" },
-  featuredBtnGhost: {
-    flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.22)",
-    borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10,
+  watchThumb: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 18,
+    marginTop: 12,
+    backgroundColor: "#F3EDE3",
   },
-  featuredBtnGhostText: { fontFamily: F.interSemi, fontSize: 13.5, color: "#FFFFFF" },
+  watchTitle: {
+    fontFamily: F.loraBold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: D.ink,
+    marginTop: 14,
+  },
+  watchChannel: {
+    fontFamily: F.inter,
+    fontSize: 14,
+    color: D.inkMuted,
+    marginTop: 4,
+  },
+  watchBtn: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E8604C",
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginTop: 14,
+  },
+  watchBtnText: { fontFamily: F.interSemi, fontSize: 14, color: "#FFFFFF" },
 
   // Sections
   section: { marginTop: 28, paddingHorizontal: 20 },

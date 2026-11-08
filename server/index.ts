@@ -538,6 +538,13 @@ function setupErrorHandler(app: express.Application) {
       }
 
       try {
+        const { startWatchThisWeekScheduler } = await import("./services/watch-this-week-job");
+        startWatchThisWeekScheduler();
+      } catch (err) {
+        console.error("[watch-this-week] scheduler init failed:", err);
+      }
+
+      try {
         const { initOdbRefresh } = await import("./services/odb-refresh");
         initOdbRefresh();
       } catch (err) {

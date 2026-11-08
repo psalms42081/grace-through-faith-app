@@ -405,6 +405,45 @@ export type WordStudyChip = {
   mapIndex: number;
 };
 
+export type OriginalWordRow = {
+  /** Hebrew or Greek surface from the STEP token. */
+  original: string;
+  transliteration: string;
+  /** Plain English gloss stored with the tagging, not a translation's verse wording. */
+  gloss: string;
+  strongId: string;
+  mapIndex: number;
+};
+
+/**
+ * One interlinear row per STEP map, in original-language order (`wordPosition`).
+ * The gloss is the tagging gloss (`translatedWord`). This does not read the
+ * verse the reader is looking at, so KJV, local, NLT, and YouVersion rows match.
+ *
+ * Verse identity is the KJV `bible_verse` for the book, chapter, and verse
+ * number the reader tapped. Ingest already stored tokens on that KJV verse
+ * after `parseStepRef` (English/KJV numbers, Hebrew alternates ignored, verse 0
+ * titles dropped, `[KJV]` brackets preferred). There is no second versification map.
+ */
+export function originalWordsFromStepMaps(maps: ReaderStrongMap[]): OriginalWordRow[] {
+  const rows: OriginalWordRow[] = [];
+  maps.forEach((item, mapIndex) => {
+    if (isAiWordStudyMap(item.map)) return;
+    if (item.map.source && item.map.source !== "step") return;
+    const strongId = formatStrongId(item.map.strongId);
+    const original = (item.map.originalWord || item.entry?.lemma || "").trim();
+    const gloss = (item.map.translatedWord ?? "").replace(/\s+/g, " ").trim();
+    const transliteration = (item.entry?.transliteration ?? "").replace(/\s+/g, " ").trim();
+    if (!original && !gloss && !strongId) return;
+    rows.push({ original, transliteration, gloss, strongId, mapIndex });
+  });
+  return rows.sort((a, b) => {
+    const pos = (maps[a.mapIndex]?.map.wordPosition ?? 0) - (maps[b.mapIndex]?.map.wordPosition ?? 0);
+    if (pos !== 0) return pos;
+    return a.mapIndex - b.mapIndex;
+  });
+}
+
 /** Unique aligned STEP words for verse-sheet chips (English → unpadded G/H). */
 export function wordStudyChipsForVerse(
   text: string,
