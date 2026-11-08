@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "887953990628",
-    "project_id": "grace-through-faith-d2009",
-    "storage_bucket": "grace-through-faith-d2009.firebasestorage.app"
+    "project_number": "15637744215",
+    "project_id": "informed-ministries",
+    "storage_bucket": "informed-ministries.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:887953990628:android:74fbb9ddeb7ecf63685df1",
+        "mobilesdk_app_id": "1:15637744215:android:f23e653588701caede3112",
         "android_client_info": {
-          "package_name": "com.gracethroughfaith.app"
+          "package_name": "com.informedministries.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDW7AZFPP8ijUkQNYelb0p7U2XKIazhYXs"
+          "current_key": "AIzaSyCudZ7VoaFxSE9IE_AU4Qow9lOAjQmS_No"
         }
       ],
       "services": {

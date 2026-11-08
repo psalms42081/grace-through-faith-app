@@ -4,15 +4,26 @@ import { describe, it } from "node:test";
 import { APP_CONTACT_EMAIL } from "../constants/app";
 
 describe("Google Play first-build prep", () => {
-  it("sets Android package identity, versionCode, light UI, and no google-services file", () => {
+  it("sets Android package identity, versionCode, light UI, and google-services file", () => {
     const app = JSON.parse(readFileSync(new URL("../app.json", import.meta.url), "utf8"));
     assert.equal(app.expo.name, "Informed Ministries");
     assert.equal(app.expo.android.package, "com.informedministries.app");
     assert.equal(app.expo.android.versionCode, 1);
     assert.equal(app.expo.userInterfaceStyle, "light");
     assert.equal(app.expo.scheme, "informedministries");
-    assert.equal(app.expo.android.googleServicesFile, undefined);
+    assert.equal(app.expo.android.googleServicesFile, "./google-services.json");
     assert.equal(app.expo.extra.eas.projectId, "d9393f6d-a589-44e4-8359-04953488bb01");
+  });
+
+  it("matches google-services.json package to the Android application id", () => {
+    const services = JSON.parse(
+      readFileSync(new URL("../google-services.json", import.meta.url), "utf8"),
+    );
+    const packages = services.client.map(
+      (client: { client_info: { android_client_info: { package_name: string } } }) =>
+        client.client_info.android_client_info.package_name,
+    );
+    assert.deepEqual(packages, ["com.informedministries.app"]);
   });
 
   it("defines EAS production app-bundle and preview apk with the public domain", () => {
