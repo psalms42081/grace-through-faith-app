@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -366,7 +367,13 @@ export default function DevotionsPreview() {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 36 }]}
+        contentContainerStyle={[
+          s.content,
+          {
+            paddingBottom:
+              (Platform.OS === "web" ? 110 : insets.bottom) + 28,
+          },
+        ]}
       >
         <View style={s.welcome} testID="devotions-preview-hero">
           <Text style={s.kicker}>MORNING WATCH</Text>

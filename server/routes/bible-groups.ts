@@ -491,6 +491,45 @@ router.get("/api/bible-groups/:id", requireAuth, async (req, res) => {
   }
 });
 
+router.patch(
+  "/api/bible-groups/:id",
+  requireAuth,
+  bibleGroupWriteLimiter,
+  async (req, res) => {
+    try {
+      const userId = req.authUserId!;
+      const groupId = String(req.params.id);
+      const group = await loadActiveGroup(groupId);
+      if (!group) return res.status(404).json({ error: "Group not found" });
+      if (group.hostUserId !== userId) {
+        return res.status(403).json({ error: "Only the host can rename this group" });
+      }
+
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      if (!name) return res.status(400).json({ error: "Group name is required" });
+      if (name.length > GROUP_NAME_MAX) {
+        return res.status(400).json({ error: "Group name is too long" });
+      }
+
+      const [updated] = await db
+        .update(bibleSmallGroups)
+        .set({ name })
+        .where(eq(bibleSmallGroups.id, group.id))
+        .returning();
+
+      const member = await membershipOf(group.id, userId);
+      return res.json({
+        group: publicGroup(updated ?? { ...group, name }, {
+          role: member?.role ?? "host",
+        }),
+      });
+    } catch (err) {
+      console.error("Rename bible group error:", err);
+      return res.status(500).json({ error: "Failed to rename group" });
+    }
+  },
+);
+
 router.post(
   "/api/bible-groups/:id/posts",
   requireAuth,

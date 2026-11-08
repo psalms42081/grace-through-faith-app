@@ -299,7 +299,7 @@ const s = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     lineHeight: 19,
-    maxWidth: 300,
+    alignSelf: "stretch",
   },
   outlineButton: {
     borderWidth: 1,
@@ -315,7 +315,9 @@ const s = StyleSheet.create({
     fontSize: 13,
   },
   empty: {
+    alignSelf: "stretch",
     alignItems: "center",
+    flexShrink: 0,
     padding: 26,
     borderRadius: 18,
     backgroundColor: D2.card,

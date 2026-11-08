@@ -153,6 +153,10 @@ describe("group home reuses SS day reader", () => {
     assert.doesNotMatch(screen, /contentMarkdown/);
     assert.doesNotMatch(screen, /#C9933A/);
     assert.match(screen, /bible-group-regen-code/);
+    assert.match(screen, /bible-group-rename/);
+    assert.match(screen, /PATCH", `\/api\/bible-groups\/\$\{id\}`/);
+    const routes = read("server/routes/bible-groups.ts");
+    assert.match(routes, /Only the host can rename this group/);
     assert.match(screen, /Remove member/);
     assert.match(screen, /\/\(tabs\)\/profile/);
     assert.match(screen, /GroupHeader/);

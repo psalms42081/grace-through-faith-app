@@ -104,15 +104,70 @@ function goToProfileGroups() {
   router.replace("/(tabs)/profile" as any);
 }
 
-function GroupHeader({ title }: { title: string }) {
+function GroupHeader({
+  title,
+  canRename,
+  renaming,
+  nameDraft,
+  saving,
+  onChangeName,
+  onStartRename,
+  onSaveRename,
+}: {
+  title: string;
+  canRename?: boolean;
+  renaming?: boolean;
+  nameDraft?: string;
+  saving?: boolean;
+  onChangeName?: (value: string) => void;
+  onStartRename?: () => void;
+  onSaveRename?: () => void;
+}) {
   return (
     <View style={s.header}>
       <Pressable onPress={goToProfileGroups} style={s.backBtn} testID="bible-group-back">
         <Ionicons name="arrow-back" size={22} color={C.ink} />
       </Pressable>
-      <Text style={s.title} numberOfLines={2}>
-        {title}
-      </Text>
+      {renaming ? (
+        <View style={s.titleRow}>
+          <TextInput
+            value={nameDraft}
+            onChangeText={onChangeName}
+            style={s.renameInput}
+            maxLength={80}
+            autoFocus
+            testID="bible-group-rename-input"
+            accessibilityLabel="Group name"
+            onSubmitEditing={onSaveRename}
+          />
+          <Pressable
+            onPress={onSaveRename}
+            disabled={saving}
+            testID="bible-group-rename-save"
+            accessibilityRole="button"
+            accessibilityLabel="Save group name"
+          >
+            <Text style={s.renameSave}>{saving ? "Saving" : "Save"}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={s.titleRow}>
+          <Text style={[s.title, { flex: 1 }]} numberOfLines={2}>
+            {title}
+          </Text>
+          {canRename ? (
+            <Pressable
+              onPress={onStartRename}
+              hitSlop={8}
+              testID="bible-group-rename"
+              accessibilityRole="button"
+              accessibilityLabel="Rename group"
+            >
+              <Ionicons name="create-outline" size={22} color={C.coral} />
+            </Pressable>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -127,6 +182,8 @@ export default function BibleGroupHomeScreen() {
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
   const deviceTimeZone = useMemo(() => getDeviceTimeZone(), []);
   const { lastRead } = useSabbathSchoolLastRead(userId);
 
@@ -244,6 +301,21 @@ export default function BibleGroupHomeScreen() {
     },
   });
 
+  const renameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("PATCH", `/api/bible-groups/${id}`, { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/bible-groups"] });
+      setRenaming(false);
+      showToast("Group name updated", "success");
+    },
+    onError: () => {
+      showToast("Could not rename the group.", "error");
+    },
+  });
+
   const archiveMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", `/api/bible-groups/${id}/archive`);
@@ -339,7 +411,26 @@ export default function BibleGroupHomeScreen() {
         contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: bottomPad + 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <GroupHeader title={data.group.name} />
+        <GroupHeader
+          title={data.group.name}
+          canRename={isHost}
+          renaming={renaming}
+          nameDraft={nameDraft}
+          saving={renameMutation.isPending}
+          onChangeName={setNameDraft}
+          onStartRename={() => {
+            setNameDraft(data.group.name);
+            setRenaming(true);
+          }}
+          onSaveRename={() => {
+            const next = nameDraft.trim();
+            if (!next || next === data.group.name) {
+              setRenaming(false);
+              return;
+            }
+            renameMutation.mutate(next);
+          }}
+        />
 
         <View style={s.card}>
           <Text style={s.eyebrow}>INVITE CODE</Text>
@@ -531,6 +622,28 @@ const s = StyleSheet.create({
     fontSize: 26,
     fontFamily: "Lora_700Bold",
     color: C.ink,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  renameInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 18,
+    fontFamily: "Lora_700Bold",
+    color: C.ink,
+    backgroundColor: C.card,
+  },
+  renameSave: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: C.coral,
   },
   card: {
     marginHorizontal: 20,

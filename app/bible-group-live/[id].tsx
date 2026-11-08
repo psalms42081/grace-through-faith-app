@@ -273,7 +273,19 @@ function attachTrackToHost(
   }
   const minHeight = host.getAttribute("data-tall") === "1" ? TALL_TILE_MIN_PX : STRIP_TILE_PX;
   ensureHostHasSize(host, minHeight);
-  const existing = host.querySelector(`[data-track-kind="${track.kind}"]`);
+  const trackKey = String(track?.sid || track?.mediaStreamTrack?.id || track?.kind || "");
+  const existing = host.querySelector(
+    `[data-track-kind="${track.kind}"]`,
+  ) as HTMLMediaElement | null;
+  if (existing && existing.getAttribute("data-track-key") === trackKey) {
+    if (track.kind === "video") {
+      const video = existing as HTMLVideoElement;
+      video.style.transform = isLocal && facingUser ? "scaleX(-1)" : "";
+      if (video.paused) void video.play().catch(() => {});
+      if (isLocal) onLocalVideo?.(video);
+    }
+    return;
+  }
   if (existing) existing.remove();
   let el: HTMLMediaElement;
   if (track.kind === "video") {
@@ -293,6 +305,7 @@ function attachTrackToHost(
     el.style.display = "none";
   }
   el.setAttribute("data-track-kind", track.kind);
+  el.setAttribute("data-track-key", trackKey);
   host.appendChild(el);
   console.log("[bible-group-live] track attached", {
     kind: track.kind,
@@ -563,8 +576,8 @@ function WebLiveRoom({
       const body: TokenResponse = await tokenRes.json();
       const speakingIds = new Set<string>();
       const room = new lk.Room({
-        adaptiveStream: true,
-        dynacast: true,
+        adaptiveStream: false,
+        dynacast: false,
         videoCaptureDefaults: { resolution: lk.VideoPresets.h360.resolution },
       });
       roomRef.current = room;

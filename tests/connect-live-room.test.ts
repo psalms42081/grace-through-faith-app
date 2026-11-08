@@ -112,6 +112,9 @@ describe("live room client", () => {
     assert.doesNotMatch(room, /#C9933A/);
     assert.match(room, /isKidsMode/);
     assert.match(room, /livekit-client/);
+    assert.match(room, /adaptiveStream: false/);
+    assert.match(room, /data-track-key/);
+    assert.match(room, /existing\.getAttribute\("data-track-key"\) === trackKey/);
     const pkg = read("package.json");
     assert.doesNotMatch(pkg, /@livekit\/react-native/);
     const html = read("server/templates/bible-group-live-room.html");

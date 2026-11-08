@@ -16,7 +16,7 @@ export const VOTW_WASH_ON_WHITE = "#F0EDF8";
 export const DEVOTIONS_CORAL_LINKS = {
   browseShelf: { label: "Browse the shelf", href: "/pioneer-shelf" },
   allSeries: { label: "All series", href: "/devotionals" },
-  allPlans: { label: "All plans", href: "/plans" },
+  allPlans: { label: "All plans", href: "/reading-plans" },
 } as const;
 
 /** Home Daily Rhythm illustration scale (44 disc / 28 art). */
