@@ -112,6 +112,8 @@ const RV2_INK_MUTED = "#6B6660"; // WCAG-safe muted (HV2.inkMutedText)
 const RV2_CORAL = "#E8604C";     // ONLY the Listen play button
 const RV2_PILL = "#F1EBDD";      // slightly darker cream for pills/surfaces
 const RV2_BORDER = "#E7E0D2";
+const READER_TOGGLE_ON_INK = "#C24431";
+const READER_TOGGLE_ON_TINT = "#FBE9E4";
 const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
 const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
 /** Internal one-release rollback. Default off = new typography + floating chrome. */
@@ -768,7 +770,8 @@ export default function VerseReaderScreen() {
   const [showSplitTranslationPicker, setShowSplitTranslationPicker] = useState(false);
   const splitScrollRef = useRef<ScrollView>(null);
   const isSyncingScroll = useRef(false);
-  const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+  /** Reader column width; on web the app is a centred column narrower than the window. */
+  const [readerWidth, setReaderWidth] = useState(0);
 
   useEffect(() => {
     AsyncStorage.getItem(SPLIT_MODE_KEY).then((val) => {
@@ -779,27 +782,14 @@ export default function VerseReaderScreen() {
     });
   }, []);
 
-  useEffect(() => {
-    const sub = Dimensions.addEventListener("change", ({ window }) => {
-      setWindowWidth(window.width);
-    });
-    return () => sub?.remove();
-  }, []);
-
-  const toggleSplitMode = useCallback(() => {
-    setSplitMode((prev) => {
-      const next = !prev;
-      AsyncStorage.setItem(SPLIT_MODE_KEY, next ? "1" : "0");
-      return next;
-    });
-  }, []);
-
   const handleSetSplitTranslation = useCallback((t: string) => {
     setSplitTranslation(t);
     AsyncStorage.setItem(SPLIT_TRANSLATION_KEY, t);
   }, []);
 
-  const isSideBySide = windowWidth >= 600;
+  const isSideBySide = readerWidth >= 600;
+  /** Under 600px the second translation sits under each verse instead of a second pane. */
+  const stackedSplit = splitMode && !isSideBySide;
 
   const { data: splitData, error: splitError } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${splitTranslation}`],
@@ -811,6 +801,10 @@ export default function VerseReaderScreen() {
   const splitUnavailable = catalogLoaded && !translationList.includes(splitTranslation);
   const splitLoadFailed = !!splitError || splitUnavailable;
   const splitVerses = splitLoadFailed ? [] : (splitData?.verses ?? []);
+  const splitVerseByNum = useMemo(
+    () => new Map(splitVerses.map((v) => [v.verse, v])),
+    [splitVerses],
+  );
 
   const handlePrimaryScroll = useCallback((event: any) => {
     if (isSyncingScroll.current) return;
@@ -1322,6 +1316,13 @@ export default function VerseReaderScreen() {
   }, []);
   useEffect(() => () => { if (stripToastTimer.current) clearTimeout(stripToastTimer.current); }, []);
 
+  const toggleSplitMode = useCallback(() => {
+    const next = !splitMode;
+    setSplitMode(next);
+    AsyncStorage.setItem(SPLIT_MODE_KEY, next ? "1" : "0");
+    showStripToast(next ? "Side-by-side reading on" : "Side-by-side reading off");
+  }, [splitMode, showStripToast]);
+
   useEffect(() => {
     if (!kjvWordStudy && wordStudyMode) setWordStudyMode(false);
   }, [kjvWordStudy, wordStudyMode]);
@@ -1606,6 +1607,60 @@ export default function VerseReaderScreen() {
   const headerPillBg = RV2_PILL;
   const headerBorderColor = RV2_BORDER;
 
+  const splitTranslationPill = (
+    <Pressable
+      testID="split-translation-pill"
+      accessibilityRole="button"
+      accessibilityLabel={`Second translation ${splitTranslation}, change`}
+      onPress={() => setShowSplitTranslationPicker(!showSplitTranslationPicker)}
+      style={[styles.headerPill, { backgroundColor: headerPillBg, flexDirection: "row", alignItems: "center" }]}
+    >
+      <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
+        {splitTranslation}
+      </Text>
+      <Ionicons name="chevron-down" size={12} color={isDark ? "#666" : "#999"} style={{ marginLeft: 4 }} />
+    </Pressable>
+  );
+
+  const splitTranslationDropdown = showSplitTranslationPicker ? (
+    <View
+      style={[styles.translationDropdown, { backgroundColor: isDark ? "#141416" : LIGHT_SURFACE, borderColor: isDark ? "#2A2A2A" : "#E0E0E0", position: "absolute", top: 44, left: 8, right: 8, zIndex: 100 }]}
+      onStartShouldSetResponder={() => true}
+    >
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }} nestedScrollEnabled>
+        {translationList.filter((t) => t !== translation).map((t) => {
+          const isActiveT = splitTranslation === t;
+          return (
+            <Pressable
+              key={t}
+              onPress={() => {
+                handleSetSplitTranslation(t);
+                setShowSplitTranslationPicker(false);
+              }}
+              style={[
+                styles.translationOption,
+                isActiveT && { backgroundColor: "#1F1A12" + "10" },
+              ]}
+            >
+              <Text style={[
+                styles.translationOptionText,
+                {
+                  color: isActiveT ? "#1F1A12" : textColor,
+                  fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
+                },
+              ]}>
+                {t}
+              </Text>
+              <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
+                {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  ) : null;
+
   return (
     <>
       <Stack.Screen
@@ -1645,6 +1700,7 @@ export default function VerseReaderScreen() {
               <Pressable
                 testID="reader-word-study-toggle"
                 accessibilityRole="button"
+                accessibilityState={{ selected: kjvWordStudy && wordStudyMode }}
                 accessibilityLabel={
                   kjvWordStudy
                     ? wordStudyMode
@@ -1652,30 +1708,33 @@ export default function VerseReaderScreen() {
                       : "Turn on Word Study"
                     : "Word study is available in the KJV"
                 }
-                hitSlop={12}
+                hitSlop={8}
                 onPress={toggleWordStudyMode}
-                style={styles.headerIconBtn}
+                style={[styles.headerToggle, kjvWordStudy && wordStudyMode && styles.headerToggleOn]}
               >
                 <Text
-                  style={{
-                    fontSize: 11,
-                    lineHeight: 14,
-                    letterSpacing: 0.2,
-                    fontFamily: "Inter_600SemiBold",
-                    color: kjvWordStudy && wordStudyMode ? RV2_INK : RV2_INK_MUTED,
-                  }}
+                  style={[
+                    styles.headerToggleText,
+                    kjvWordStudy && wordStudyMode && styles.headerToggleTextOn,
+                  ]}
                 >
                   Word study
                 </Text>
               </Pressable>
               <Pressable
                 testID="split-screen-toggle"
-                accessibilityLabel="Toggle split screen"
-                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityState={{ selected: splitMode }}
+                accessibilityLabel={splitMode ? "Turn off side-by-side reading" : "Turn on side-by-side reading"}
+                hitSlop={8}
                 onPress={toggleSplitMode}
-                style={styles.headerIconBtn}
+                style={[styles.headerToggle, splitMode && styles.headerToggleOn]}
               >
-                <Ionicons name="tablet-landscape-outline" size={18} color={splitMode ? RV2_INK : RV2_INK_MUTED} />
+                <Ionicons
+                  name="tablet-landscape-outline"
+                  size={16}
+                  color={splitMode ? READER_TOGGLE_ON_INK : RV2_INK_MUTED}
+                />
               </Pressable>
               <Pressable
                 hitSlop={12}
@@ -1704,7 +1763,10 @@ export default function VerseReaderScreen() {
           ),
         }}
       />
-      <View style={[styles.container, { backgroundColor: readerBg }]}>
+      <View
+        style={[styles.container, { backgroundColor: readerBg }]}
+        onLayout={(event) => setReaderWidth(event.nativeEvent.layout.width)}
+      >
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={RV2_INK_MUTED} />
@@ -1802,7 +1864,7 @@ export default function VerseReaderScreen() {
               </View>
             )}
 
-            <View style={splitMode && isSideBySide ? styles.splitRow : splitMode ? styles.splitColumn : { flex: 1 }}>
+            <View style={splitMode && isSideBySide ? styles.splitRow : { flex: 1 }}>
             <ScrollView
               ref={scrollViewRef}
               onScrollBeginDrag={() => {
@@ -1811,7 +1873,7 @@ export default function VerseReaderScreen() {
               }}
               onScroll={(e) => {
                 handleReaderScroll(e);
-                if (splitMode) handlePrimaryScroll(e);
+                if (splitMode && isSideBySide) handlePrimaryScroll(e);
               }}
               onTouchStart={useNewTypography ? onPreviewChromeTouchStart : undefined}
               onTouchEnd={useNewTypography ? onPreviewChromeTouchEnd : undefined}
@@ -1842,12 +1904,22 @@ export default function VerseReaderScreen() {
                   <Ionicons name="hand-left-outline" size={14} color={RV2_INK_MUTED} />
                   <Text style={[styles.verseTapHintText, { color: RV2_INK_MUTED }]}>
                     {wordStudyMode
-                      ? "Tap an underlined word for its Strong's entry."
+                      ? "Tap a word for its Strong's entry."
                       : "Tap a verse to select. Tap more to add. Drag down to dismiss."}
                   </Text>
                   <Ionicons name="close" size={12} color={RV2_INK_MUTED} />
                 </Pressable>
               )}
+
+              {stackedSplit ? (
+                <View style={styles.stackedSplitBar} testID="split-stacked-bar">
+                  <Text style={styles.stackedSplitBarLabel}>
+                    {splitLoadFailed ? `${splitTranslation} unavailable` : `${translation} with`}
+                  </Text>
+                  {splitTranslationPill}
+                  {splitTranslationDropdown}
+                </View>
+              ) : null}
 
               <View style={styles.proseContainer}>
                 {useNewTypography && !splitMode ? (
@@ -1933,6 +2005,21 @@ export default function VerseReaderScreen() {
                         )}
                       </Text>
                     </Pressable>
+                    {stackedSplit && splitVerseByNum.get(v.verse) ? (
+                      <View style={styles.stackedCompanion} testID={`split-stacked-verse-${v.verse}`}>
+                        <Text style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
+                          <Text style={styles.stackedCompanionLabel}>{splitTranslation}{"\u00a0\u00a0"}</Text>
+                          <VerseSpokenText
+                            text={splitVerseByNum.get(v.verse)!.text}
+                            spokenRanges={
+                              wordsOfChrist && isKjvTranslation(splitTranslation)
+                                ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse)
+                                : []
+                            }
+                          />
+                        </Text>
+                      </View>
+                    ) : null}
                     </View>
                   );
                 })}
@@ -1971,61 +2058,16 @@ export default function VerseReaderScreen() {
               </View>
             </ScrollView>
 
-            {splitMode && (
+            {splitMode && isSideBySide && (
               <View style={[
-                isSideBySide ? styles.splitPaneSide : styles.splitPaneStacked,
+                styles.splitPaneSide,
                 { borderColor: isDark ? DARK_BORDER : "#E8E8E8" },
               ]}>
                 <View style={[styles.splitPaneHeader, { borderBottomColor: isDark ? DARK_BORDER : "#E8E8E8" }]}>
-                  <Pressable
-                    onPress={() => setShowSplitTranslationPicker(!showSplitTranslationPicker)}
-                    style={[styles.headerPill, { backgroundColor: headerPillBg }]}
-                  >
-                    <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
-                      {splitTranslation}
-                    </Text>
-                    <Ionicons name="chevron-down" size={12} color={isDark ? "#666" : "#999"} style={{ marginLeft: 4 }} />
-                  </Pressable>
+                  {splitTranslationPill}
                 </View>
 
-                {showSplitTranslationPicker && (
-                  <View
-                    style={[styles.translationDropdown, { backgroundColor: isDark ? "#141416" : LIGHT_SURFACE, borderColor: isDark ? "#2A2A2A" : "#E0E0E0", position: "absolute", top: 44, left: 8, right: 8, zIndex: 100 }]}
-                    onStartShouldSetResponder={() => true}
-                  >
-                    <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }} nestedScrollEnabled>
-                      {translationList.filter((t) => t !== translation).map((t) => {
-                        const isActiveT = splitTranslation === t;
-                        return (
-                          <Pressable
-                            key={t}
-                            onPress={() => {
-                              handleSetSplitTranslation(t);
-                              setShowSplitTranslationPicker(false);
-                            }}
-                            style={[
-                              styles.translationOption,
-                              isActiveT && { backgroundColor: "#1F1A12" + "10" },
-                            ]}
-                          >
-                            <Text style={[
-                              styles.translationOptionText,
-                              {
-                                color: isActiveT ? "#1F1A12" : textColor,
-                                fontFamily: isActiveT ? "Inter_700Bold" : "Inter_500Medium",
-                              },
-                            ]}>
-                              {t}
-                            </Text>
-                            <Text style={[styles.translationOptionDesc, { color: isDark ? "#555" : "#999", fontFamily: "Inter_400Regular" }]}>
-                              {TRANSLATION_LABELS[t] || (availableTranslations?.find((a) => a.abbreviation === t)?.name ?? t)}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                )}
+                {splitTranslationDropdown}
 
                 <ScrollView
                   ref={splitScrollRef}
@@ -2407,6 +2449,27 @@ const styles = StyleSheet.create({
   headerIconBtn: {
     padding: 4,
   },
+  headerToggle: {
+    minHeight: 26,
+    paddingHorizontal: 8,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  headerToggleOn: {
+    backgroundColor: READER_TOGGLE_ON_TINT,
+  },
+  headerToggleText: {
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.2,
+    fontFamily: "Inter_600SemiBold",
+    color: RV2_INK_MUTED,
+  },
+  headerToggleTextOn: {
+    color: READER_TOGGLE_ON_INK,
+  },
   headerPill: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -2561,16 +2624,37 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row" as const,
   },
-  splitColumn: {
-    flex: 1,
-  },
   splitPaneSide: {
     flex: 1,
     borderLeftWidth: 1,
   },
-  splitPaneStacked: {
-    flex: 1,
-    borderTopWidth: 1,
+  stackedSplitBar: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 12,
+    zIndex: 20,
+  },
+  stackedSplitBarLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: RV2_INK_MUTED,
+  },
+  stackedCompanion: {
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingBottom: 10,
+    marginTop: -4,
+  },
+  stackedCompanionText: {
+    fontFamily: "Lora_400Regular",
+    color: "#3F3A31",
+  },
+  stackedCompanionLabel: {
+    fontSize: 10,
+    letterSpacing: 0.6,
+    fontFamily: "Inter_600SemiBold",
+    color: RV2_INK_MUTED,
   },
   splitPaneHeader: {
     flexDirection: "row" as const,

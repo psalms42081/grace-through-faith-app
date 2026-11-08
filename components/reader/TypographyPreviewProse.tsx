@@ -201,7 +201,6 @@ export function TypographyPreviewProse({
                           text={v.text}
                           maps={maps}
                           wordStudyMode={wordStudyMode}
-                          indicateTagged={wordStudyMode}
                           spokenRanges={
                             wordsOfChrist ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse) : []
                           }

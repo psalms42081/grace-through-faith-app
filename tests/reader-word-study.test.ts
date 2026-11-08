@@ -138,10 +138,35 @@ describe("reader word-study chrome", () => {
     assert.doesNotMatch(reader, /<Languages/);
   });
 
-  it("underlines tagged words with a dotted stroke and no grey wash", () => {
+  it("leaves tagged words unmarked and tints the tapped word before the sheet opens", () => {
     const words = readFileSync(new URL("../components/reader/ReaderVerseWords.tsx", import.meta.url), "utf8");
-    assert.match(words, /textDecorationStyle: "dotted"/);
+    assert.doesNotMatch(words, /textDecoration/);
     assert.doesNotMatch(words, /rgba\(91, 107, 122/);
+    assert.match(words, /WORD_TAP_TINT = "#F1EBDD"/);
+    assert.match(words, /WORD_TAP_TINT_MS = 300/);
+    assert.match(words, /tappedIndex === index \? tappedStyle : null/);
+    assert.match(words, /if \(pressOpensSheet\) tapThenActivate\(\)/);
+  });
+
+  it("shows an on state for Word study and side-by-side as a matching pill pair", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(reader, /READER_TOGGLE_ON_INK = "#C24431"/);
+    assert.match(reader, /READER_TOGGLE_ON_TINT = "#FBE9E4"/);
+    assert.match(reader, /style=\{\[styles\.headerToggle, kjvWordStudy && wordStudyMode && styles\.headerToggleOn\]\}/);
+    assert.match(reader, /style=\{\[styles\.headerToggle, splitMode && styles\.headerToggleOn\]\}/);
+    assert.match(reader, /"Turn off side-by-side reading" : "Turn on side-by-side reading"/);
+    assert.match(reader, /"Side-by-side reading on" : "Side-by-side reading off"/);
+    assert.doesNotMatch(reader, /Toggle split screen/);
+  });
+
+  it("stacks the second translation under each verse below 600px", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(reader, /const stackedSplit = splitMode && !isSideBySide/);
+    assert.match(reader, /const isSideBySide = readerWidth >= 600/);
+    assert.match(reader, /onLayout=\{\(event\) => setReaderWidth\(event\.nativeEvent\.layout\.width\)\}/);
+    assert.match(reader, /\{splitMode && isSideBySide && \(/);
+    assert.match(reader, /stackedSplit && splitVerseByNum\.get\(v\.verse\)/);
+    assert.doesNotMatch(reader, /styles\.splitPaneStacked/);
   });
 
   it("routes See all uses to Strong's concordance, not Deep Dive", () => {

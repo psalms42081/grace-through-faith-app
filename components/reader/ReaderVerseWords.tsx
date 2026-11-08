@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Text, type TextStyle } from "react-native";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import {
@@ -23,10 +23,13 @@ const webInline: TextStyle | undefined = IS_WEB
     } as unknown as TextStyle)
   : undefined;
 
-const taggedStyle: TextStyle = {
-  textDecorationLine: "underline",
-  textDecorationStyle: "dotted",
-  textDecorationColor: "#1F1A12",
+/** Canon cream tint shown on the tapped word before its sheet opens. */
+export const WORD_TAP_TINT = "#F1EBDD";
+export const WORD_TAP_TINT_MS = 300;
+
+const tappedStyle: TextStyle = {
+  backgroundColor: WORD_TAP_TINT,
+  borderRadius: 4,
 };
 
 export function ReaderVerseWords({
@@ -35,7 +38,6 @@ export function ReaderVerseWords({
   text,
   maps,
   wordStudyMode,
-  indicateTagged,
   onVerseTap,
   onVerseLongPress,
   onWordActivate,
@@ -46,7 +48,6 @@ export function ReaderVerseWords({
   text: string;
   maps: ReaderStrongMap[];
   wordStudyMode: boolean;
-  indicateTagged: boolean;
   onVerseTap: () => void;
   onVerseLongPress: () => void;
   onWordActivate: (surface: string, mapping: ReaderStrongMap) => void;
@@ -88,14 +89,22 @@ export function ReaderVerseWords({
     });
   }
   const webLongPress = webLongPressRef.current;
-  const mark = indicateTagged ? taggedStyle : undefined;
+  const [tappedIndex, setTappedIndex] = useState<number | null>(null);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+  }, []);
 
   let spokenOrdinal = -1;
   return (
     <>
       {tokens.map((token, index) => {
         if (token.kind === "word") spokenOrdinal += 1;
-        const spoken = token.kind === "word" && spokenRanges.some((range) => wordInRange(spokenOrdinal, range));
+        // Punctuation after a spoken word belongs to that word's whitespace-split index.
+        const spoken =
+          (token.kind === "word" || /\S/.test(token.surface)) &&
+          spokenOrdinal >= 0 &&
+          spokenRanges.some((range) => wordInRange(spokenOrdinal, range));
         const mapping = token.mapIndex != null ? maps[token.mapIndex] : null;
         const tagged = token.kind === "word" && mapping != null;
         const pressOpensSheet = tagged && wordStudyMode;
@@ -106,6 +115,15 @@ export function ReaderVerseWords({
 
         const activate = () => {
           if (mapping) onWordActivate(token.surface, mapping);
+        };
+        const tapThenActivate = () => {
+          if (!mapping) return;
+          if (tapTimer.current) clearTimeout(tapTimer.current);
+          setTappedIndex(index);
+          tapTimer.current = setTimeout(() => {
+            setTappedIndex(null);
+            activateRef.current(token.surface, mapping);
+          }, WORD_TAP_TINT_MS);
         };
 
         const webHandlers = IS_WEB
@@ -135,7 +153,7 @@ export function ReaderVerseWords({
               key={`${verseId}-s-${index}`}
               pointerEvents={wordStudyMode ? "none" : "auto"}
               onPress={wordStudyMode ? undefined : onVerseTap}
-              style={webInline}
+              style={[webInline, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
             >
               {token.surface}
             </Text>
@@ -164,23 +182,15 @@ export function ReaderVerseWords({
             nativeID={testId}
             onPress={() => {
               if (IS_WEB && webLongPress.consumeSuppressedClick()) return;
-              if (pressOpensSheet) activate();
+              if (pressOpensSheet) tapThenActivate();
               else onVerseTap();
             }}
             {...webHandlers}
-            suppressHighlighting={false}
+            suppressHighlighting={pressOpensSheet}
             selectable={false}
             style={[
               webInline,
-              tagged && mark
-                ? IS_WEB
-                  ? ({
-                      textDecorationLine: "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: "#1F1A12",
-                    } as unknown as TextStyle)
-                  : mark
-                : null,
+              tappedIndex === index ? tappedStyle : null,
               IS_WEB && tagged ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
               spoken ? { color: WORDS_OF_CHRIST_INK } : null,
             ]}
