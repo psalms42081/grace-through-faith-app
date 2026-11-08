@@ -680,7 +680,7 @@ const NAV_VERSE_WASH_HOLD_MS = 2000;
 const NAV_VERSE_WASH_FADE_MS = 400;
 
 export default function VerseReaderScreen() {
-  const { bookId, chapter, translation: txParam, verse: verseParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string }>();
+  const { bookId, chapter, translation: txParam, verse: verseParam, verseEnd: verseEndParam, verses: versesParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string; verseEnd?: string; verses?: string }>();
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
   const pathname = usePathname();
@@ -1053,6 +1053,25 @@ export default function VerseReaderScreen() {
     const vNum = parseInt(verseParam, 10);
     if (isNaN(vNum) || verses.length === 0) return;
 
+    const listed = (versesParam ?? "")
+      .split(",")
+      .map((piece) => parseInt(piece, 10))
+      .filter((verse) => Number.isInteger(verse) && verse > 0);
+    const endNum = verseEndParam ? parseInt(verseEndParam, 10) : NaN;
+    const wanted = listed.length > 0
+      ? listed
+      : Number.isInteger(endNum) && endNum >= vNum
+        ? Array.from({ length: endNum - vNum + 1 }, (_, index) => vNum + index)
+        : [];
+    if (wanted.length > 0) {
+      const present = new Set(verses.map((verse) => verse.verse));
+      const selected = wanted.filter((verse) => present.has(verse));
+      if (selected.length > 0) {
+        setSelectedVerseNums(selected);
+        setSheetOpen(true);
+      }
+    }
+
     setHighlightedFromNav(vNum);
     setNavHighlightAlpha(1);
 
@@ -1096,7 +1115,7 @@ export default function VerseReaderScreen() {
       clearTimeout(fadeStart);
       if (fadeInterval) clearInterval(fadeInterval);
     };
-  }, [verseParam, verses.length]);
+  }, [verseEndParam, verseParam, verses, versesParam]);
 
   const kjvWordStudy = isKjvTranslation(translation);
   const strongMapQueries = useQueries({

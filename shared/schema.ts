@@ -1910,6 +1910,25 @@ export const sabbathSchoolDays = pgTable("sabbath_school_day", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const sabbathSchoolDayAnswers = pgTable("sabbath_school_day_answer", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  dayId: varchar("day_id")
+    .notNull()
+    .references(() => sabbathSchoolDays.id),
+  questionKey: varchar("question_key", { length: 64 }).notNull(),
+  answer: text("answer").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userDayQuestion: uniqueIndex("ss_day_answer_user_day_question").on(
+    table.userId,
+    table.dayId,
+    table.questionKey,
+  ),
+}));
+
 export const sabbathSchoolUserProgress = pgTable("sabbath_school_user_progress", {
   id: varchar("id")
     .primaryKey()

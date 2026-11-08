@@ -5,13 +5,14 @@ import {
   sabbathSchoolQuarterlies,
   sabbathSchoolLessons,
   sabbathSchoolDays,
+  sabbathSchoolDayAnswers,
   sabbathSchoolUserProgress,
   sabbathSchoolDiscussionPrep,
   resources,
 } from "../../shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { aiGenerationLimiter } from "../middleware/rate-limit";
-import { extractUserId } from "../middleware/auth";
+import { extractUserId, requireAuth } from "../middleware/auth";
 import {
   generateDiscussionPrep,
   generateSabbathSchoolTutorResponse,
@@ -412,6 +413,64 @@ router.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
   } catch (err) {
     console.error("Sabbath School quarter detail error:", err);
     return res.status(500).json({ error: "Failed to fetch quarter detail" });
+  }
+});
+
+router.get("/api/sabbath-school/answers", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const dayId = String(req.query.dayId || "");
+    if (!userId || !dayId) {
+      return res.status(400).json({ error: "dayId is required" });
+    }
+    const rows = await db
+      .select({
+        questionKey: sabbathSchoolDayAnswers.questionKey,
+        answer: sabbathSchoolDayAnswers.answer,
+      })
+      .from(sabbathSchoolDayAnswers)
+      .where(
+        and(
+          eq(sabbathSchoolDayAnswers.userId, userId),
+          eq(sabbathSchoolDayAnswers.dayId, dayId),
+        ),
+      );
+    const answers: Record<string, string> = {};
+    for (const row of rows) answers[row.questionKey] = row.answer;
+    return res.json({ answers });
+  } catch (err) {
+    console.error("Sabbath School answers error:", err);
+    return res.status(500).json({ error: "Failed to load answers" });
+  }
+});
+
+router.put("/api/sabbath-school/answers", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+    const dayId = String(req.body?.dayId || "");
+    const questionKey = String(req.body?.questionKey || "");
+    const answer = typeof req.body?.answer === "string" ? req.body.answer : "";
+    if (!userId || !dayId || !/^q[a-z0-9]{1,32}$/.test(questionKey)) {
+      return res.status(400).json({ error: "dayId and questionKey are required" });
+    }
+    if (answer.length > 8000) {
+      return res.status(400).json({ error: "Answer is too long" });
+    }
+    await db
+      .insert(sabbathSchoolDayAnswers)
+      .values({ userId, dayId, questionKey, answer, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [
+          sabbathSchoolDayAnswers.userId,
+          sabbathSchoolDayAnswers.dayId,
+          sabbathSchoolDayAnswers.questionKey,
+        ],
+        set: { answer, updatedAt: new Date() },
+      });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Sabbath School answer save error:", err);
+    return res.status(500).json({ error: "Failed to save answer" });
   }
 });
 

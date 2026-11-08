@@ -17,6 +17,8 @@ export function scriptureOverlayHref(opts: {
   bookId: number | string;
   chapter: number | string;
   verse?: number | string;
+  verseEnd?: number | string;
+  verses?: number[];
   translation?: string;
 }): { pathname: "/scripture"; params: Record<string, string> } {
   const params: Record<string, string> = {
@@ -25,6 +27,12 @@ export function scriptureOverlayHref(opts: {
   };
   if (opts.verse !== undefined && String(opts.verse).length > 0) {
     params.verse = String(opts.verse);
+  }
+  if (opts.verseEnd !== undefined && String(opts.verseEnd).length > 0) {
+    params.verseEnd = String(opts.verseEnd);
+  }
+  if (opts.verses && opts.verses.length > 0) {
+    params.verses = opts.verses.join(",");
   }
   if (opts.translation) {
     params.translation = opts.translation;
@@ -49,7 +57,9 @@ export function navigateToScriptureByParts(
   bookId: number,
   chapter: number,
   verse?: number | string,
-  translation?: string
+  translation?: string,
+  verseEnd?: number,
+  verses?: number[],
 ): void {
   router.push(
     scriptureOverlayHref({
@@ -57,6 +67,8 @@ export function navigateToScriptureByParts(
       chapter,
       verse,
       translation,
+      verseEnd,
+      verses,
     }) as any,
   );
 }

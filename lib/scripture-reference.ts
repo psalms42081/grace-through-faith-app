@@ -103,8 +103,12 @@ const BOOK_ALIASES: Record<string, string> = {
   "2 kgs.": "2 Kings",
   "1 chr": "1 Chronicles",
   "1 chr.": "1 Chronicles",
+  "1 chron": "1 Chronicles",
+  "1 chron.": "1 Chronicles",
   "2 chr": "2 Chronicles",
   "2 chr.": "2 Chronicles",
+  "2 chron": "2 Chronicles",
+  "2 chron.": "2 Chronicles",
   ps: "Psalms",
   "ps.": "Psalms",
   psa: "Psalms",
@@ -131,6 +135,8 @@ const BOOK_ALIASES: Record<string, string> = {
   "dan.": "Daniel",
   hos: "Hosea",
   "hos.": "Hosea",
+  mal: "Malachi",
+  "mal.": "Malachi",
   mt: "Matthew",
   "mt.": "Matthew",
   matt: "Matthew",
@@ -201,15 +207,20 @@ const BOOK_LABELS = [...NORMALIZED_BOOK_IDS.keys()].sort((a, b) => b.length - a.
 const BOOK_LABEL_PATTERN = BOOK_LABELS.map((label) =>
   label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
 ).join("|");
-const CITATION_RE = new RegExp(
-  `(^|[^A-Za-z0-9])(${BOOK_LABEL_PATTERN})\\.?\\s+(\\d+)(?::(\\d+))?`,
-  "gi",
-);
+const BOOK_START_RE = new RegExp(`^(${BOOK_LABEL_PATTERN})\\.?`, "i");
+const CHAPTER_RE =
+  /^(\d+)(?::(\d+)(?:\s*[–—-]\s*(\d+)|((?:\s*,\s*\d+)+))?)?/;
+
+/** Obadiah, Philemon, 2 John, 3 John, and Jude are a single chapter. */
+const SINGLE_CHAPTER_BOOKS = new Set([31, 57, 63, 64, 65]);
 
 export interface ParsedScriptureReference {
   bookId: number;
   chapter: number;
   verse?: number;
+  verseEnd?: number;
+  /** Set when the source lists verses that are not one continuous range. */
+  verses?: number[];
 }
 
 export interface ScriptureCitation extends ParsedScriptureReference {
@@ -218,43 +229,183 @@ export interface ScriptureCitation extends ParsedScriptureReference {
   text: string;
 }
 
+function verseList(start: number, end: number | null, extras: string | undefined): number[] {
+  const verses = [start];
+  if (end != null) {
+    if (end < start) return [];
+    for (let verse = start + 1; verse <= end; verse += 1) verses.push(verse);
+    return verses;
+  }
+  if (extras) {
+    for (const piece of extras.split(",")) {
+      const verse = Number.parseInt(piece.trim(), 10);
+      if (Number.isInteger(verse) && verse > 0) verses.push(verse);
+    }
+  }
+  return verses;
+}
+
+function isContiguous(verses: number[]): boolean {
+  for (let index = 1; index < verses.length; index += 1) {
+    if (verses[index] !== verses[index - 1] + 1) return false;
+  }
+  return true;
+}
+
+function asCitation(
+  text: string,
+  start: number,
+  end: number,
+  bookId: number,
+  chapter: number,
+  verses: number[],
+): ScriptureCitation | null {
+  let verseStart = verses[0];
+  let verseEnd = verses[verses.length - 1];
+  let listed = verses;
+  if (SINGLE_CHAPTER_BOOKS.has(bookId) && verses.length === 0) {
+    verseStart = chapter;
+    verseEnd = chapter;
+    chapter = 1;
+    listed = [verseStart];
+  }
+  if (!bookId || !Number.isInteger(chapter) || chapter < 1) return null;
+  if (listed.some((verse) => !Number.isInteger(verse) || verse < 1)) return null;
+  const contiguous = listed.length === 0 || isContiguous(listed);
+  return {
+    bookId,
+    chapter,
+    verse: listed.length ? verseStart : undefined,
+    verseEnd: contiguous && listed.length > 1 ? verseEnd : undefined,
+    verses: contiguous ? undefined : listed,
+    start,
+    end,
+    text: text.slice(start, end),
+  };
+}
+
+function readChapter(
+  source: string,
+  requireVerse: boolean,
+): { chapter: number; verses: number[]; length: number } | null {
+  const match = source.match(CHAPTER_RE);
+  if (!match) return null;
+  const chapter = Number.parseInt(match[1], 10);
+  if (!Number.isInteger(chapter) || chapter < 1) return null;
+  const verse = match[2] ? Number.parseInt(match[2], 10) : null;
+  if (requireVerse && verse == null) return null;
+  const rangeEnd = match[3] ? Number.parseInt(match[3], 10) : null;
+  const verses = verse == null ? [] : verseList(verse, rangeEnd, match[4]);
+  if (verse != null && verses.length === 0) return null;
+  return { chapter, verses, length: match[0].length };
+}
+
+/**
+ * Reads every citation in a label, including ranges (3:14–18), verse lists
+ * (36:15, 16), and a following reference that inherits the book (15:20, 21).
+ */
+export function parseScriptureReferenceList(reference: string): ScriptureCitation[] {
+  const text = reference;
+  const hits: ScriptureCitation[] = [];
+  let index = 0;
+  let lastBookId: number | null = null;
+
+  const push = (citation: ScriptureCitation | null) => {
+    if (!citation) return false;
+    hits.push(citation);
+    lastBookId = citation.bookId;
+    index = citation.end;
+    return true;
+  };
+
+  while (index < text.length) {
+    const atBoundary = index === 0 || /[^A-Za-z0-9]/.test(text[index - 1] ?? "");
+    const slice = text.slice(index);
+    const bookMatch = atBoundary ? slice.match(BOOK_START_RE) : null;
+    const bookId = bookMatch
+      ? NORMALIZED_BOOK_IDS.get(bookMatch[1].toLowerCase()) ?? null
+      : null;
+
+    if (bookId && bookMatch) {
+      const afterBook = slice.slice(bookMatch[0].length);
+      const space = afterBook.match(/^\s+/)?.[0].length ?? 0;
+      if (space > 0) {
+        const chapter = readChapter(afterBook.slice(space), false);
+        if (chapter) {
+          const start = index;
+          const end = index + bookMatch[0].length + space + chapter.length;
+          if (
+            push(
+              asCitation(
+                text,
+                start,
+                end,
+                bookId,
+                SINGLE_CHAPTER_BOOKS.has(bookId) && chapter.verses.length === 0
+                  ? 1
+                  : chapter.chapter,
+                SINGLE_CHAPTER_BOOKS.has(bookId) && chapter.verses.length === 0
+                  ? [chapter.chapter]
+                  : chapter.verses,
+              ),
+            )
+          ) {
+            consumeInherited(text, hits, () => lastBookId);
+            index = hits[hits.length - 1]?.end ?? end;
+            continue;
+          }
+        }
+      }
+    }
+
+    index += 1;
+  }
+
+  return hits;
+
+  function consumeInherited(
+    source: string,
+    existing: ScriptureCitation[],
+    book: () => number | null,
+  ) {
+    while (existing.length > 0) {
+      let cursor = existing[existing.length - 1].end;
+      let separator = cursor;
+      while (separator < source.length && /[\s,;]/.test(source[separator] ?? "")) separator += 1;
+      if (separator === cursor || !/[,;]/.test(source.slice(cursor, separator))) return;
+      if (BOOK_START_RE.test(source.slice(separator))) return;
+      const inherited = book();
+      if (!inherited) return;
+      const chapter = readChapter(source.slice(separator), true);
+      if (!chapter) return;
+      const citation = asCitation(
+        source,
+        separator,
+        separator + chapter.length,
+        inherited,
+        chapter.chapter,
+        chapter.verses,
+      );
+      if (!citation) return;
+      existing.push(citation);
+    }
+  }
+}
+
 export function parseScriptureReference(
   reference: string,
 ): ParsedScriptureReference | null {
-  const match = reference.trim().match(/^(.+?)\s+(\d+)(?::(\d+))?/);
-  if (!match) return null;
-
-  const bookId = NORMALIZED_BOOK_IDS.get(match[1].trim().toLowerCase().replace(/\.$/, ""));
-  const chapter = Number.parseInt(match[2], 10);
-  const verse = match[3] ? Number.parseInt(match[3], 10) : undefined;
-
-  if (!bookId || !Number.isInteger(chapter) || chapter < 1) return null;
-  if (verse !== undefined && (!Number.isInteger(verse) || verse < 1)) {
-    return null;
-  }
-
-  return { bookId, chapter, verse };
+  const hit = parseScriptureReferenceList(reference.trim()).find((item) => item.start === 0);
+  if (!hit) return null;
+  return {
+    bookId: hit.bookId,
+    chapter: hit.chapter,
+    ...(hit.verse != null ? { verse: hit.verse } : {}),
+    ...(hit.verseEnd != null ? { verseEnd: hit.verseEnd } : {}),
+    ...(hit.verses ? { verses: hit.verses } : {}),
+  };
 }
 
 export function findScriptureCitations(text: string): ScriptureCitation[] {
-  const hits: ScriptureCitation[] = [];
-  CITATION_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = CITATION_RE.exec(text))) {
-    const prefix = match[1] ?? "";
-    const start = match.index + prefix.length;
-    const bookId = NORMALIZED_BOOK_IDS.get(match[2].toLowerCase());
-    const chapter = Number.parseInt(match[3], 10);
-    const verse = match[4] ? Number.parseInt(match[4], 10) : undefined;
-    if (!bookId || !Number.isInteger(chapter) || chapter < 1) continue;
-    hits.push({
-      bookId,
-      chapter,
-      verse,
-      start,
-      end: match.index + match[0].length,
-      text: text.slice(start, match.index + match[0].length),
-    });
-  }
-  return hits;
+  return parseScriptureReferenceList(text);
 }

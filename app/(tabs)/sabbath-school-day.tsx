@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Platform,
   useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
@@ -32,11 +34,9 @@ import {
   type SabbathSchoolSound,
 } from "@/lib/sabbath-school-audio";
 import { MemoryVerseCard } from "@/components/sabbath-school/MemoryVerseCard";
-import { ScriptureLinkedText } from "@/components/reader/ScriptureLinkedText";
-import { navigateToScriptureByParts } from "@/lib/scripture-nav";
-import { parseScriptureReference } from "@/lib/scripture-reference";
-import { useTranslation } from "@/context/TranslationContext";
+import { LessonDayBody } from "@/components/sabbath-school/LessonDayBody";
 import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
+import { loadLocalLessonAnswers, saveLocalLessonAnswer } from "@/lib/sabbath-school-answers";
 import { buildStudyTutorRoute } from "@/lib/sabbath-school-tutor";
 import {
   buildSabbathSchoolDayNavigator,
@@ -115,180 +115,6 @@ function getReflectionPrompt(title: string | null, dayNumber: number): string {
   return prompts[(dayNumber - 1) % prompts.length];
 }
 
-function MarkdownRenderer({
-  content,
-  theme,
-}: {
-  content: string;
-  theme: any;
-}) {
-  const { translation } = useTranslation();
-  const lines = content.split("\n");
-  const elements: React.ReactNode[] = [];
-  let blockquote: string[] = [];
-
-  const flushBlockquote = () => {
-    if (blockquote.length > 0) {
-      const text = blockquote
-        .map((l) => l.replace(/^>\s*/, "").replace(/<p>|<\/p>/g, ""))
-        .join(" ")
-        .trim();
-      elements.push(
-        <View
-          key={`bq-${elements.length}`}
-          style={[styles.blockquote, { borderLeftColor: theme.accent }]}
-        >
-          <Text style={[styles.blockquoteText, { color: theme.text }]}>
-            {formatInlineText(text, theme, translation)}
-          </Text>
-        </View>
-      );
-      blockquote = [];
-    }
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmedLine = line.trimStart();
-
-    if (trimmedLine.startsWith(">")) {
-      blockquote.push(line);
-      continue;
-    }
-    flushBlockquote();
-
-    if (trimmedLine.startsWith("#### ")) {
-      elements.push(
-        <Text key={i} style={[styles.mdH4, { color: theme.text }]}>
-          {trimmedLine.replace(/^####\s*/, "")}
-        </Text>
-      );
-    } else if (trimmedLine.startsWith("### ")) {
-      elements.push(
-        <Text key={i} style={[styles.mdH3, { color: theme.text }]}>
-          {trimmedLine.replace(/^###\s*/, "")}
-        </Text>
-      );
-    } else if (trimmedLine.startsWith("## ")) {
-      elements.push(
-        <Text key={i} style={[styles.mdH2, { color: theme.text }]}>
-          {trimmedLine.replace(/^##\s*/, "")}
-        </Text>
-      );
-    } else if (trimmedLine.startsWith("# ")) {
-      elements.push(
-        <Text key={i} style={[styles.mdH1, { color: theme.text }]}>
-          {trimmedLine.replace(/^#\s*/, "")}
-        </Text>
-      );
-    } else if (trimmedLine.startsWith("---")) {
-      elements.push(
-        <View
-          key={i}
-          style={[styles.mdHr, { backgroundColor: theme.border }]}
-        />
-      );
-    } else if (line.trim() === "") {
-      elements.push(<View key={i} style={{ height: 8 }} />);
-    } else {
-      const cleaned = line
-        .replace(/<p>|<\/p>/g, "")
-        .replace(/\\\s*$/, "")
-        .trim();
-      if (cleaned) {
-        elements.push(
-          <Text key={i} style={[styles.mdParagraph, { color: theme.textSecondary }]}>
-            {formatInlineText(cleaned, theme, translation)}
-          </Text>
-        );
-      }
-    }
-  }
-  flushBlockquote();
-
-  return <View style={styles.mdContainer}>{elements}</View>;
-}
-
-function formatInlineText(text: string, theme: any, translation?: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  // Normalize *italic* to _italic_ so both common styles render.
-  let remaining = text.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1_$2_");
-  let key = 0;
-
-  const pushPlain = (chunk: string) => {
-    if (!chunk) return;
-    parts.push(<ScriptureLinkedText key={key++} text={chunk} />);
-  };
-
-  while (remaining.length > 0) {
-    const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
-    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-    const italicMatch = remaining.match(/_(.+?)_/);
-    const candidates = [linkMatch, boldMatch, italicMatch].filter(
-      (item): item is RegExpMatchArray => !!item && item.index !== undefined,
-    );
-    const firstMatch = candidates.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))[0];
-
-    if (!firstMatch || firstMatch.index === undefined) {
-      pushPlain(remaining);
-      break;
-    }
-
-    if (firstMatch.index > 0) {
-      pushPlain(remaining.substring(0, firstMatch.index));
-    }
-
-    if (firstMatch === linkMatch) {
-      const label = firstMatch[1];
-      const parsed = parseScriptureReference(label);
-      parts.push(
-        parsed ? (
-          <Text
-            key={key++}
-            onPress={() =>
-              navigateToScriptureByParts(parsed.bookId, parsed.chapter, parsed.verse, translation)
-            }
-            accessibilityRole="link"
-            style={{ color: theme.accent, textDecorationLine: "underline" }}
-          >
-            {label}
-          </Text>
-        ) : (
-          <ScriptureLinkedText key={key++} text={label} />
-        ),
-      );
-    } else if (firstMatch === boldMatch) {
-      parts.push(
-        <Text key={key++} style={{ fontFamily: "Inter_700Bold" }}>
-          <ScriptureLinkedText text={firstMatch[1]} />
-        </Text>
-      );
-    } else {
-      parts.push(
-        <Text key={key++} style={{ fontStyle: "italic" }}>
-          <ScriptureLinkedText text={firstMatch[1]} />
-        </Text>
-      );
-    }
-
-    remaining = remaining.substring(
-      (firstMatch.index || 0) + firstMatch[0].length
-    );
-  }
-
-  return parts;
-}
-
-function sanitizeContent(content: string): string {
-  console.log("[sanitize] input snippet:", content.slice(0, 200));
-  const result = content
-    .replace(/<\/?code\b[^>]*>/gi, "")
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, "$1")
-    .replace(/<\/?[^>]+>/g, "");
-  console.log("[sanitize] output snippet:", result.slice(0, 200));
-  return result;
-}
-
 export default function SabbathSchoolDayScreen() {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [wideReading, setWideReading] = useState(false);
@@ -361,6 +187,11 @@ export default function SabbathSchoolDayScreen() {
 
   const [journalText, setJournalText] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
+  const [reachedEnd, setReachedEnd] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const scrollViewport = useRef(0);
+  const scrollContentHeight = useRef(0);
+  const answerTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [showCompletionState, setShowCompletionState] = useState(false);
   const audioSoundRef = useRef<SabbathSchoolSound | null>(null);
   const audioAttemptRef = useRef(0);
@@ -516,8 +347,54 @@ export default function SabbathSchoolDayScreen() {
       setShowCompletionState(false);
       setJournalText(current.journalEntry || "");
     }
+    setReachedEnd(false);
+    setAnswers({});
     // Re-sync local state only when the day identity changes.
   }, [day?.id]);
+
+  React.useEffect(() => {
+    const dayId = day?.id;
+    if (!dayId) return;
+    let cancelled = false;
+    const apply = (next: Record<string, string>) => {
+      if (!cancelled) setAnswers(next);
+    };
+    if (isAuthenticated) {
+      apiRequest("GET", `/api/sabbath-school/answers?dayId=${encodeURIComponent(dayId)}`)
+        .then((response) => response.json())
+        .then((payload: { answers?: Record<string, string> }) => apply(payload.answers || {}))
+        .catch(() => apply({}));
+    } else {
+      loadLocalLessonAnswers(dayId).then(apply).catch(() => apply({}));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [day?.id, isAuthenticated]);
+
+  const saveAnswer = (questionKey: string, value: string) => {
+    const dayId = day?.id;
+    if (!dayId) return;
+    setAnswers((current) => ({ ...current, [questionKey]: value }));
+    const existing = answerTimers.current[questionKey];
+    if (existing) clearTimeout(existing);
+    answerTimers.current[questionKey] = setTimeout(() => {
+      if (isAuthenticated) {
+        void apiRequest("PUT", "/api/sabbath-school/answers", {
+          dayId,
+          questionKey,
+          answer: value,
+        }).catch(() => {});
+      } else {
+        void saveLocalLessonAnswer(dayId, questionKey, value).catch(() => {});
+      }
+    }, 400);
+  };
+
+  const noteReachedEnd = (offsetY: number, viewport: number, contentHeight: number) => {
+    if (viewport <= 0 || contentHeight <= 0) return;
+    if (offsetY + viewport >= contentHeight - 48) setReachedEnd(true);
+  };
 
   const completeMutation = useMutation({
     mutationFn: async () => {
@@ -739,6 +616,20 @@ export default function SabbathSchoolDayScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           testID="ss-day-reader"
+          scrollEventThrottle={16}
+          onLayout={(event) => {
+            scrollViewport.current = event.nativeEvent.layout.height;
+            noteReachedEnd(0, scrollViewport.current, scrollContentHeight.current);
+          }}
+          onContentSizeChange={(_width, height) => {
+            scrollContentHeight.current = height;
+            noteReachedEnd(0, scrollViewport.current, height);
+          }}
+          onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+            scrollViewport.current = layoutMeasurement.height;
+            noteReachedEnd(contentOffset.y, layoutMeasurement.height, contentSize.height);
+          }}
         >
           {day.title && (
             <Text style={[styles.dayMainTitle, { color: theme.text }]}>
@@ -803,9 +694,10 @@ export default function SabbathSchoolDayScreen() {
           )}
 
           {memoryTextExtraction.remainingContent && (
-            <MarkdownRenderer
-              content={sanitizeContent(memoryTextExtraction.remainingContent)}
-              theme={theme}
+            <LessonDayBody
+              content={memoryTextExtraction.remainingContent}
+              answers={answers}
+              onAnswer={saveAnswer}
             />
           )}
 
@@ -891,21 +783,26 @@ export default function SabbathSchoolDayScreen() {
 
           {!showCompletionState ? (
             <Pressable
+              testID="ss-day-complete"
+              accessibilityRole="button"
+              accessibilityLabel={isCompleted ? "Completed" : "Mark day complete"}
+              accessibilityState={{ disabled: !isCompleted && !reachedEnd }}
               onPress={() => {
                 if (isCompleted) {
                   setShowCompletionState(true);
-                } else {
-                  completeMutation.mutate();
+                  return;
                 }
+                if (!reachedEnd || completeMutation.isPending) return;
+                completeMutation.mutate();
               }}
-              disabled={completeMutation.isPending}
+              disabled={completeMutation.isPending || (!isCompleted && !reachedEnd)}
               style={({ pressed }) => [
                 styles.completeBtn,
                 {
                   backgroundColor: isCompleted
                     ? "rgba(34, 197, 94, 0.15)"
                     : theme.accent,
-                  opacity: pressed ? 0.85 : 1,
+                  opacity: !isCompleted && !reachedEnd ? 0.45 : pressed ? 0.85 : 1,
                 },
               ]}
             >
@@ -924,7 +821,7 @@ export default function SabbathSchoolDayScreen() {
                   { color: isCompleted ? "#22C55E" : "#FFFFFF" },
                 ]}
               >
-                {isCompleted ? "Completed" : "Mark as Complete"}
+                {isCompleted ? "Completed" : "Mark day complete"}
               </Text>
             </Pressable>
           ) : (

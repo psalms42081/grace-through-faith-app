@@ -169,6 +169,7 @@ function RootLayoutNav() {
       <Stack.Screen name="pioneer-reading-preview" options={{ headerShown: false }} />
       <Stack.Screen name="pioneer-shelf" options={{ headerShown: false }} />
       <Stack.Screen name="reading-plans" options={{ headerShown: false }} />
+      <Stack.Screen name="devotional-series" options={{ headerShown: false }} />
       <Stack.Screen name="pioneer-chapter" options={{ headerShown: false }} />
       <Stack.Screen name="prayer-journal" options={{ headerShown: true, title: "Prayer Journal" }} />
       <Stack.Screen name="topic/[id]" options={{ headerShown: false }} />
@@ -283,6 +284,7 @@ useEffect(() => {
         "/pioneer-reading-preview",
         "/pioneer-shelf",
         "/reading-plans",
+        "/devotional-series",
         "/pioneer-chapter",
         "/touchpoint-topic-preview",
         "/touchpoint-study-preview",

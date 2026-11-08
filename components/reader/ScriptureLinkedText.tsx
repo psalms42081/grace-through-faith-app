@@ -23,7 +23,14 @@ export function ScriptureLinkedText({
       <Text
         key={`${hit.start}-${index}`}
         onPress={() =>
-          navigateToScriptureByParts(hit.bookId, hit.chapter, hit.verse, translation)
+          navigateToScriptureByParts(
+            hit.bookId,
+            hit.chapter,
+            hit.verse,
+            translation,
+            hit.verses ? undefined : hit.verse != null ? (hit.verseEnd ?? hit.verse) : undefined,
+            hit.verses,
+          )
         }
         accessibilityRole="link"
         accessibilityLabel={hit.text}

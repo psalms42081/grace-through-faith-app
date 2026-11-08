@@ -43,7 +43,14 @@ export function MemoryVerseCard({ memoryText, testID }: MemoryVerseCardProps) {
       accessibilityRole="link"
       accessibilityLabel={memoryText.reference || "Memory verse"}
       onPress={() =>
-        navigateToScriptureByParts(parsed.bookId, parsed.chapter, parsed.verse, translation)
+        navigateToScriptureByParts(
+          parsed.bookId,
+          parsed.chapter,
+          parsed.verse,
+          translation,
+          parsed.verses ? undefined : parsed.verse != null ? (parsed.verseEnd ?? parsed.verse) : undefined,
+          parsed.verses,
+        )
       }
     >
       {body}

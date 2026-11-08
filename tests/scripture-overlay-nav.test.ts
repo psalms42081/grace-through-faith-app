@@ -27,6 +27,23 @@ describe("scripture citations", () => {
     assert.equal(hits[1].bookId, 43);
     assert.equal(hits[1].verse, 11);
   });
+
+  it("keeps the book and the verse range together", () => {
+    const range = findScriptureCitations("See 2 Cor. 3:14–18.");
+    assert.equal(range.length, 1);
+    assert.equal(range[0].bookId, 47);
+    assert.equal(range[0].text, "2 Cor. 3:14–18");
+    assert.equal(range[0].verse, 14);
+    assert.equal(range[0].verseEnd, 18);
+    const chronicles = parseScriptureReference("2 Chronicles 36:15, 16");
+    assert.equal(chronicles?.bookId, 14);
+    assert.equal(chronicles?.verse, 15);
+    assert.equal(chronicles?.verseEnd, 16);
+    const abbreviated = parseScriptureReference("2 Chron. 36:11");
+    assert.equal(abbreviated?.bookId, 14);
+    assert.equal(abbreviated?.chapter, 36);
+    assert.equal(abbreviated?.verse, 11);
+  });
 });
 
 describe("concordance and verse-sheet reader hop", () => {

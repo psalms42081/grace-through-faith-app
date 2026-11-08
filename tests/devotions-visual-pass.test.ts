@@ -67,12 +67,16 @@ describe("Devotions visual pass", () => {
     assert.equal(DEVOTIONS_CORAL_LINKS.browseShelf.label, "Browse the shelf");
     assert.equal(DEVOTIONS_CORAL_LINKS.browseShelf.href, "/pioneer-shelf");
     assert.equal(DEVOTIONS_CORAL_LINKS.allSeries.label, "All series");
-    assert.equal(DEVOTIONS_CORAL_LINKS.allSeries.href, "/devotionals");
+    assert.equal(DEVOTIONS_CORAL_LINKS.allSeries.href, "/devotional-series");
     assert.equal(DEVOTIONS_CORAL_LINKS.allPlans.label, "All plans");
     assert.equal(DEVOTIONS_CORAL_LINKS.allPlans.href, "/reading-plans");
     const planList = read("app/reading-plans.tsx");
     assert.match(planList, /testID="reading-plans-screen"/);
     assert.match(planList, /queryKey: \["\/api\/plans"\]/);
+    const seriesList = read("app/devotional-series.tsx");
+    assert.match(seriesList, /testID="devotional-series-screen"/);
+    assert.match(seriesList, /DEVOTIONAL_CATALOG_QUERY_KEY/);
+    assert.match(seriesList, /isApprovedHumanDevotionalPlan/);
     assert.match(preview, /testID="devotions-preview-browse-shelf"/);
     assert.match(preview, /testID="devotions-preview-all-series"/);
     assert.match(preview, /testID="devotions-preview-all-plans"/);
