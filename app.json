@@ -28,7 +28,6 @@
     "android": {
       "package": "com.informedministries.app",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1A1F3C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

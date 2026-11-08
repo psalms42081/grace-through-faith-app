@@ -1,0 +1,75 @@
+# Copied from .gitignore — .easignore replaces it for EAS uploads.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+static-build/
+web-build/
+expo-env.d.ts
+
+# Native
+ios/
+android/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+.env
+
+# typescript
+*.tsbuildinfo
+.vercel
+
+# STEP Bible source dumps
+data/step-bible/
+
+# NET Bible® text
+data/net.json
+data/NETBIBLE21.epub
+
+# Attached assets (screenshots shared during development)
+attached_assets/
+
+# Extra: native EAS does not need these.
+docs/
+screenshots/
+downloads/
+comparison-deck/
+artifacts/
+coverage/
+.cursor/
+server_dist/
+*.tar.gz
+package-lock.json.bak
+
+# Root test screenshots / ad-hoc captures.
+/*.png
+
+# Seed/ingest text only. Keep data/*.ts and kjv-words-of-christ.json for Metro.
+data/*.json
+!data/kjv-words-of-christ.json
+data/*.xml
+
+# EPUB sources used only by ingest scripts.
+server/data/pioneer-source/*.epub
+server/data/egw-source/*.epub

@@ -4,11 +4,11 @@ import { describe, it } from "node:test";
 import { APP_CONTACT_EMAIL } from "../constants/app";
 
 describe("Google Play first-build prep", () => {
-  it("sets Android package identity, versionCode, light UI, and google-services file", () => {
+  it("sets Android package identity, light UI, google-services file, and remote versioning", () => {
     const app = JSON.parse(readFileSync(new URL("../app.json", import.meta.url), "utf8"));
     assert.equal(app.expo.name, "Informed Ministries");
     assert.equal(app.expo.android.package, "com.informedministries.app");
-    assert.equal(app.expo.android.versionCode, 1);
+    assert.equal(app.expo.android.versionCode, undefined);
     assert.equal(app.expo.userInterfaceStyle, "light");
     assert.equal(app.expo.scheme, "informedministries");
     assert.equal(app.expo.android.googleServicesFile, "./google-services.json");
