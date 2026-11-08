@@ -16,6 +16,8 @@ import {
   isAndroidChrome,
   isGonePushStatus,
   readRegisteredPushToken,
+  normalizePrayerTimes,
+  prayerTimeNotification,
   readingPlanNotification,
   sabbathSchoolNotification,
   formatVerseTimeLabel,
@@ -105,6 +107,33 @@ describe("daily verse push schedule", () => {
     assert.deepEqual(again, ["verse"]);
   });
 
+  it("sends each prayer time once, and stays off when none are set", () => {
+    assert.deepEqual(normalizePrayerTimes(undefined), []);
+    assert.equal(normalizePrayerTimes(["07:00", "07:00"]), null);
+    assert.equal(normalizePrayerTimes(["07:00", "12:00", "18:00", "21:00"]), null);
+    const quiet = duePushKinds(base, new Date("2026-09-23T07:07:00Z"));
+    assert.deepEqual(quiet, ["verse"]);
+    const morning = duePushKinds(
+      { ...base, verseTimeLocal: null, prayerTimes: ["07:00", "12:00", "18:00"] },
+      new Date("2026-09-23T07:07:00Z"),
+    );
+    assert.deepEqual(morning, ["prayer:07:00"]);
+    const midday = duePushKinds(
+      {
+        ...base,
+        verseTimeLocal: null,
+        prayerTimes: ["07:00", "12:00"],
+        lastPrayerSent: { "07:00": "2026-09-23" },
+      },
+      new Date("2026-09-23T12:05:00Z"),
+    );
+    assert.deepEqual(midday, ["prayer:12:00"]);
+    const note = prayerTimeNotification("Psalm 23:1");
+    assert.equal(note.title, "A time to pray");
+    assert.equal(note.body, "Psalm 23:1");
+    assert.equal(note.url, "/prayer-journal");
+  });
+
   it("sends web push as high urgency with a six-hour TTL", () => {
     assert.equal(WEB_PUSH_URGENCY, "high");
     assert.equal(WEB_PUSH_TTL_SECONDS, 6 * 60 * 60);
@@ -169,6 +198,10 @@ describe("daily verse push wiring", () => {
     assert.match(settings, /testID="profile-ss-reminder-time"/);
     assert.match(settings, /Reading plan/);
     assert.match(settings, /testID="profile-plan-reminder-switch"/);
+    assert.match(settings, /Times of prayer/);
+    assert.match(settings, /testID="profile-prayer-times-switch"/);
+    assert.match(settings, /testID=\{`profile-prayer-time-\$\{index\}`\}/);
+    assert.match(settings, /anyNotificationOn/);
     assert.match(settings, /ANDROID_CHROME_BATTERY_TIP/);
     assert.match(web, /type: "time"/);
     assert.match(native, /@react-native-community\/datetimepicker/);
@@ -212,6 +245,7 @@ describe("daily verse push wiring", () => {
     );
     assert.match(policy, /push endpoint/);
     assert.match(policy, /time you chose/);
+    assert.match(policy, /Times of prayer/);
     assert.match(policy, /time zone/);
     assert.match(policy, /deleted when you turn the reminder off/);
     assert.match(policy, /deleted with your account/);

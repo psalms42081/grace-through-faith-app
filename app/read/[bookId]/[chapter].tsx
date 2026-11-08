@@ -33,7 +33,7 @@ import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/Ve
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
-import { PathBSwitch } from "@/components/settings/PathBSwitch";
+import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage } from "@/lib/words-of-christ";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -113,7 +113,6 @@ const RV2_CORAL = "#E8604C";     // ONLY the Listen play button
 const RV2_PILL = "#F1EBDD";      // slightly darker cream for pills/surfaces
 const RV2_BORDER = "#E7E0D2";
 const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
-const WORDS_OF_CHRIST_KEY = "@grace-through-faith/reader-words-of-christ";
 const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
 /** Internal one-release rollback. Default off = new typography + floating chrome. */
 const READER_LEGACY_VERSE_BLOCKS = false;
@@ -857,7 +856,7 @@ export default function VerseReaderScreen() {
 
   // reader-v2: text size (AA sheet), chapter picker, strip visibility
   const [fontScale, setFontScale] = useState(1);
-  const [wordsOfChrist, setWordsOfChrist] = useState(false);
+  const [wordsOfChrist, setWordsOfChrist] = useState(true);
   const [showTextSizeSheet, setShowTextSizeSheet] = useState(false);
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [showStudySheet, setShowStudySheet] = useState(false);
@@ -872,9 +871,6 @@ export default function VerseReaderScreen() {
       const n = v ? parseFloat(v) : NaN;
       if (!isNaN(n) && FONT_SCALE_STEPS.includes(n as any)) setFontScale(n);
     });
-    AsyncStorage.getItem(WORDS_OF_CHRIST_KEY).then((v) => {
-      if (v === "1") setWordsOfChrist(true);
-    });
   }, []);
 
   const applyFontScale = useCallback((n: number) => {
@@ -882,10 +878,17 @@ export default function VerseReaderScreen() {
     AsyncStorage.setItem(RV2_FONT_SCALE_KEY, String(n));
   }, []);
 
-  const applyWordsOfChrist = useCallback((on: boolean) => {
-    setWordsOfChrist(on);
-    AsyncStorage.setItem(WORDS_OF_CHRIST_KEY, on ? "1" : "0");
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      AsyncStorage.getItem(RED_LETTERS_STORAGE_KEY).then((value) => {
+        if (active) setWordsOfChrist(redLettersFromStorage(value));
+      });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const setStripHidden = useCallback((hidden: boolean) => {
     if (stripHiddenRef.current === hidden) return;
@@ -2302,17 +2305,6 @@ export default function VerseReaderScreen() {
               <Text style={[styles.fontScalePreview, { fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
                 For by grace are ye saved through faith.
               </Text>
-              <View style={styles.wordsOfChristRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.wordsOfChristTitle}>Words of Christ in red</Text>
-                  <Text style={styles.wordsOfChristMeta}>Shown in the KJV</Text>
-                </View>
-                <PathBSwitch
-                  value={wordsOfChrist}
-                  onValueChange={applyWordsOfChrist}
-                  testID="reader-words-of-christ-switch"
-                />
-              </View>
             </View>
           </>
         )}
@@ -2766,26 +2758,6 @@ const styles = StyleSheet.create({
   fontScaleStopActive: {
     backgroundColor: "#1F1A12",
     transform: [{ scale: 1.35 }],
-  },
-  wordsOfChristRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 18,
-    paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(31,26,18,0.12)",
-  },
-  wordsOfChristTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: "#1F1A12",
-  },
-  wordsOfChristMeta: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "#6B6660",
-    marginTop: 2,
   },
   fontScalePreview: {
     fontFamily: "Lora_400Regular",

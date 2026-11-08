@@ -1,5 +1,5 @@
 import React from "react";
-import { Switch, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, Switch, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { PathB } from "@/constants/colors";
 
 export const PATH_B_SWITCH_TRACK = {
@@ -29,6 +29,11 @@ export function PathBSwitch({
       disabled={disabled}
       trackColor={{ ...PATH_B_SWITCH_TRACK }}
       thumbColor={PATH_B_SWITCH_THUMB}
+      // Web uses activeThumbColor while the switch is on, and otherwise paints
+      // the knob #009688. thumbColor alone only colours the off state.
+      {...(Platform.OS === "web"
+        ? ({ activeThumbColor: PATH_B_SWITCH_THUMB } as object)
+        : null)}
       ios_backgroundColor={PATH_B_SWITCH_IOS_BACKGROUND}
       testID={testID}
       style={style ?? styles.switch}

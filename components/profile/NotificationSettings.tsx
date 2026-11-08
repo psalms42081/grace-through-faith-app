@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/query-client";
 import {
   ANDROID_CHROME_BATTERY_TIP,
   DEFAULT_VERSE_PUSH_TIME,
+  MAX_PRAYER_TIMES,
   NOTIFICATIONS_BLOCKED_MESSAGE,
   NOTIFICATIONS_SETUP_FAILED_MESSAGE,
   SABBATH_SCHOOL_PUSH_TIME,
@@ -35,9 +36,25 @@ type StoredSubscription = {
   ssReminder: boolean;
   ssTimeLocal: string | null;
   planReminder: boolean;
+  prayerTimes: string[];
   timezone: string;
   web: boolean;
 };
+
+type ReminderPrefs = {
+  verseTimeLocal: string | null;
+  ssReminder: boolean;
+  ssTimeLocal: string | null;
+  planReminder: boolean;
+  prayerTimes: string[];
+};
+
+const PRAYER_SLOT_LABELS = ["Morning", "Midday", "Evening"];
+const PRAYER_SLOT_DEFAULTS = ["07:00", "12:00", "18:00"];
+
+function nextPrayerTime(existing: string[]): string {
+  return PRAYER_SLOT_DEFAULTS.find((time) => !existing.includes(time)) ?? "21:00";
+}
 
 type PlanProgress = {
   planId: string;
@@ -67,6 +84,7 @@ export default function NotificationSettings() {
   const [endpointChecked, setEndpointChecked] = useState(Platform.OS !== "web");
   const [switchEpoch, setSwitchEpoch] = useState(0);
   const [planChoice, setPlanChoice] = useState<boolean | null>(null);
+  const [prayerChoice, setPrayerChoice] = useState<string[] | null>(null);
   const [batteryTipDismissed, setBatteryTipDismissed] = useState(true);
 
   useEffect(() => {
@@ -105,8 +123,11 @@ export default function NotificationSettings() {
   const verseOn = Boolean(mine?.verseTimeLocal);
   const ssOn = Boolean(mine?.ssReminder);
   const planOn = planChoice ?? (mine ? mine.planReminder : hasActivePlan);
+  const prayerTimes = prayerChoice ?? mine?.prayerTimes ?? [];
+  const prayerOn = prayerTimes.length > 0;
+  const anyNotificationOn = verseOn || ssOn || planOn || prayerOn;
   const showBatteryTip =
-    verseOn &&
+    anyNotificationOn &&
     !batteryTipDismissed &&
     Platform.OS === "web" &&
     typeof navigator !== "undefined" &&
@@ -126,25 +147,17 @@ export default function NotificationSettings() {
     setSetupFailed(kind === "failed");
   }
 
-  function rememberSubscription(
-    endpoint: string,
-    next: {
-      verseTimeLocal: string | null;
-      ssReminder: boolean;
-      ssTimeLocal: string | null;
-      planReminder: boolean;
-      timezone: string;
-    } | null,
-  ) {
+  function rememberSubscription(endpoint: string, next: (ReminderPrefs & { timezone: string }) | null) {
     queryClient.setQueryData<SubscriptionResponse>(QUERY_KEY, (current) => {
       const subscriptions = (current?.subscriptions ?? []).filter((row) => row.endpoint !== endpoint);
-      if (next && (next.verseTimeLocal || next.ssReminder || next.planReminder)) {
+      if (next && (next.verseTimeLocal || next.ssReminder || next.planReminder || next.prayerTimes.length > 0)) {
         subscriptions.push({
           endpoint,
           verseTimeLocal: next.verseTimeLocal,
           ssReminder: next.ssReminder,
           ssTimeLocal: next.ssTimeLocal,
           planReminder: next.planReminder,
+          prayerTimes: next.prayerTimes,
           timezone: next.timezone,
           web: !endpoint.startsWith("ExponentPushToken[") && !endpoint.startsWith("ExpoPushToken["),
         });
@@ -153,16 +166,23 @@ export default function NotificationSettings() {
     });
   }
 
-  async function save(next: {
-    verseTimeLocal: string | null;
-    ssReminder: boolean;
-    ssTimeLocal: string | null;
-    planReminder: boolean;
+  function currentPrefs(overrides: Partial<ReminderPrefs> = {}): ReminderPrefs {
+    return {
+      verseTimeLocal: verseOn ? verseTime : null,
+      ssReminder: ssOn,
+      ssTimeLocal: ssOn ? ssTime : null,
+      planReminder: planOn,
+      prayerTimes,
+      ...overrides,
+    };
+  }
+
+  async function save(next: ReminderPrefs & {
     permission: WebPermissionStart | null;
     turningOn: boolean;
   }) {
     const knownEndpoint = mine?.endpoint ?? (await currentWebEndpoint());
-    if (!next.verseTimeLocal && !next.ssReminder && !next.planReminder) {
+    if (!next.verseTimeLocal && !next.ssReminder && !next.planReminder && next.prayerTimes.length === 0) {
       if (!knownEndpoint) {
         markFailure("failed");
         return;
@@ -207,6 +227,7 @@ export default function NotificationSettings() {
       ssReminder: next.ssReminder,
       ssTimeLocal: next.ssReminder ? next.ssTimeLocal : null,
       planReminder: next.planReminder,
+      prayerTimes: next.prayerTimes,
       timezone,
     };
     const keys = acquired.kind === "web" && acquired.keys.p256dh && acquired.keys.auth ? acquired.keys : null;
@@ -226,12 +247,7 @@ export default function NotificationSettings() {
   }
 
   async function commit(
-    next: {
-      verseTimeLocal: string | null;
-      ssReminder: boolean;
-      ssTimeLocal: string | null;
-      planReminder: boolean;
-    },
+    next: ReminderPrefs,
     permission: WebPermissionStart | null,
     turningOn: boolean,
   ) {
@@ -252,12 +268,7 @@ export default function NotificationSettings() {
     if (!ready || busy || enabled === verseOn) return;
     const permission = enabled && Platform.OS === "web" ? startWebNotificationPermission() : null;
     void commit(
-      {
-        verseTimeLocal: enabled ? verseTime : null,
-        ssReminder: ssOn,
-        ssTimeLocal: ssOn ? ssTime : null,
-        planReminder: planOn,
-      },
+      currentPrefs({ verseTimeLocal: enabled ? verseTime : null }),
       permission,
       enabled,
     );
@@ -269,12 +280,7 @@ export default function NotificationSettings() {
     if (!enabled && !mine) return;
     const permission = enabled && Platform.OS === "web" && !mine ? startWebNotificationPermission() : null;
     void commit(
-      {
-        verseTimeLocal: verseOn ? verseTime : null,
-        ssReminder: ssOn,
-        ssTimeLocal: ssOn ? ssTime : null,
-        planReminder: enabled,
-      },
+      currentPrefs({ planReminder: enabled }),
       permission,
       enabled && !mine,
     );
@@ -284,15 +290,44 @@ export default function NotificationSettings() {
     if (!ready || busy || enabled === ssOn) return;
     const permission = enabled && Platform.OS === "web" ? startWebNotificationPermission() : null;
     void commit(
-      {
-        verseTimeLocal: verseOn ? verseTime : null,
-        ssReminder: enabled,
-        ssTimeLocal: enabled ? ssTime : null,
-        planReminder: planOn,
-      },
+      currentPrefs({ ssReminder: enabled, ssTimeLocal: enabled ? ssTime : null }),
       permission,
       enabled,
     );
+  }
+
+  function onPrayerChange(enabled: boolean) {
+    if (!ready || busy || enabled === prayerOn) return;
+    const nextTimes = enabled ? [nextPrayerTime([])] : [];
+    setPrayerChoice(nextTimes);
+    if (!enabled && !mine) return;
+    const permission = enabled && Platform.OS === "web" && !mine ? startWebNotificationPermission() : null;
+    void commit(currentPrefs({ prayerTimes: nextTimes }), permission, enabled && !mine);
+  }
+
+  function onAddPrayerTime() {
+    if (!ready || busy || prayerTimes.length >= MAX_PRAYER_TIMES) return;
+    const nextTimes = [...prayerTimes, nextPrayerTime(prayerTimes)];
+    setPrayerChoice(nextTimes);
+    const permission = Platform.OS === "web" && !mine ? startWebNotificationPermission() : null;
+    void commit(currentPrefs({ prayerTimes: nextTimes }), permission, !mine);
+  }
+
+  function onRemovePrayerTime(index: number) {
+    if (!ready || busy) return;
+    const nextTimes = prayerTimes.filter((_, item) => item !== index);
+    setPrayerChoice(nextTimes);
+    if (nextTimes.length === 0 && !mine) return;
+    void commit(currentPrefs({ prayerTimes: nextTimes }), null, false);
+  }
+
+  async function applyPrayerTime(index: number, nextTime: string) {
+    const normalized = normalizeHm(nextTime);
+    if (!normalized) return;
+    if (prayerTimes.some((time, item) => item !== index && time === normalized)) return;
+    const nextTimes = prayerTimes.map((time, item) => (item === index ? normalized : time));
+    setPrayerChoice(nextTimes);
+    await commit(currentPrefs({ prayerTimes: nextTimes }), null, false);
   }
 
   async function applyTime(which: "verse" | "sabbath", nextTime: string) {
@@ -302,12 +337,7 @@ export default function NotificationSettings() {
       setLocalSsTime(normalized);
       if (!ssOn) return;
       await commit(
-        {
-          verseTimeLocal: verseOn ? verseTime : null,
-          ssReminder: true,
-          ssTimeLocal: normalized,
-          planReminder: planOn,
-        },
+        currentPrefs({ ssReminder: true, ssTimeLocal: normalized }),
         null,
         false,
       );
@@ -315,16 +345,7 @@ export default function NotificationSettings() {
     }
     setLocalTime(normalized);
     if (!verseOn) return;
-    await commit(
-      {
-        verseTimeLocal: normalized,
-        ssReminder: ssOn,
-        ssTimeLocal: ssOn ? ssTime : null,
-        planReminder: planOn,
-      },
-      null,
-      false,
-    );
+    await commit(currentPrefs({ verseTimeLocal: normalized }), null, false);
   }
 
   return (
@@ -403,6 +424,49 @@ export default function NotificationSettings() {
         testID="profile-ss-reminder-time"
         onCommit={(next) => void applyTime("sabbath", next)}
       />
+      <View style={styles.row}>
+        <View style={styles.copy}>
+          <Text style={styles.title}>Times of prayer</Text>
+          <Text style={styles.meta}>Up to three times a day, after Daniel 6:10</Text>
+        </View>
+        <PathBSwitch
+          key={`prayer-${prayerOn}-${switchEpoch}`}
+          value={prayerOn}
+          onValueChange={onPrayerChange}
+          disabled={!ready || busy}
+          testID="profile-prayer-times-switch"
+        />
+      </View>
+      {prayerTimes.map((time, index) => (
+        <View key={`${time}-${index}`}>
+          <ReminderTimeField
+            label={PRAYER_SLOT_LABELS[index] ?? "Prayer"}
+            value={time}
+            testID={`profile-prayer-time-${index}`}
+            onCommit={(next) => void applyPrayerTime(index, next)}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${PRAYER_SLOT_LABELS[index] ?? "prayer"} time`}
+            testID={`profile-prayer-time-remove-${index}`}
+            onPress={() => onRemovePrayerTime(index)}
+            style={styles.remove}
+          >
+            <Text style={styles.tipDismiss}>Remove</Text>
+          </Pressable>
+        </View>
+      ))}
+      {prayerOn && prayerTimes.length < MAX_PRAYER_TIMES ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add a prayer time"
+          testID="profile-prayer-time-add"
+          onPress={onAddPrayerTime}
+          style={styles.remove}
+        >
+          <Text style={styles.tipDismiss}>Add a time</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -446,4 +510,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
+  remove: { alignSelf: "flex-start", paddingBottom: 8 },
 });

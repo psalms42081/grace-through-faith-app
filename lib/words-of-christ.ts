@@ -11,6 +11,13 @@ const table = ranges as unknown as Record<string, [number, number][]>;
 
 export const WORDS_OF_CHRIST_INK = "#C24431";
 
+/** Settings → Bible Reading → Red Letters. Absent means on, matching that switch. */
+export const RED_LETTERS_STORAGE_KEY = "@gtf/setting-red-letters";
+
+export function redLettersFromStorage(stored: string | null): boolean {
+  return stored == null ? true : stored === "true";
+}
+
 export const WORDS_OF_CHRIST_SOURCE =
   "nolanbaxter/kjv-bible red-letter spans on the public-domain King James Version";
 

@@ -1,5 +1,5 @@
 import * as webpush from "web-push";
-import { and, desc, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { APP_CONTACT_EMAIL } from "../../constants/app";
 import { bibleBookNamesMatch } from "../../components/home-v2/home-data";
 import {
@@ -9,7 +9,10 @@ import {
   isExpoPushEndpoint,
   isGonePushStatus,
   normalizeHm,
+  normalizePrayerTimes,
   parseDailyVerseReference,
+  prayerTimeFromKind,
+  prayerTimeNotification,
   readingPlanNotification,
   sabbathSchoolNotification,
   scripturePushPath,
@@ -143,11 +146,54 @@ async function retireSubscription(row: PushSubscription): Promise<void> {
   }
 }
 
+async function claimPrayerTime(
+  row: PushSubscription,
+  time: string,
+  dateKey: string,
+): Promise<boolean> {
+  const claimed = await db
+    .update(pushSubscriptions)
+    .set({
+      lastPrayerSent: sql`jsonb_set(COALESCE(${pushSubscriptions.lastPrayerSent}, '{}'::jsonb), ARRAY[${time}]::text[], to_jsonb(${dateKey}::text), true)`,
+    })
+    .where(
+      and(
+        eq(pushSubscriptions.id, row.id),
+        sql`COALESCE(${pushSubscriptions.lastPrayerSent} ->> ${time}, '') <> ${dateKey}`,
+      ),
+    )
+    .returning({ id: pushSubscriptions.id });
+  return claimed.length > 0;
+}
+
+async function releasePrayerTime(
+  row: PushSubscription,
+  time: string,
+  dateKey: string,
+  previous: string | null,
+): Promise<void> {
+  await db
+    .update(pushSubscriptions)
+    .set({
+      lastPrayerSent: previous
+        ? sql`jsonb_set(COALESCE(${pushSubscriptions.lastPrayerSent}, '{}'::jsonb), ARRAY[${time}]::text[], to_jsonb(${previous}::text), true)`
+        : sql`COALESCE(${pushSubscriptions.lastPrayerSent}, '{}'::jsonb) - ${time}`,
+    })
+    .where(
+      and(
+        eq(pushSubscriptions.id, row.id),
+        sql`${pushSubscriptions.lastPrayerSent} ->> ${time} = ${dateKey}`,
+      ),
+    );
+}
+
 async function claimDate(
   row: PushSubscription,
   kind: DuePushKind,
   dateKey: string,
 ): Promise<boolean> {
+  const prayerTime = prayerTimeFromKind(kind);
+  if (prayerTime) return claimPrayerTime(row, prayerTime, dateKey);
   const column =
     kind === "verse"
       ? pushSubscriptions.lastVerseLocalDate
@@ -179,6 +225,11 @@ async function releaseClaim(
   dateKey: string,
   previous: string | null,
 ): Promise<void> {
+  const prayerTime = prayerTimeFromKind(kind);
+  if (prayerTime) {
+    await releasePrayerTime(row, prayerTime, dateKey, previous);
+    return;
+  }
   const column =
     kind === "verse"
       ? pushSubscriptions.lastVerseLocalDate
@@ -298,16 +349,19 @@ async function sendClaimed(
 ): Promise<"sent" | "retired" | "skipped"> {
   const clock = zonedClock(now, row.timezone);
   if (!clock) return "skipped";
-  const previous =
-    kind === "verse"
+  const prayerTime = prayerTimeFromKind(kind);
+  const previous = prayerTime
+    ? (row.lastPrayerSent?.[prayerTime] ?? null)
+    : kind === "verse"
       ? row.lastVerseLocalDate
       : kind === "sabbath"
         ? row.lastSsLocalDate
         : row.lastPlanLocalDate;
   const claimed = await claimDate(row, kind, clock.dateKey);
   if (!claimed) return "skipped";
-  const payload =
-    kind === "verse"
+  const payload = prayerTime
+    ? prayerTimeNotification(verseReferenceForLocalDate(clock.dateKey))
+    : kind === "verse"
       ? await versePayloadFor(clock.dateKey)
       : kind === "sabbath"
         ? await sabbathPayloadFor(row.timezone, now)
@@ -347,6 +401,7 @@ export async function runDueDailyVersePushes(now = new Date()): Promise<{
           isNotNull(pushSubscriptions.verseTimeLocal),
           eq(pushSubscriptions.ssReminder, true),
           eq(pushSubscriptions.planReminder, true),
+          sql`jsonb_array_length(${pushSubscriptions.prayerTimes}) > 0`,
         ),
       );
     for (const row of rows) {
@@ -358,6 +413,8 @@ export async function runDueDailyVersePushes(now = new Date()): Promise<{
             ssReminder: row.ssReminder,
             ssTimeLocal: row.ssTimeLocal,
             planReminder: row.planReminder,
+            prayerTimes: row.prayerTimes ?? [],
+            lastPrayerSent: row.lastPrayerSent ?? {},
             lastVerseLocalDate: row.lastVerseLocalDate,
             lastSsLocalDate: row.lastSsLocalDate,
             lastPlanLocalDate: row.lastPlanLocalDate,
@@ -438,6 +495,7 @@ export function readPushPreference(body: unknown): {
   ssReminder: boolean;
   ssTimeLocal: string | null;
   planReminder: boolean;
+  prayerTimes: string[];
 } | null {
   if (!body || typeof body !== "object") return null;
   const record = body as {
@@ -448,6 +506,7 @@ export function readPushPreference(body: unknown): {
     ssReminder?: unknown;
     ssTimeLocal?: unknown;
     planReminder?: unknown;
+    prayerTimes?: unknown;
   };
   if (typeof record.endpoint !== "string" || !record.endpoint.trim()) return null;
   const timezone = typeof record.timezone === "string" && record.timezone.trim()
@@ -476,6 +535,8 @@ export function readPushPreference(body: unknown): {
   } else if (ssReminder) {
     ssTimeLocal = SABBATH_SCHOOL_PUSH_TIME;
   }
+  const prayerTimes = normalizePrayerTimes(record.prayerTimes);
+  if (!prayerTimes) return null;
   return {
     endpoint: record.endpoint.trim(),
     keys,
@@ -484,5 +545,6 @@ export function readPushPreference(body: unknown): {
     ssReminder,
     ssTimeLocal,
     planReminder: record.planReminder === true,
+    prayerTimes,
   };
 }

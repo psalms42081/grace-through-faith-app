@@ -2858,9 +2858,10 @@ export const churchGeocodeCache = pgTable("church_geocode_cache", {
 export type ChurchGeocodeCache = typeof churchGeocodeCache.$inferSelect;
 
 /**
- * Web Push subscriptions and Expo push tokens that opted into daily verse
- * or the Friday Sabbath School reminder. last_* dates make each local day
- * send at most once. Rows cascade-delete with the user.
+ * Web Push subscriptions and Expo push tokens that opted into daily verse,
+ * the Friday Sabbath School reminder, a reading plan, or up to three prayer
+ * times. last_* dates make each local day send at most once. Rows cascade-delete
+ * with the user.
  */
 export const pushSubscriptions = pgTable(
   "push_subscription",
@@ -2878,6 +2879,8 @@ export const pushSubscriptions = pgTable(
     ssReminder: boolean("ss_reminder").notNull().default(false),
     ssTimeLocal: text("ss_time_local"),
     planReminder: boolean("plan_reminder").notNull().default(true),
+    prayerTimes: jsonb("prayer_times").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    lastPrayerSent: jsonb("last_prayer_sent").$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
     lastVerseLocalDate: text("last_verse_local_date"),
     lastSsLocalDate: text("last_ss_local_date"),
     lastPlanLocalDate: text("last_plan_local_date"),

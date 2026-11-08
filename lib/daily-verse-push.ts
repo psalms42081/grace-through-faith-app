@@ -54,12 +54,26 @@ export type PushScheduleRow = {
   ssReminder: boolean;
   ssTimeLocal?: string | null;
   planReminder?: boolean;
+  /** Up to three HH:MM prayer times. Empty means the reminder is off. */
+  prayerTimes?: string[];
+  /** Last local date a given prayer time was sent, keyed by HH:MM. */
+  lastPrayerSent?: Record<string, string>;
   lastVerseLocalDate: string | null;
   lastSsLocalDate: string | null;
   lastPlanLocalDate?: string | null;
 };
 
-export type DuePushKind = "verse" | "sabbath" | "plan";
+export type DuePushKind = "verse" | "sabbath" | "plan" | `prayer:${string}`;
+
+export const MAX_PRAYER_TIMES = 3;
+
+export function prayerKind(time: string): DuePushKind {
+  return `prayer:${time}`;
+}
+
+export function prayerTimeFromKind(kind: DuePushKind): string | null {
+  return kind.startsWith("prayer:") ? kind.slice("prayer:".length) : null;
+}
 
 export function parseHmToMinutes(value: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
@@ -202,6 +216,28 @@ export function readingPlanNotification(dayNumber: number, planTitle: string, pl
   };
 }
 
+export function prayerTimeNotification(reference: string) {
+  return {
+    title: "A time to pray",
+    body: reference,
+    url: "/prayer-journal",
+  };
+}
+
+/** Keeps at most three distinct clock times, in the order the reader set them. */
+export function normalizePrayerTimes(value: unknown): string[] | null {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.length > MAX_PRAYER_TIMES) return null;
+  const times: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") return null;
+    const hm = normalizeHm(item);
+    if (!hm || times.includes(hm)) return null;
+    times.push(hm);
+  }
+  return times;
+}
+
 export function fallsInCurrentWindow(
   localMinutes: number,
   scheduledHm: string,
@@ -238,6 +274,10 @@ export function duePushKinds(row: PushScheduleRow, now: Date): DuePushKind[] {
     fallsInCurrentWindow(clock.minutes, row.verseTimeLocal || DEFAULT_VERSE_PUSH_TIME)
   ) {
     due.push("plan");
+  }
+  for (const time of row.prayerTimes ?? []) {
+    if ((row.lastPrayerSent?.[time] ?? null) === clock.dateKey) continue;
+    if (fallsInCurrentWindow(clock.minutes, time)) due.push(prayerKind(time));
   }
   return due;
 }

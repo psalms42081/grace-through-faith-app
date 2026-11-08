@@ -33,6 +33,7 @@ import i18n from "@/lib/i18n";
 import { ENABLE_PREMIUM } from "@/lib/feature-flags";
 import NotificationSettings from "@/components/profile/NotificationSettings";
 import { PathBSwitch } from "@/components/settings/PathBSwitch";
+import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage } from "@/lib/words-of-christ";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 
@@ -48,7 +49,7 @@ const CARD_BG = "#FFFFFF";
 const NARRATOR_VOICE_KEY = "@grace-through-faith/tts-voice";
 
 const STORAGE_KEYS = {
-  redLetters: "@gtf/setting-red-letters",
+  redLetters: RED_LETTERS_STORAGE_KEY,
   verseNumbers: "@gtf/setting-verse-numbers",
   downloadImages: "@gtf/setting-download-images",
   fontSize: "@gtf/setting-font-size",
@@ -126,7 +127,7 @@ export default function SettingsScreen() {
         AsyncStorage.getItem(STORAGE_KEYS.fontSize),
         AsyncStorage.getItem(NARRATOR_VOICE_KEY),
       ]);
-      if (rl !== null) setRedLetters(rl === "true");
+      setRedLetters(redLettersFromStorage(rl));
       if (vn !== null) setVerseNumbers(vn === "true");
       if (di !== null) setDownloadImages(di === "true");
       if (fs !== null && FONT_SIZE_OPTIONS.includes(fs as any)) setFontSize(fs as any);
@@ -260,9 +261,10 @@ export default function SettingsScreen() {
       rightElement?: React.ReactNode;
       showChevron?: boolean;
       isLast?: boolean;
+      testID?: string;
     },
   ) => {
-    const { onPress, rightText, rightElement, showChevron = true, isLast = false } = options || {};
+    const { onPress, rightText, rightElement, showChevron = true, isLast = false, testID } = options || {};
     const content = (
       <View style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ROW_BORDER }]}>
         <Ionicons name={icon} size={20} color={CORAL} style={s.rowIcon} />
@@ -285,6 +287,7 @@ export default function SettingsScreen() {
     return (
       <Pressable
         onPress={onPress}
+        testID={testID}
         style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
       >
         {content}
@@ -292,8 +295,12 @@ export default function SettingsScreen() {
     );
   };
 
-  const pathBSwitch = (value: boolean, onValueChange: (v: boolean) => void) => (
-    <PathBSwitch value={value} onValueChange={onValueChange} />
+  const pathBSwitch = (
+    value: boolean,
+    onValueChange: (v: boolean) => void,
+    testID: string,
+  ) => (
+    <PathBSwitch value={value} onValueChange={onValueChange} testID={testID} />
   );
 
   return (
@@ -346,7 +353,7 @@ export default function SettingsScreen() {
           onPress: () => showToast("Theme follows your device setting", "info"),
         })}
         {renderRow("cloud-download-outline", "Download Images", {
-          rightElement: pathBSwitch(downloadImages, toggleDownloadImages),
+          rightElement: pathBSwitch(downloadImages, toggleDownloadImages, "settings-download-images"),
           showChevron: false,
           isLast: true,
         })}
@@ -365,23 +372,20 @@ export default function SettingsScreen() {
           rightText: fontSize,
         })}
         {renderRow("book-outline", "Red Letters", {
-          rightElement: pathBSwitch(redLetters, toggleRedLetters),
+          rightElement: pathBSwitch(redLetters, toggleRedLetters, "settings-red-letters"),
           showChevron: false,
         })}
         {renderRow("list-outline", "Show Verse Numbers", {
-          rightElement: pathBSwitch(verseNumbers, toggleVerseNumbers),
+          rightElement: pathBSwitch(verseNumbers, toggleVerseNumbers, "settings-verse-numbers"),
           showChevron: false,
           isLast: true,
         })}
 
         {renderSectionHeader("FORMATION")}
-        {renderRow("alarm-outline", "Daily Reminder Time", {
-          onPress: () => comingSoon("Daily Reminder Time"),
+        {renderRow("notifications-outline", "Profile → Notifications", {
+          onPress: () => router.push("/(tabs)/profile" as any),
           showChevron: true,
-          rightText: "9:00 AM",
-          rightElement: ENABLE_PREMIUM ? (
-            <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />
-          ) : undefined,
+          testID: "settings-profile-notifications",
         })}
         {renderRow("flame-outline", "Streak Notifications", {
           onPress: () => comingSoon("Streak Notifications"),
