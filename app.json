@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/informed-ministries-icon.png",
-    "scheme": "graceThroughFaith",
-    "userInterfaceStyle": "dark",
+    "scheme": "informedministries",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/informed-ministries-splash.png",
@@ -26,8 +26,8 @@
       }
     },
     "android": {
-      "package": "com.graceThroughFaith",
-      "googleServicesFile": "./google-services.json",
+      "package": "com.informedministries.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1A1F3C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

@@ -2,7 +2,7 @@
 export const APP_SHARE_URL = "https://informedministries.app";
 
 /** Public contact for outbound API identification (Nominatim and similar). */
-export const APP_CONTACT_EMAIL = "joseph@gracethroughfaith.app";
+export const APP_CONTACT_EMAIL = "hello@informedministries.app";
 
 /** Render hostname still served; keep on CORS / CSP allowlists. */
 export const APP_RENDER_ORIGIN = "https://informed-ministries-api.onrender.com";

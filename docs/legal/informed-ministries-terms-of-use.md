@@ -25,7 +25,7 @@ You must be at least 13 years old to create an account. If you are under 18, you
 
 ## 3. Your account
 
-You are responsible for keeping your login details private and for everything done through your account. Tell us promptly at [support email] if you believe someone else has accessed it.
+You are responsible for keeping your login details private and for everything done through your account. Tell us promptly at hello@informedministries.app if you believe someone else has accessed it.
 
 You may delete your account at any time from within the App or by contacting us. Deleting your account removes your personal data as described in the Privacy Policy.
 
@@ -113,8 +113,7 @@ These Terms are governed by the laws of Victoria, Australia, and you agree to th
 
 Informed Ministries
 ABN 39 741 036 497
-[postal or email address]
-[support email]
+hello@informedministries.app
 
 ---
 

@@ -84,7 +84,7 @@ describe("problem report surfaces", () => {
     assert.match(handler, /sendFeedbackEmail/);
     const mail = readFileSync(path.join(root, "server", "services", "feedback-mail.ts"), "utf8");
     assert.match(mail, /to: APP_CONTACT_EMAIL/);
-    assert.equal(APP_CONTACT_EMAIL, "joseph@gracethroughfaith.app");
+    assert.equal(APP_CONTACT_EMAIL, "hello@informedministries.app");
     const route = readFileSync(path.join(root, "server", "routes.ts"), "utf8");
     assert.match(route, /handleProblemReport\(req, res\)/);
     assert.match(route, /app\.post\("\/api\/feedback"/);

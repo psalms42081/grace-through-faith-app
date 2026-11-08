@@ -23,10 +23,30 @@ describe("legal markdown source", () => {
     assert.match(terms, /Draft for legal review — not yet in force/);
     assert.match(privacy, /Draft for legal review — not yet in force/);
     assert.match(terms, /ABN 39 741 036 497/);
-    assert.match(terms, /\[support email\]/);
+    assert.match(terms, /hello@informedministries\.app/);
+    assert.doesNotMatch(terms, /\[support email\]/);
+    assert.doesNotMatch(terms, /\[postal or email address\]/);
     assert.match(privacy, /ABN 39 741 036 497/);
-    assert.match(privacy, /\[postal or email address\]/);
-    assert.match(privacy, /\[hosting provider\]/);
+    assert.match(privacy, /hello@informedministries\.app/);
+    assert.doesNotMatch(privacy, /\[privacy contact email\]/);
+    assert.doesNotMatch(privacy, /\[postal or email address\]/);
+    assert.match(privacy, /Render in Singapore/);
+    assert.match(privacy, /Neon in Sydney, Australia/);
+    assert.doesNotMatch(privacy, /\[hosting provider\]/);
+    assert.doesNotMatch(privacy, /\[database provider\]/);
+    assert.match(privacy, /Posts you made in a group are removed/);
+    assert.match(privacy, /not kept as "Former member"/);
+    assert.doesNotMatch(privacy, /remain visible to the group in anonymised form/);
+    assert.match(privacy, /Problem reports you sent are kept with your user id removed/);
+    assert.match(privacy, /LiveKit/);
+    assert.match(privacy, /YouTube/);
+    assert.match(privacy, /OpenAI/);
+    assert.match(privacy, /no longer than 30 days/);
+    assert.doesNotMatch(privacy, /\[video provider\]/);
+    assert.doesNotMatch(privacy, /\[AI provider\]/);
+    assert.doesNotMatch(privacy, /\[analytics\/error provider\]/);
+    assert.doesNotMatch(privacy, /\[30\]/);
+    assert.doesNotMatch(privacy, /Error and usage reporting/);
     assert.doesNotMatch(terms, /Drafting notes for review/);
     assert.doesNotMatch(privacy, /Drafting notes for review/);
     assert.doesNotMatch(terms, /delete before publishing/);
@@ -82,7 +102,7 @@ describe("legal surfaces", () => {
     assert.match(register, /router\.push\("\/privacy"/);
   });
 
-  it("serves public HTML pages at /terms and /privacy", () => {
+  it("serves public HTML pages at /terms, /privacy, and /delete-account", () => {
     const server = readFileSync(new URL("../server/index.ts", import.meta.url), "utf8");
     const termsHtml = readFileSync(
       new URL("../server/templates/terms.html", import.meta.url),
@@ -92,13 +112,37 @@ describe("legal surfaces", () => {
       new URL("../server/templates/privacy.html", import.meta.url),
       "utf8",
     );
+    const deleteAccountHtml = readFileSync(
+      new URL("../server/templates/delete-account.html", import.meta.url),
+      "utf8",
+    );
     assert.match(server, /app\.get\("\/privacy"/);
     assert.match(server, /app\.get\("\/terms"/);
+    assert.match(server, /app\.get\("\/delete-account"/);
     assert.match(server, /templates", "terms.html"/);
     assert.match(termsHtml, /Draft for legal review/);
     assert.match(privacyHtml, /Draft for legal review/);
     assert.match(termsHtml, /ABN 39 741 036 497/);
-    assert.match(privacyHtml, /\[hosting provider\]/);
+    assert.match(termsHtml, /hello@informedministries\.app/);
+    assert.doesNotMatch(termsHtml, /\[postal or email address\]/);
+    assert.match(privacyHtml, /Render in Singapore/);
+    assert.match(privacyHtml, /Neon in Sydney, Australia/);
+    assert.match(privacyHtml, /hello@informedministries\.app/);
+    assert.match(privacyHtml, /Posts you made in a group are removed/);
+    assert.doesNotMatch(privacyHtml, /remain visible to the group in anonymised form/);
+    assert.doesNotMatch(privacyHtml, /\[hosting provider\]/);
+    assert.doesNotMatch(privacyHtml, /\[postal or email address\]/);
+    assert.match(privacyHtml, /LiveKit/);
+    assert.match(privacyHtml, /YouTube/);
+    assert.match(privacyHtml, /OpenAI/);
+    assert.doesNotMatch(privacyHtml, /\[video provider\]/);
+    assert.doesNotMatch(privacyHtml, /\[AI provider\]/);
+    assert.doesNotMatch(privacyHtml, /\[analytics\/error provider\]/);
+    assert.doesNotMatch(privacyHtml, /Error and usage reporting/);
+    assert.match(deleteAccountHtml, /Delete your Informed Ministries account/);
+    assert.match(deleteAccountHtml, /hello@informedministries\.app/);
+    assert.match(deleteAccountHtml, /Profile/);
+    assert.match(deleteAccountHtml, /Settings/);
     assert.doesNotMatch(termsHtml, /Drafting notes for review/);
     assert.doesNotMatch(privacyHtml, /Drafting notes for review/);
   });

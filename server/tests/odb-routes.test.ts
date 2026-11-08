@@ -157,7 +157,7 @@ describe("ODB routes read only from odb_posts", () => {
     assert.match(refresh, /https:\/\/odb\.org\/wp-json\/wp\/v2\/posts/);
     assert.match(refresh, /ODB_FETCH_TIMEOUT_MS = 20_000/);
     assert.match(refresh, /ODB_BACKOFF_INTERVAL_MS/);
-    assert.match(refresh, /joseph@gracethroughfaith\.app/);
+    assert.match(refresh, /APP_CONTACT_EMAIL/);
     assert.match(refresh, /User-Agent/);
     assert.match(refresh, /initOdbRefresh/);
     assert.match(refresh, /refresh start/);

@@ -36,6 +36,7 @@ import { PathBSwitch } from "@/components/settings/PathBSwitch";
 import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage } from "@/lib/words-of-christ";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
+import { APP_CONTACT_EMAIL } from "@/constants/app";
 
 // Path B light sweep tokens
 const CORAL = "#E8604C";
@@ -85,6 +86,7 @@ export default function SettingsScreen() {
   const [showNarratorPicker, setShowNarratorPicker] = useState(false);
   const [narratorVoiceKey, setNarratorVoiceKey] = useState("ellen_white");
   const [resettingHistory, setResettingHistory] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     setCurrentLang(i18n.language || "en");
@@ -213,6 +215,29 @@ export default function SettingsScreen() {
       if (ok) logout();
     });
   }, [logout]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (deletingAccount) return;
+    const ok = await confirmWebSafe({
+      title: "Delete your account?",
+      message:
+        "This permanently deletes your Informed Ministries account and your personal data in the app, including notes, highlights, bookmarks, reading progress, and notification subscriptions. This cannot be undone.",
+      confirmLabel: "Delete account",
+      destructive: true,
+      testID: "settings-delete-account-confirm",
+    });
+    if (!ok) return;
+    setDeletingAccount(true);
+    try {
+      await apiRequest("POST", "/api/auth/delete-account");
+      await logout();
+      router.replace("/(auth)/login");
+    } catch {
+      showToast(`Could not delete your account. Try again or email ${APP_CONTACT_EMAIL}.`, "error");
+    } finally {
+      setDeletingAccount(false);
+    }
+  }, [deletingAccount, logout, router, showToast]);
 
   const handleResetHistory = useCallback(async () => {
     if (resettingHistory) return;
@@ -442,6 +467,25 @@ export default function SettingsScreen() {
             <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
               Sign Out
+            </Text>
+          </Pressable>
+        )}
+
+        {isAuthenticated && (
+          <Pressable
+            onPress={() => void handleDeleteAccount()}
+            disabled={deletingAccount}
+            style={({ pressed }) => [
+              s.signOutBtn,
+              { opacity: deletingAccount || pressed ? 0.76 : 1 },
+            ]}
+            testID="settings-delete-account"
+            accessibilityRole="button"
+            accessibilityLabel="Delete account"
+          >
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Text style={[s.signOutText, { fontFamily: "Inter_600SemiBold" }]}>
+              {deletingAccount ? "Deleting…" : "Delete account"}
             </Text>
           </Pressable>
         )}

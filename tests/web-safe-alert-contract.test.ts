@@ -46,6 +46,9 @@ describe("web-safe alerts", () => {
     assert.match(settings, /confirmWebSafe/);
     assert.match(settings, /testID:\s*"settings-reset-history-confirm"/);
     assert.match(settings, /testID:\s*"settings-sign-out-confirm"/);
+    assert.match(settings, /testID:\s*"settings-delete-account-confirm"/);
+    assert.match(settings, /testID="settings-delete-account"/);
+    assert.match(settings, /POST", "\/api\/auth\/delete-account"/);
     assert.match(settings, /DELETE", "\/api\/reading-history\/reset"/);
     assert.match(settings, /Reading history cleared/);
     assert.doesNotMatch(settings, /Alert\.alert|window\.confirm|window\.alert/);

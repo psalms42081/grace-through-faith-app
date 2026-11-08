@@ -24,6 +24,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { JWT_SECRET, requireAuth, getAuthUserId, getDeviceId, touchUserActivity } from "../middleware/auth";
 import { validate, authRegisterSchema, authLoginSchema } from "../middleware/validate";
 import { authLimiter } from "../middleware/rate-limit";
+import { deleteUserAccount } from "../services/delete-user-account";
 
 const router = Router();
 
@@ -152,7 +153,7 @@ router.post("/api/auth/login", authLimiter, validate(authLoginSchema), async (re
 
 router.post("/api/auth/delete-account", requireAuth, async (req, res) => {
   try {
-    await db.delete(users).where(eq(users.id, req.authUserId!));
+    await deleteUserAccount(req.authUserId!);
     return res.json({ success: true });
   } catch (err) {
     console.error("Delete account error:", err);

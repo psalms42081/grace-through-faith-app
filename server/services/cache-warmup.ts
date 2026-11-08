@@ -171,6 +171,7 @@ Return JSON array: [{"verseStart": number, "verseEnd": number, "label": "short d
   return true;
 }
 
+/** Keep in sync with SEARCH_CACHE_LENS_MARKER_HASH in ai-question-retention.ts. */
 const SDA_LENS_MARKER_HASH = "sda-lens-cache-version";
 
 /**

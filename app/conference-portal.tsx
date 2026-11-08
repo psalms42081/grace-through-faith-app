@@ -21,6 +21,7 @@ import { safeGoBack } from "@/lib/safe-back";
 import { useAuth } from "@/contexts/AuthContext";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { useToast } from "@/contexts/ToastContext";
+import { APP_CONTACT_EMAIL } from "@/constants/app";
 
 const GOLD = "#C9933A";
 const BG = "#050507";
@@ -271,7 +272,7 @@ export default function ConferencePortalScreen() {
     const body = encodeURIComponent(
       `Quote Request\n\nTier: ${activeTier.name}\nChurches: ${churchCount}\nBilling: ${billingCycle}\nTotal: $${calcSummary.total.toFixed(2)}/${billingCycle === "monthly" ? "mo" : "yr"}\n\nPlease send me a formal quote.`
     );
-    Linking.openURL(`mailto:joseph@gracethroughfaith.app?subject=${subject}&body=${body}`);
+    Linking.openURL(`mailto:${APP_CONTACT_EMAIL}?subject=${subject}&body=${body}`);
   }
 
   return (
@@ -623,7 +624,7 @@ export default function ConferencePortalScreen() {
 
         <Pressable
           onPress={() => {
-            Linking.openURL("mailto:joseph@gracethroughfaith.app?subject=GTF Conference Licensing Enquiry");
+            Linking.openURL(`mailto:${APP_CONTACT_EMAIL}?subject=GTF Conference Licensing Enquiry`);
           }}
           style={styles.contactSalesBtn}
         >

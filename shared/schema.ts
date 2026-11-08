@@ -695,7 +695,7 @@ export const userPlanProgress = pgTable(
       .default(sql`gen_random_uuid()`),
     enrollmentId: varchar("enrollment_id")
       .notNull()
-      .references(() => userPlanEnrollments.id),
+      .references(() => userPlanEnrollments.id, { onDelete: "cascade" }),
     dayId: varchar("day_id")
       .notNull()
       .references(() => devotionalDays.id),
@@ -721,7 +721,7 @@ export const userNotes = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     verseId: varchar("verse_id")
       .notNull()
       .references(() => bibleVerses.id),
@@ -743,7 +743,7 @@ export const userHighlights = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     verseId: varchar("verse_id")
       .notNull()
       .references(() => bibleVerses.id),
@@ -770,7 +770,7 @@ export const userBookmarks = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: varchar("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     verseId: varchar("verse_id")
       .notNull()
       .references(() => bibleVerses.id),

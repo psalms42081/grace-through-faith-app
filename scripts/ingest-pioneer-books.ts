@@ -16,11 +16,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Client } from "pg";
+import { APP_CONTACT_EMAIL } from "../constants/app";
 
 const SOURCE_DIR = path.resolve(process.cwd(), "server/data/pioneer-source");
 const MANIFEST_PATH = path.join(SOURCE_DIR, "manifest.json");
 const UA =
-  "GraceThroughFaith/1.0 (joseph@gracethroughfaith.app; +https://informedministries.app)";
+  `InformedMinistries/1.0 (${APP_CONTACT_EMAIL}; +https://informedministries.app)`;
 
 const SKIP_TITLE =
   /^(contents|table of contents|copyright|title page|cover|titlepage|nav|information about this book|illustrations|index(\s+of\b.*)?)$/i;

@@ -256,6 +256,13 @@ function configureExpoAndLanding(app: express.Application) {
     res.status(200).send(termsHtml);
   });
 
+  const deleteAccountPath = path.resolve(process.cwd(), "server", "templates", "delete-account.html");
+  const deleteAccountHtml = fs.readFileSync(deleteAccountPath, "utf-8");
+  app.get("/delete-account", (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.status(200).send(deleteAccountHtml);
+  });
+
   const robotsTxt = fs.readFileSync(path.resolve(process.cwd(), "server", "templates", "robots.txt"), "utf-8");
   app.get("/robots.txt", (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -357,7 +364,14 @@ function configureExpoAndLanding(app: express.Application) {
     }));
 
     app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api") || req.path === "/manifest.json" || req.path === "/sw.js") {
+      if (
+        req.path.startsWith("/api") ||
+        req.path === "/manifest.json" ||
+        req.path === "/sw.js" ||
+        req.path === "/privacy" ||
+        req.path === "/terms" ||
+        req.path === "/delete-account"
+      ) {
         return next();
       }
       if (req.path === "/service-worker.js") {
@@ -473,7 +487,15 @@ function setupErrorHandler(app: express.Application) {
     });
 
     app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api") || req.path === "/__health" || req.path === "/robots.txt" || req.path === "/sitemap.xml") {
+      if (
+        req.path.startsWith("/api") ||
+        req.path === "/__health" ||
+        req.path === "/robots.txt" ||
+        req.path === "/sitemap.xml" ||
+        req.path === "/privacy" ||
+        req.path === "/terms" ||
+        req.path === "/delete-account"
+      ) {
         return next();
       }
       return metroProxy(req, res, next);
@@ -570,6 +592,12 @@ function setupErrorHandler(app: express.Application) {
           .then(({ startDailyVersePushScheduler }) => startDailyVersePushScheduler())
           .catch((err) => console.error("[push] scheduler failed to start:", err));
       }, 15000);
+
+      setTimeout(() => {
+        void import("./services/ai-question-retention")
+          .then(({ startAiQuestionRetentionScheduler }) => startAiQuestionRetentionScheduler())
+          .catch((err) => console.error("[ai-retention] scheduler failed to start:", err));
+      }, 20000);
 
       const FOUR_HOURS = 4 * 60 * 60 * 1000;
       setTimeout(async () => {

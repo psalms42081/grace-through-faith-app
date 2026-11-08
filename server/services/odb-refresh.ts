@@ -7,6 +7,7 @@ import {
   type OdbRssItem,
 } from "../odb-map";
 import { odbDateKeyFromTimeZone } from "../odb-select";
+import { APP_CONTACT_EMAIL } from "../../constants/app";
 
 export const ODB_FEED_URL = "https://odb.org/feed/";
 export const ODB_WP_POSTS_URL = "https://odb.org/wp-json/wp/v2/posts";
@@ -15,7 +16,7 @@ export const ODB_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 export const ODB_BACKOFF_INTERVAL_MS = 60 * 60 * 1000;
 export const ODB_FAILURES_BEFORE_BACKOFF = 2;
 export const ODB_JITTER_MS = 30_000;
-export const ODB_CONTACT_EMAIL = "joseph@gracethroughfaith.app";
+export const ODB_CONTACT_EMAIL = APP_CONTACT_EMAIL;
 export const ODB_USER_AGENT =
   `Informed Ministries (https://informedministries.app; ${ODB_CONTACT_EMAIL})`;
 
