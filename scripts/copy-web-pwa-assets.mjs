@@ -13,12 +13,11 @@ const manifestTo = resolve(distDir, "manifest.json");
 await access(indexPath);
 
 const indexHtml = await readFile(indexPath, "utf8");
-const buildId = createHash("sha256").update(indexHtml).digest("hex").slice(0, 12);
-
 let swSource = await readFile(swSourcePath, "utf8");
 if (!swSource.includes("__SW_BUILD_ID__")) {
   throw new Error("public/sw.js is missing the __SW_BUILD_ID__ placeholder");
 }
+const buildId = createHash("sha256").update(indexHtml).update(swSource).digest("hex").slice(0, 12);
 swSource = swSource.replaceAll("__SW_BUILD_ID__", buildId);
 await writeFile(swDestPath, swSource, "utf8");
 

@@ -12,6 +12,13 @@ self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
 
+async function precacheIndex() {
+  const fresh = await fetch(new Request("/index.html", { cache: "no-store" }));
+  if (!fresh.ok) return;
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put("/index.html", fresh.clone());
+}
+
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
@@ -19,6 +26,11 @@ self.addEventListener("activate", (event) => {
       await Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
       );
+      try {
+        await precacheIndex();
+      } catch {
+        /* offline */
+      }
       await self.clients.claim();
       const windows = await self.clients.matchAll({ type: "window" });
       for (const client of windows) {
@@ -32,10 +44,37 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
+  if (event.data && event.data.type === "GET_BUILD_ID" && event.source) {
+    event.source.postMessage({ type: "SW_BUILD_ID", buildId: BUILD_ID });
+  }
 });
 
 function isApiPath(pathname) {
   return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+function documentRequest(request) {
+  try {
+    return new Request(request.url, {
+      method: "GET",
+      credentials: request.credentials,
+      cache: "no-store",
+      redirect: "follow",
+    });
+  } catch {
+    return request;
+  }
+}
+
+function noStoreResponse(response) {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "no-store");
+  headers.set("Pragma", "no-cache");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 async function fetchIndexDocument() {
@@ -45,22 +84,22 @@ async function fetchIndexDocument() {
     const cache = await caches.open(CACHE_NAME);
     await cache.put("/index.html", fresh.clone());
   }
-  return fresh;
+  return noStoreResponse(fresh);
 }
 
 async function networkFirstDocument(request) {
   try {
-    const fresh = await fetch(request, { cache: "no-store" });
+    const fresh = await fetch(documentRequest(request));
     if (fresh.ok) {
       const cache = await caches.open(CACHE_NAME);
       await cache.put("/index.html", fresh.clone());
-      return fresh;
+      return noStoreResponse(fresh);
     }
     // Static hosts 404 client routes; serve the app shell instead.
     if (fresh.status === 404) {
       return fetchIndexDocument();
     }
-    return fresh;
+    return noStoreResponse(fresh);
   } catch {
     try {
       return await fetchIndexDocument();

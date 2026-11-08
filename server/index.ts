@@ -277,10 +277,15 @@ function configureExpoAndLanding(app: express.Application) {
   const distIndexPath = path.resolve(process.cwd(), "dist", "index.html");
   if (fs.existsSync(publicSwPath) && fs.existsSync(distIndexPath)) {
     // The build id must change with every deploy or returning browsers never install a new worker.
-    const buildId = createHash("sha256").update(fs.readFileSync(distIndexPath, "utf8")).digest("hex").slice(0, 12);
+    const swSource = fs.readFileSync(publicSwPath, "utf8");
+    const buildId = createHash("sha256")
+      .update(fs.readFileSync(distIndexPath, "utf8"))
+      .update(swSource)
+      .digest("hex")
+      .slice(0, 12);
     fs.writeFileSync(
       distSwPath,
-      fs.readFileSync(publicSwPath, "utf8").replaceAll("__SW_BUILD_ID__", buildId),
+      swSource.replaceAll("__SW_BUILD_ID__", buildId),
       "utf8",
     );
   }
@@ -339,13 +344,13 @@ function configureExpoAndLanding(app: express.Application) {
       maxAge: "1h",
       index: false,
       setHeaders(res, filePath) {
-        if (filePath.endsWith(".html")) {
+        if (filePath.endsWith(".html") || filePath.endsWith(`${path.sep}sw.js`) || filePath.endsWith("/sw.js")) {
           res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
           res.setHeader("Pragma", "no-cache");
           res.setHeader("Expires", "0");
           return;
         }
-        if (/\.[a-f0-9]{8,}\.(js|css)$/i.test(filePath)) {
+        if (/(?:[.-])[a-f0-9]{8,}\.(js|css)$/i.test(filePath)) {
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         }
       },

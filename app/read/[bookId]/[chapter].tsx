@@ -63,6 +63,13 @@ import {
   useHardwareBackToHomeWhenAtStackRoot,
 } from "@/lib/use-hardware-back-to-home";
 import {
+  READER_FLOATING_CHROME_HEIGHT,
+  floatingChromeHiddenAfterScroll,
+  readerChromeBottom,
+  readerScrollBottomPad as readingScrollPad,
+  readerTabBarClearance,
+} from "@/lib/reader-floating-chrome";
+import {
   buildHighlightSheetPayload,
   formatVerseRangeLabel,
   highlightIdsForVerses,
@@ -142,10 +149,6 @@ const READER_TOGGLE_ON_INK = "#C24431";
 const READER_TOGGLE_ON_TINT = "#FBE9E4";
 /** Internal one-release rollback. Default off = new typography + floating chrome. */
 const READER_LEGACY_VERSE_BLOCKS = false;
-/** `reader-floating-chrome`: paddingTop 8 + listenBtn 36 + extra paddingBottom 8. */
-const READER_FLOATING_CHROME_HEIGHT = 8 + 36 + 8;
-/** Space below last verse so text does not sit under the play button. */
-const READER_SCROLL_END_AIR = 80;
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SPLIT_MODE_KEY = "@grace-through-faith/split-mode";
 const SPLIT_TRANSLATION_KEY = "@grace-through-faith/split-translation";
@@ -943,12 +946,19 @@ export default function VerseReaderScreen() {
   }, [stripAnim]);
 
   const handleReaderScroll = useCallback((event: any) => {
-    const y = event.nativeEvent.contentOffset.y;
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    const y = contentOffset.y;
     const dy = y - lastScrollY.current;
     lastScrollY.current = y;
-    if (y < 40) { setStripHidden(false); return; }
-    if (dy > 6) setStripHidden(true);
-    else if (dy < -6) setStripHidden(false);
+    setStripHidden(
+      floatingChromeHiddenAfterScroll({
+        y,
+        dy,
+        viewportHeight: layoutMeasurement?.height ?? 0,
+        contentHeight: contentSize?.height ?? 0,
+        currentlyHidden: stripHiddenRef.current,
+      }),
+    );
   }, [setStripHidden]);
 
   const onPreviewChromeTouchStart = useCallback((event: any) => {
@@ -1362,13 +1372,20 @@ export default function VerseReaderScreen() {
     }
   }, [chapterNum, canGoNext, audioHandleStop, readerRoute]);
 
-  const tabBarClearance = isTabReader ? (Platform.OS === "web" ? 84 : 64) : 0;
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) + tabBarClearance;
-  const readerScrollBottomPad =
-    (sheetOpen && !wordStudyMode ? VERSE_SHEET_COLLAPSED_HEIGHT : READER_FLOATING_CHROME_HEIGHT) +
-    READER_SCROLL_END_AIR +
-    bottomPad;
+  const tabBarClearance = readerTabBarClearance(
+    isTabReader || Platform.OS === "web",
+    undefined,
+    Platform.OS,
+  );
+  const safeBottom = Platform.OS === "web" ? (tabBarClearance > 0 ? 0 : 34) : insets.bottom;
+  const bottomPad = safeBottom + tabBarClearance;
+  const chromeBottom = readerChromeBottom(tabBarClearance);
+  const readerScrollBottomPad = readingScrollPad({
+    tabBarHeight: tabBarClearance,
+    safeBottom,
+    fontScale,
+    chromeHeight: sheetOpen && !wordStudyMode ? VERSE_SHEET_COLLAPSED_HEIGHT : READER_FLOATING_CHROME_HEIGHT,
+  });
 
   const handleVerseTap = useCallback((item: Verse) => {
     if (wordStudyMode) return;
@@ -1392,8 +1409,9 @@ export default function VerseReaderScreen() {
 
   const handleReaderBackgroundPress = useCallback(() => {
     if (Date.now() - verseInteractedAt.current < 250) return;
+    if (useNewTypography) setStripHidden(false);
     dismissToolbar();
-  }, [dismissToolbar]);
+  }, [dismissToolbar, useNewTypography, setStripHidden]);
 
   // A.3 strip actions
   const [stripToast, setStripToast] = useState<string | null>(null);
@@ -2321,7 +2339,8 @@ export default function VerseReaderScreen() {
                     styles.previewFloatingRow,
                     splitMode && isSideBySide && styles.previewFloatingRowPrimary,
                     {
-                      paddingBottom: bottomPad + 8,
+                      bottom: chromeBottom,
+                      paddingBottom: 8,
                       opacity: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
                       transform: [{ translateY: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 72] }) }],
                     },

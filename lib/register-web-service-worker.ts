@@ -1,30 +1,46 @@
 /** Web-only: register the app-shell service worker at /sw.js. */
-const RELOAD_FLAG = "im-pwa-sw-reloaded";
+import {
+  entryScriptFromHtml,
+  markReloaded,
+  shellNeedsReload,
+  shouldReloadNow,
+} from "@/lib/pwa-update";
 
-function consumeReloadFlag(): void {
+function sessionStore(): Storage | null {
   try {
-    if (sessionStorage.getItem(RELOAD_FLAG) === "1") {
-      window.setTimeout(() => {
-        try {
-          sessionStorage.removeItem(RELOAD_FLAG);
-        } catch {
-          /* ignore quota / private-mode */
-        }
-      }, 2000);
-    }
+    return window.sessionStorage;
   } catch {
-    /* ignore */
+    return null;
   }
 }
 
-function reloadOnce(): void {
+function reloadOnce(token: string): void {
+  const store = sessionStore();
+  if (store && !shouldReloadNow((key) => store.getItem(key), token)) return;
   try {
-    if (sessionStorage.getItem(RELOAD_FLAG) === "1") return;
-    sessionStorage.setItem(RELOAD_FLAG, "1");
+    if (store) markReloaded((key, value) => store.setItem(key, value), token);
   } catch {
     /* still reload if storage is unavailable */
   }
   window.location.reload();
+}
+
+function pageEntryScript(): string | null {
+  const el = document.querySelector('script[src*="_expo/static/js/web/entry-"]');
+  return el?.getAttribute("src") ?? null;
+}
+
+async function ensureFreshShell(): Promise<void> {
+  try {
+    const res = await fetch("/index.html", { cache: "no-store" });
+    if (!res.ok) return;
+    const html = await res.text();
+    if (!shellNeedsReload(pageEntryScript(), html)) return;
+    const token = entryScriptFromHtml(html) || "html";
+    reloadOnce(token);
+  } catch {
+    /* offline */
+  }
 }
 
 function watchForWaitingWorker(registration: ServiceWorkerRegistration): void {
@@ -55,19 +71,22 @@ async function checkForUpdates(registration: ServiceWorkerRegistration): Promise
   }
 }
 
+function onAppVisible(registration: ServiceWorkerRegistration): void {
+  void checkForUpdates(registration);
+  void ensureFreshShell();
+}
+
 export function registerWebServiceWorker(): void {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
 
-  consumeReloadFlag();
-
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    reloadOnce();
+    reloadOnce("controller");
   });
 
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data && event.data.type === "SW_UPDATED") {
-      reloadOnce();
+      reloadOnce(typeof event.data.buildId === "string" ? event.data.buildId : "sw");
     }
     if (
       event.data &&
@@ -84,24 +103,20 @@ export function registerWebServiceWorker(): void {
       .register("/sw.js", { updateViaCache: "none" })
       .then((registration) => {
         watchForWaitingWorker(registration);
-        void checkForUpdates(registration);
+        onAppVisible(registration);
 
-        const onVisible = () => {
-          if (document.visibilityState === "visible") {
-            void checkForUpdates(registration);
-          }
-        };
-        window.addEventListener("focus", () => {
-          void checkForUpdates(registration);
+        window.addEventListener("focus", () => onAppVisible(registration));
+        window.addEventListener("pageshow", () => onAppVisible(registration));
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") onAppVisible(registration);
         });
-        document.addEventListener("visibilitychange", onVisible);
       })
       .catch(() => {});
   };
 
-  if (document.readyState === "complete") {
-    register();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", register, { once: true });
     return;
   }
-  window.addEventListener("load", register, { once: true });
+  register();
 }

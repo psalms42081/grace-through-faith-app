@@ -243,8 +243,10 @@ describe("typography preview source contracts", () => {
     assert.match(reader, /delayLongPress=\{400\}/);
     assert.match(
       reader,
-      /READER_FLOATING_CHROME_HEIGHT\) \+\s*READER_SCROLL_END_AIR \+\s*bottomPad/,
+      /readingScrollPad\(\{[\s\S]*chromeHeight: sheetOpen && !wordStudyMode \? VERSE_SHEET_COLLAPSED_HEIGHT : READER_FLOATING_CHROME_HEIGHT/,
     );
+    assert.match(reader, /bottom: chromeBottom/);
+    assert.match(reader, /floatingChromeHiddenAfterScroll/);
     assert.match(reader, /testID="reader-floating-chrome"/);
   });
 
