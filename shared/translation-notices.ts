@@ -69,3 +69,23 @@ export function linkSegments(text: string, links: AttributionLink[] = []): TextS
   }
   return segments;
 }
+
+export function creditPublisherLink(attribution: {
+  publisherName?: string | null;
+  publisherUrl?: string | null;
+}): { name: string; url: string } | null {
+  const url = attribution.publisherUrl?.trim();
+  if (!url) return null;
+  const haystack = `${attribution.publisherName ?? ""} ${url}`;
+  if (/biblica/i.test(haystack)) return { name: "Biblica", url };
+  if (/lockman/i.test(haystack)) return { name: "The Lockman Foundation", url };
+  const name = attribution.publisherName?.trim();
+  return { name: name || "the publisher", url };
+}
+
+/** Short version tag for Lockman, which asks that the tag link to lockman.org when the full notice is folded away. */
+export function creditVersionTag(attribution: { versionName?: string | null }): string | null {
+  const name = attribution.versionName?.trim() ?? "";
+  const match = name.match(/\b(NASB\s*1995|NASB\s*2020|NASB1995|NASB2020|AMP|NIV)\b/i);
+  return match ? match[1].replace(/\s+/g, "") : null;
+}

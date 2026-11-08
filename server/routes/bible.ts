@@ -35,6 +35,7 @@ import {
   type ResolvedYouVersionChapter,
 } from "../services/youversion";
 import { isYouVersionCode } from "../../shared/youversion";
+import { stripAcrosticMarker } from "../../shared/acrostic-markers";
 import {
   localTranslationLicense,
   localTranslationNotice,
@@ -587,7 +588,12 @@ router.get("/api/search", async (req, res) => {
       "db",
       "local"
     );
-    return res.json({ results, total: totalCount, returned: results.length, ...meta });
+    return res.json({
+      results: results.map((row) => ({ ...row, text: stripAcrosticMarker(row.text) })),
+      total: totalCount,
+      returned: results.length,
+      ...meta,
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

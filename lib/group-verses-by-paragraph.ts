@@ -4,6 +4,8 @@
  * original identity used by audio and highlights.
  */
 
+import { extractAcrosticHeadings } from "../shared/acrostic-markers";
+
 export function groupVersesByParagraphStarts<T extends { verse: number }>(
   verses: T[],
   paragraphStarts: Set<number>,
@@ -25,6 +27,39 @@ export function groupVersesByParagraphStarts<T extends { verse: number }>(
 
 /** Reader heading; `qa` is the USFM acrostic letter (Psalm 119, Lamentations). */
 export type ReaderHeading = { text: string; kind?: "qa" };
+
+export type ProviderHeadingLike = { text: string; beforeVerse?: number; kind?: "qa" };
+
+export function headingsByVerse(headings: ProviderHeadingLike[] | undefined): Map<number, ReaderHeading[]> {
+  const byVerse = new Map<number, ReaderHeading[]>();
+  for (const heading of headings ?? []) {
+    if (heading.beforeVerse && heading.text) {
+      byVerse.set(heading.beforeVerse, [
+        ...(byVerse.get(heading.beforeVerse) ?? []),
+        { text: heading.text, kind: heading.kind },
+      ]);
+    }
+  }
+  return byVerse;
+}
+
+/**
+ * Lift leftover BBE-style `&lt;ALEPH&gt;` markers into qa headings when the API
+ * response still has them in the verse text (older servers, or Compare).
+ */
+export function withAcrosticHeadings<T extends { verse: number; text: string }>(
+  verses: T[],
+  providerHeadings?: ProviderHeadingLike[],
+): { verses: T[]; headingsByVerse: Map<number, ReaderHeading[]> } {
+  const extracted = extractAcrosticHeadings(verses);
+  if (!extracted.headings.length) {
+    return { verses, headingsByVerse: headingsByVerse(providerHeadings) };
+  }
+  return {
+    verses: extracted.verses,
+    headingsByVerse: headingsByVerse([...(providerHeadings ?? []), ...extracted.headings]),
+  };
+}
 
 /** Break a paragraph run when a later verse has provider headings (block-level). */
 export function splitParagraphGroupAtHeadings<T extends { verse: number }, H = string>(

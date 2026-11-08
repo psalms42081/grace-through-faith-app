@@ -10,6 +10,10 @@ import {
   NET_COPYRIGHT_NOTICE,
 } from "../shared/translation-notices";
 import { withQuotationNotice } from "../lib/verse-selection";
+import { quotedVerseText } from "../lib/quoted-verse";
+import { extractAcrosticHeadings } from "../shared/acrostic-markers";
+import { withAcrosticHeadings } from "../lib/group-verses-by-paragraph";
+import { creditPublisherLink, creditVersionTag } from "../shared/translation-notices";
 import { READER_HEADER_LEFT_ALLOWANCE, READER_HEADER_TITLE_GAP, readerHeaderTitleMaxWidth } from "../lib/reader-header-layout";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -157,5 +161,86 @@ describe("reader header", () => {
     assert.match(reader, /testID="reader-header-chips"\s+onLayout=/);
     assert.match(reader, /styles\.headerTitleText[^>]*numberOfLines=\{1\} ellipsizeMode="tail"/);
     assert.match(reader, /maxWidth: READER_VERSION_CHIP_MAX_WIDTH/);
+  });
+});
+
+describe("quoted verse of the day", () => {
+  it("adds a closing mark only when the version did not already end with one", () => {
+    assert.equal(quotedVerseText("Be strong and courageous."), "\u201CBe strong and courageous.\u201D");
+    assert.equal(
+      quotedVerseText("Have I not commanded you? Be strong and courageous.\u201D"),
+      "\u201CHave I not commanded you? Be strong and courageous.\u201D",
+    );
+    assert.equal(quotedVerseText("\u201CAlready wrapped.\u201D"), "\u201CAlready wrapped.\u201D");
+    assert.equal(quotedVerseText('Straight quotes."'), "\u201CStraight quotes.\"");
+  });
+
+  it("Home uses the helper for the card and for share", () => {
+    assert.match(read("components/home-v2/HeroCard.tsx"), /quotedVerseText\(verse\.text\)/);
+    assert.match(read("components/home-v2/hero-share.ts"), /quotedVerseText\(input\.verse\.text\)/);
+  });
+});
+
+describe("BBE acrostic letter markers", () => {
+  it("lifts HTML-escaped Psalm 119 markers into qa headings", () => {
+    const parsed = extractAcrosticHeadings([
+      { verse: 1, text: "&lt;ALEPH&gt; Happy are they who are without sin in their ways." },
+      { verse: 2, text: "Happy are they who keep his unchanging word." },
+      { verse: 9, text: "<BETH> How may a young man make his way clean?" },
+    ]);
+    assert.deepEqual(
+      parsed.verses.map((v) => v.text),
+      [
+        "Happy are they who are without sin in their ways.",
+        "Happy are they who keep his unchanging word.",
+        "How may a young man make his way clean?",
+      ],
+    );
+    assert.deepEqual(parsed.headings, [
+      { text: "Aleph", beforeVerse: 1, kind: "qa" },
+      { text: "Beth", beforeVerse: 9, kind: "qa" },
+    ]);
+  });
+
+  it("is idempotent when the API has already lifted the markers", () => {
+    const again = withAcrosticHeadings(
+      [{ verse: 1, text: "Happy are they who are without sin in their ways." }],
+      [{ text: "Aleph", beforeVerse: 1, kind: "qa" }],
+    );
+    assert.equal(again.verses[0].text, "Happy are they who are without sin in their ways.");
+    assert.deepEqual(again.headingsByVerse.get(1), [{ text: "Aleph", kind: "qa" }]);
+  });
+
+  it("Compare renders the letter headings for the companion translation", () => {
+    const reader = read("app/read/[bookId]/[chapter].tsx");
+    assert.match(reader, /withAcrosticHeadings\(splitLoadFailed/);
+    assert.match(reader, /splitHeadings\.get\(v\.verse\)/);
+  });
+});
+
+describe("compact Home credit", () => {
+  it("keeps Biblica and Lockman on the compact line with their required names", () => {
+    assert.deepEqual(
+      creditPublisherLink({ publisherName: "Biblica, Inc.", publisherUrl: "https://www.biblica.com" }),
+      { name: "Biblica", url: "https://www.biblica.com" },
+    );
+    assert.deepEqual(
+      creditPublisherLink({ publisherName: null, publisherUrl: "https://www.lockman.org" }),
+      { name: "The Lockman Foundation", url: "https://www.lockman.org" },
+    );
+    assert.equal(
+      creditVersionTag({ versionName: "New American Standard Bible - NASB 1995" }),
+      "NASB1995",
+    );
+  });
+
+  it("opens the full notice from Copyright and does not drop the wording", () => {
+    const credit = read("components/reader/ChapterAttribution.tsx");
+    assert.match(credit, /accessibilityLabel="Show copyright notice"/);
+    assert.match(credit, />\s*Copyright\s*</);
+    assert.match(credit, /testID=\{testID \? `\$\{testID\}-full` : undefined\}/);
+    assert.match(credit, /<CreditNoticeBody attribution=\{attribution\} \/>/);
+    assert.match(credit, /attribution\.notice/);
+    assert.match(read("components/home-v2/HeroCard.tsx"), /<ScriptureCredit attribution=\{verseAttribution\}/);
   });
 });

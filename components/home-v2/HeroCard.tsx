@@ -12,6 +12,7 @@ import {
   dayOfYear,
   type HomeDaypart,
 } from "./home-data";
+import { quotedVerseText } from "@/lib/quoted-verse";
 import { buildHeroShareMessage, type HeroTab } from "./hero-share";
 import {
   HERO_ART_ASPECT,
@@ -180,7 +181,7 @@ export default function HeroCard({
               : "This verse is currently unavailable. Open your Bible to read it."}
           </Text>
         ) : verse.text ? (
-          <Text style={s.verseQuote}>{`\u201C${verse.text}\u201D`}</Text>
+          <Text style={s.verseQuote}>{quotedVerseText(verse.text)}</Text>
         ) : null}
         <Text style={s.cite}>{verse.reference}{versionLabel ? ` · ${versionLabel}` : ""}</Text>
       </>

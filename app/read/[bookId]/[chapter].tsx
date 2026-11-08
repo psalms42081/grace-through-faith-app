@@ -40,7 +40,7 @@ import { translationLabel, type CatalogTranslation } from "@/lib/translation-cat
 import { READER_VERSION_CHIP_MAX_WIDTH, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
-import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
+import { withAcrosticHeadings } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
 import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage, wordsOfChristRanges } from "@/lib/words-of-christ";
@@ -833,7 +833,12 @@ export default function VerseReaderScreen() {
   const translationDisplay = translationLabel(translation, availableTranslations);
   const splitTranslationLabel = translationLabel(splitTranslation, availableTranslations);
   const splitLoadFailed = !!splitError || splitUnavailable;
-  const splitVerses = splitLoadFailed ? [] : (splitData?.verses ?? []);
+  const splitAcrostic = useMemo(
+    () => withAcrosticHeadings(splitLoadFailed ? [] : (splitData?.verses ?? []), splitData?.providerContent?.headings),
+    [splitLoadFailed, splitData?.verses, splitData?.providerContent?.headings],
+  );
+  const splitVerses = splitAcrostic.verses;
+  const splitHeadings = splitAcrostic.headingsByVerse;
   const splitVerseByNum = useMemo(
     () => new Map(splitVerses.map((v) => [v.verse, v])),
     [splitVerses],
@@ -1055,7 +1060,11 @@ export default function VerseReaderScreen() {
   const canGoPrev = chapterNum > 1;
   const canGoNext = chapterNum < totalChapters;
 
-  const verses = useMemo(() => data?.verses ?? [], [data?.verses]);
+  const primaryAcrostic = useMemo(
+    () => withAcrosticHeadings(data?.verses ?? [], data?.providerContent?.headings),
+    [data?.verses, data?.providerContent?.headings],
+  );
+  const verses = primaryAcrostic.verses;
   const wordRanges = useMemo((): VerseWordRangeHighlight[] => {
     const rows: VerseWordRangeHighlight[] = [];
     const seen = new Set<string>();
@@ -1201,18 +1210,7 @@ export default function VerseReaderScreen() {
   }, [selectedVerseNums.join(",")]);
   // Do not infer headings from KJV verse text. These maps are populated only
   // when the provider explicitly returned its own chapter structure.
-  const providerHeadings = useMemo(() => {
-    const byVerse = new Map<number, ReaderHeading[]>();
-    for (const heading of data?.providerContent?.headings ?? []) {
-      if (heading.beforeVerse && heading.text) {
-        byVerse.set(heading.beforeVerse, [
-          ...(byVerse.get(heading.beforeVerse) ?? []),
-          { text: heading.text, kind: heading.kind },
-        ]);
-      }
-    }
-    return byVerse;
-  }, [data?.providerContent?.headings]);
+  const providerHeadings = primaryAcrostic.headingsByVerse;
   const providerParagraphStarts = useMemo(
     () => new Set((data?.providerContent?.paragraphs ?? []).map((paragraph) => paragraph.verseStart)),
     [data?.providerContent?.paragraphs]
@@ -2001,6 +1999,19 @@ export default function VerseReaderScreen() {
                     </Pressable>
                     {stackedSplit && splitVerseByNum.get(v.verse) ? (
                       <View style={styles.stackedCompanion} testID={`split-stacked-verse-${v.verse}`}>
+                        {(splitHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
+                          <Text
+                            key={`${v.id}-split-heading-${headingIndex}`}
+                            style={[
+                              styles.providerHeading,
+                              heading.kind === "qa" && styles.providerHeadingQa,
+                              styles.stackedCompanionHeading,
+                            ]}
+                            accessibilityRole="header"
+                          >
+                            {heading.text}
+                          </Text>
+                        ))}
                         <Text style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
                           <Text style={styles.stackedCompanionLabel}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
                           <VerseSpokenText
@@ -2105,7 +2116,21 @@ export default function VerseReaderScreen() {
                       </View>
                     ) : (
                       splitVerses.map((v) => (
-                        <View key={v.id} style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
+                        <View key={v.id}>
+                          {(splitHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
+                            <Text
+                              key={`${v.id}-heading-${headingIndex}`}
+                              style={[
+                                styles.providerHeading,
+                                heading.kind === "qa" && styles.providerHeadingQa,
+                                { color: textColor },
+                              ]}
+                              accessibilityRole="header"
+                            >
+                              {heading.text}
+                            </Text>
+                          ))}
+                          <View style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
                           <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
                             <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
                               {v.verse}{"\u00a0"}
@@ -2119,6 +2144,7 @@ export default function VerseReaderScreen() {
                               }
                             />
                           </Text>
+                          </View>
                         </View>
                       ))
                     )}
@@ -2692,6 +2718,13 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingBottom: 10,
     marginTop: -4,
+  },
+  stackedCompanionHeading: {
+    marginTop: 8,
+    marginBottom: 2,
+    fontSize: 13,
+    lineHeight: 18,
+    color: RV2_INK_MUTED,
   },
   stackedCompanionText: {
     fontFamily: "Lora_400Regular",

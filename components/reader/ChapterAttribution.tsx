@@ -1,6 +1,11 @@
-import React from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
-import { linkSegments, type AttributionLink } from "@/shared/translation-notices";
+import React, { useState } from "react";
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  creditPublisherLink,
+  creditVersionTag,
+  linkSegments,
+  type AttributionLink,
+} from "@/shared/translation-notices";
 
 export type { AttributionLink };
 
@@ -56,13 +61,12 @@ function showsPublisherLink(attribution: ChapterAttributionData, lines: string[]
   return !!publisherUrl && !lines.some((line) => line.toLowerCase().includes(publisherUrl));
 }
 
-/** The required copyright line and publisher link under Scripture shown outside the reader. */
-export function ScriptureCredit({ attribution, testID }: { attribution: ChapterAttributionData; testID?: string }) {
+function CreditNoticeBody({ attribution }: { attribution: ChapterAttributionData }) {
   const copyright = stripWrappingQuotes(attribution.text);
   const notice = attribution.notice?.trim();
   const textStyle = styles.credit;
   return (
-    <View style={styles.creditWrap} testID={testID}>
+    <>
       <Text style={textStyle}>
         <LinkedText text={copyright} links={attribution.links} />
       </Text>
@@ -71,11 +75,65 @@ export function ScriptureCredit({ attribution, testID }: { attribution: ChapterA
           <LinkedText text={notice} />
         </Text>
       ) : null}
+      {attribution.info ? <Text style={textStyle}>{attribution.info}</Text> : null}
       {showsPublisherLink(attribution, [copyright, notice ?? ""]) ? (
         <Text style={[textStyle, styles.link]} onPress={() => openUrl(attribution.publisherUrl as string)} accessibilityRole="link">
           Learn more from {attribution.publisherName || "the publisher"}
         </Text>
       ) : null}
+    </>
+  );
+}
+
+/** Compact copyright line; the full required wording opens from Copyright. */
+export function ScriptureCredit({ attribution, testID }: { attribution: ChapterAttributionData; testID?: string }) {
+  const [open, setOpen] = useState(false);
+  const publisher = creditPublisherLink(attribution);
+  const versionTag = publisher?.name === "The Lockman Foundation" ? creditVersionTag(attribution) : null;
+  return (
+    <View style={styles.creditWrap} testID={testID}>
+      <Text style={styles.credit}>
+        {versionTag && publisher ? (
+          <>
+            <Text style={styles.link} onPress={() => openUrl(publisher.url)} accessibilityRole="link">
+              {versionTag}
+            </Text>
+            {" · "}
+          </>
+        ) : null}
+        <Text
+          style={styles.link}
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Show copyright notice"
+        >
+          Copyright
+        </Text>
+        {publisher ? (
+          <>
+            {" · "}
+            <Text style={styles.link} onPress={() => openUrl(publisher.url)} accessibilityRole="link">
+              {publisher.name}
+            </Text>
+          </>
+        ) : null}
+      </Text>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.creditModalRoot}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} accessibilityLabel="Close copyright notice" />
+          <View style={styles.creditSheet} testID={testID ? `${testID}-full` : undefined}>
+            <Text style={styles.creditSheetTitle} accessibilityRole="header">
+              Copyright
+            </Text>
+            <ScrollView style={styles.creditSheetScroll} keyboardShouldPersistTaps="handled">
+              <CreditNoticeBody attribution={attribution} />
+            </ScrollView>
+            <Text style={[styles.credit, styles.link]} onPress={() => setOpen(false)} accessibilityRole="button">
+              Close
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -158,5 +216,29 @@ const styles = StyleSheet.create({
   copyright: { fontSize: 12, lineHeight: 18, fontFamily: "Inter_400Regular", color: INK_MUTED },
   creditWrap: { gap: 4, marginTop: 8 },
   credit: { fontSize: 10.5, lineHeight: 15, fontFamily: "Inter_400Regular", color: INK_MUTED },
+  creditModalRoot: {
+    flex: 1,
+    backgroundColor: "rgba(31, 26, 18, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  creditSheet: {
+    width: "100%",
+    maxWidth: 420,
+    maxHeight: "80%",
+    backgroundColor: "#FBF7F0",
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+  },
+  creditSheetTitle: {
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    fontFamily: "Inter_600SemiBold",
+    color: INK_MUTED,
+  },
+  creditSheetScroll: { flexGrow: 0 },
   link: { color: LINK, textDecorationLine: "underline" },
 });

@@ -13,6 +13,7 @@ import { bibleBooks, bibleVerses, bibleTranslations } from "../../shared/schema"
 import { eq, and, ilike } from "drizzle-orm";
 import { withKjvProviderContent, KJV_STRUCTURE_VERSION } from "./kjv-structure";
 import { aiScriptureTranslation } from "../../shared/youversion";
+import { extractAcrosticHeadings } from "../../shared/acrostic-markers";
 
 // ─── Book maps ────────────────────────────────────────────────────────────────
 
@@ -1520,10 +1521,12 @@ export async function resolveChapter(params: ResolveChapterParams): Promise<Reso
     };
   }
 
+  const acrostic = extractAcrosticHeadings(verses);
   return {
     book: bookRecord,
     chapter: chapterNum,
-    verses,
+    verses: acrostic.verses,
+    ...(acrostic.headings.length ? { providerContent: { headings: acrostic.headings, paragraphs: [] } } : {}),
     cached: false,
     meta: {
       translation: translationRecord[0].abbreviation,

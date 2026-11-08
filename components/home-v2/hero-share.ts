@@ -1,6 +1,7 @@
 export type HeroTab = "verse" | "signpost" | "reflection";
 
 import { APP_SHARE_URL } from "@/constants/app";
+import { quotedVerseText } from "@/lib/quoted-verse";
 
 export const SIGNPOST_SHARE_ORIGIN = APP_SHARE_URL;
 
@@ -33,5 +34,5 @@ export function buildHeroShareMessage(input: {
     return parts.join("\n\n");
   }
 
-  return `\u201C${input.verse.text}\u201D\n\u2014 ${input.verse.reference}`;
+  return `${quotedVerseText(input.verse.text)}\n\u2014 ${input.verse.reference}`;
 }
