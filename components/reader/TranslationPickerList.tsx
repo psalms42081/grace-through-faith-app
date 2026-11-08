@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PathB } from "@/constants/colors";
@@ -59,6 +59,10 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
   }, []);
 
   const searching = query.trim().length > 0;
+  const listRef = useRef<FlatList<Row>>(null);
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [query]);
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     for (const group of filterTranslationGroups(groups, query)) {
@@ -142,6 +146,7 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
         />
       </View>
       <FlatList
+        ref={listRef}
         style={{ flexShrink: 1 }}
         data={rows}
         keyExtractor={(row) => row.key}

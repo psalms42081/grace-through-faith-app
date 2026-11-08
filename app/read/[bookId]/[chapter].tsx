@@ -42,6 +42,7 @@ import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
 import { withAcrosticHeadings } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
+import { comparisonTranslation } from "@/lib/compare-translation";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
 import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage, wordsOfChristRanges } from "@/lib/words-of-christ";
 import useBibleAudio from "@/hooks/useBibleAudio";
@@ -795,7 +796,9 @@ export default function VerseReaderScreen() {
   }, [setGlobalTranslation]);
 
   const [splitMode, setSplitMode] = useState(false);
-  const [splitTranslation, setSplitTranslation] = useState("ASV");
+  /** Device choice. Null until storage has been read, and when the device has never chosen. */
+  const [savedSplitTranslation, setSavedSplitTranslation] = useState<string | null>(null);
+  const splitTranslation = comparisonTranslation(translation, savedSplitTranslation);
   const [showSplitTranslationPicker, setShowSplitTranslationPicker] = useState(false);
   const splitScrollRef = useRef<ScrollView>(null);
   const isSyncingScroll = useRef(false);
@@ -805,16 +808,22 @@ export default function VerseReaderScreen() {
   const headerTitleMaxWidth = readerHeaderTitleMaxWidth(readerWidth, headerChipsWidth);
 
   useEffect(() => {
-    AsyncStorage.getItem(SPLIT_MODE_KEY).then((val) => {
-      if (val === "1") setSplitMode(true);
+    let cancelled = false;
+    Promise.all([
+      AsyncStorage.getItem(SPLIT_MODE_KEY),
+      AsyncStorage.getItem(SPLIT_TRANSLATION_KEY),
+    ]).then(([mode, saved]) => {
+      if (cancelled) return;
+      if (mode === "1") setSplitMode(true);
+      setSavedSplitTranslation(saved || null);
     });
-    AsyncStorage.getItem(SPLIT_TRANSLATION_KEY).then((val) => {
-      if (val) setSplitTranslation(val);
-    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSetSplitTranslation = useCallback((t: string) => {
-    setSplitTranslation(t);
+    setSavedSplitTranslation(t);
     AsyncStorage.setItem(SPLIT_TRANSLATION_KEY, t);
   }, []);
 
@@ -1868,6 +1877,7 @@ export default function VerseReaderScreen() {
 
             <View style={splitMode && isSideBySide ? styles.splitRow : { flex: 1 }}>
             <ScrollView
+              style={splitMode && isSideBySide ? styles.splitPanePrimary : undefined}
               ref={scrollViewRef}
               onScrollBeginDrag={() => {
                 audio.onUserScroll();
@@ -2218,6 +2228,7 @@ export default function VerseReaderScreen() {
                   testID="reader-floating-chrome"
                   style={[
                     styles.previewFloatingRow,
+                    splitMode && isSideBySide && styles.previewFloatingRowPrimary,
                     {
                       paddingBottom: bottomPad + 8,
                       opacity: stripAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
@@ -2679,9 +2690,15 @@ const styles = StyleSheet.create({
   splitRow: {
     flex: 1,
     flexDirection: "row" as const,
+    minWidth: 0,
+  },
+  splitPanePrimary: {
+    flex: 1,
+    minWidth: 0,
   },
   splitPaneSide: {
     flex: 1,
+    minWidth: 0,
     borderLeftWidth: 1,
   },
   compareBar: {
@@ -2818,6 +2835,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingTop: 8,
+  },
+  /** Side-by-side: keep play and the chapter pill in the reading column, clear of the gutter. */
+  previewFloatingRowPrimary: {
+    right: "50%",
   },
   bottomPillWrap: {
     position: "absolute",

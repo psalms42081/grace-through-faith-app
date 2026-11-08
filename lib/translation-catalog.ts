@@ -73,6 +73,20 @@ function translationSortLabel(entry: CatalogTranslation): string {
   return (entry.displayAbbreviation || entry.abbreviation).toLowerCase();
 }
 
+/**
+ * 0 exact abbreviation, 1 abbreviation prefix, 2 name, 3 language.
+ * Exact codes such as NET stay above a language that merely contains the letters.
+ */
+function translationSearchRank(entry: CatalogTranslation, needle: string, languageMatched: boolean): number | null {
+  const labels = [entry.abbreviation, entry.displayAbbreviation]
+    .map((value) => (value ?? "").trim().toLowerCase())
+    .filter(Boolean);
+  if (labels.some((label) => label === needle)) return 0;
+  if (labels.some((label) => label.startsWith(needle))) return 1;
+  if (entry.name.toLowerCase().includes(needle)) return 2;
+  return languageMatched ? 3 : null;
+}
+
 /** Groups whose language, abbreviation or name match the query; empty query keeps everything. */
 export function filterTranslationGroups(
   groups: TranslationLanguageGroup[],
@@ -80,18 +94,19 @@ export function filterTranslationGroups(
 ): TranslationLanguageGroup[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return groups;
-  const result: TranslationLanguageGroup[] = [];
+  const ranked: { group: TranslationLanguageGroup; rank: number }[] = [];
   for (const group of groups) {
-    if (group.languageName.toLowerCase().includes(needle)) {
-      result.push(group);
-      continue;
-    }
-    const entries = group.entries.filter((entry) =>
-      [entry.displayAbbreviation, entry.abbreviation, entry.name].some((field) =>
-        (field ?? "").toLowerCase().includes(needle),
-      ),
-    );
-    if (entries.length) result.push({ ...group, entries });
+    const languageMatched = group.languageName.toLowerCase().includes(needle);
+    const entries = group.entries
+      .map((entry) => ({ entry, rank: translationSearchRank(entry, needle, languageMatched) }))
+      .filter((item): item is { entry: CatalogTranslation; rank: number } => item.rank !== null)
+      .sort((a, b) => a.rank - b.rank || translationSortLabel(a.entry).localeCompare(translationSortLabel(b.entry)));
+    if (!entries.length) continue;
+    ranked.push({
+      group: { ...group, entries: entries.map((item) => item.entry) },
+      rank: entries[0].rank,
+    });
   }
-  return result;
+  ranked.sort((a, b) => a.rank - b.rank);
+  return ranked.map((item) => item.group);
 }

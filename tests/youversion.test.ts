@@ -295,6 +295,25 @@ describe("translation picker catalog", () => {
     const groups = groupTranslationsByLanguage(catalog);
     assert.deepEqual(filterTranslationGroups(groups, "spanish").map((g) => g.languageName), ["Spanish"]);
     assert.deepEqual(filterTranslationGroups(groups, "nasb").flatMap((g) => g.entries.map((e) => e.abbreviation)), ["YV2692"]);
+    assert.deepEqual(filterTranslationGroups(groups, "king james").flatMap((g) => g.entries.map((e) => e.abbreviation)), ["KJV"]);
+  });
+
+  it("lists an exact abbreviation before a language that only contains those letters", () => {
+    const groups = groupTranslationsByLanguage([
+      ...catalog,
+      { id: "NET", abbreviation: "NET", name: "NET Bible®, New English Translation", language: "en", languageName: "English", source: "db" },
+      { id: "NIV", abbreviation: "NIV", name: "New International Version", language: "en", languageName: "English", source: "youversion" },
+      { id: "YV2163", abbreviation: "YV2163", displayAbbreviation: "NIVUK", name: "New International Version (Anglicised)", language: "en", languageName: "English", source: "youversion" },
+      { id: "YV2576", abbreviation: "YV2576", displayAbbreviation: "tex", name: "Tennet", language: "tex", languageName: "Tennet", source: "youversion" },
+    ]);
+    const net = filterTranslationGroups(groups, "Net").flatMap((g) => g.entries.map((e) => e.abbreviation));
+    assert.equal(net[0], "NET");
+    assert.ok(net.includes("YV2576"));
+    assert.deepEqual(filterTranslationGroups(groups, "kjv").flatMap((g) => g.entries.map((e) => e.abbreviation)), ["KJV"]);
+    assert.deepEqual(
+      filterTranslationGroups(groups, "niv").flatMap((g) => g.entries.map((e) => e.displayAbbreviation || e.abbreviation)).slice(0, 2),
+      ["NIV", "NIVUK"],
+    );
   });
 
   it("shows the version's own abbreviation and keeps YouVersion out of search", () => {
@@ -310,5 +329,8 @@ describe("translation picker catalog", () => {
     assert.match(reader, /<ChapterAttribution[\s\S]*?attribution=\{data\.attribution\}/);
     assert.match(reader, /<ChapterAttribution[\s\S]*?attribution=\{splitData\.attribution\}/);
     assert.match(reader, /<TranslationPickerList/);
+    assert.equal(reader.match(/catalog=\{pickerCatalog\}/g)?.length, 3);
+    assert.match(reader, /testID="split-translation-picker"/);
+    assert.match(reader, /testID="reader-translation-picker"/);
   });
 });
