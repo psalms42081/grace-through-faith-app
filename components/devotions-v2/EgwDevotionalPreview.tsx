@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readingSpace, readingType } from "@/lib/reading-font-scale";
+import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 import { D2, F } from "./tokens";
 import { Header, LoadingState } from "./PreviewPrimitives";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -29,6 +31,7 @@ function chapterParagraphs(d: Egw): string[] {
 
 export default function EgwDevotionalPreview() {
   const insets = useSafeAreaInsets();
+  const scale = useReadingFontScale() * useSystemFontScale();
   const q = useQuery<Egw>({
     queryKey: [withDeviceTimeZone("/api/egw/devotional/today")],
     staleTime: 86400000,
@@ -84,9 +87,9 @@ export default function EgwDevotionalPreview() {
           </Text>
         </View>
 
-        <View style={s.bodyWrap}>
+        <View style={[s.bodyWrap, { gap: readingSpace(16, scale) }]}>
           {chapterParagraphs(d).map((paragraph, index) => (
-            <Text key={index} style={s.body}>
+            <Text key={index} allowFontScaling={false} style={[s.body, readingType(16, 28, scale)]}>
               {paragraph}
             </Text>
           ))}

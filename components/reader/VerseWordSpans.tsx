@@ -120,6 +120,7 @@ export function VerseWordSpans({
         return (
           <Text
             key={`${verseId}-w-${piece.index}`}
+            allowFontScaling={false}
             testID={`reader-verse-word-${verseNum}-${piece.index}`}
             suppressHighlighting={false}
             selectable={false}

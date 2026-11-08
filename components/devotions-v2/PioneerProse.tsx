@@ -1,6 +1,8 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ScriptureLinkedText } from "@/components/reader/ScriptureLinkedText";
+import { readingSpace, readingType } from "@/lib/reading-font-scale";
+import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 import { D2, F } from "./tokens";
 
 export function PioneerProse({
@@ -10,11 +12,13 @@ export function PioneerProse({
   paragraphs: string[];
   testID?: string;
 }) {
+  const scale = useReadingFontScale() * useSystemFontScale();
+  const body = [s.body, readingType(16, 28, scale)];
   return (
-    <View style={s.bodyWrap} testID={testID}>
+    <View style={[s.bodyWrap, { gap: readingSpace(16, scale) }]} testID={testID}>
       {paragraphs.map((paragraph, index) => (
-        <Text key={`${index}-${paragraph.slice(0, 24)}`} style={s.body}>
-          <ScriptureLinkedText text={paragraph} style={s.body} />
+        <Text key={`${index}-${paragraph.slice(0, 24)}`} allowFontScaling={false} style={body}>
+          <ScriptureLinkedText text={paragraph} style={{ ...s.body, ...readingType(16, 28, scale) }} />
         </Text>
       ))}
     </View>

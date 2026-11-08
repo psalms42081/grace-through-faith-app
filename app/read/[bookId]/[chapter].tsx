@@ -29,6 +29,9 @@ import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import { VerseSpokenText } from "@/components/reader/VerseSpokenText";
 import { OriginalWordsSheet } from "@/components/reader/OriginalWordsSheet";
+import { ReadingSizeControl } from "@/components/reader/ReadingSizeControl";
+import { READING_CHROME_FONT_CAP } from "@/lib/reading-font-scale";
+import { setReadingFontScale, useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
 import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/VerseSheet";
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
@@ -137,8 +140,6 @@ const RV2_PILL = "#F1EBDD";      // slightly darker cream for pills/surfaces
 const RV2_BORDER = "#E7E0D2";
 const READER_TOGGLE_ON_INK = "#C24431";
 const READER_TOGGLE_ON_TINT = "#FBE9E4";
-const RV2_FONT_SCALE_KEY = "@grace-through-faith/reader-font-scale";
-const FONT_SCALE_STEPS = [0.85, 1, 1.15, 1.3, 1.45] as const;
 /** Internal one-release rollback. Default off = new typography + floating chrome. */
 const READER_LEGACY_VERSE_BLOCKS = false;
 /** `reader-floating-chrome`: paddingTop 8 + listenBtn 36 + extra paddingBottom 8. */
@@ -906,7 +907,8 @@ export default function VerseReaderScreen() {
 
 
   // reader-v2: text size (AA sheet), chapter picker, strip visibility
-  const [fontScale, setFontScale] = useState(1);
+  const readingScale = useReadingFontScale();
+  const fontScale = readingScale * useSystemFontScale();
   const [wordsOfChrist, setWordsOfChrist] = useState(true);
   const [showTextSizeSheet, setShowTextSizeSheet] = useState(false);
   const [showChapterPicker, setShowChapterPicker] = useState(false);
@@ -917,16 +919,8 @@ export default function VerseReaderScreen() {
   const lastScrollY = useRef(0);
   const previewTouchY = useRef(0);
 
-  useEffect(() => {
-    AsyncStorage.getItem(RV2_FONT_SCALE_KEY).then((v) => {
-      const n = v ? parseFloat(v) : NaN;
-      if (!isNaN(n) && FONT_SCALE_STEPS.includes(n as any)) setFontScale(n);
-    });
-  }, []);
-
   const applyFontScale = useCallback((n: number) => {
-    setFontScale(n);
-    AsyncStorage.setItem(RV2_FONT_SCALE_KEY, String(n));
+    setReadingFontScale(n);
   }, []);
 
   useFocusEffect(
@@ -1704,7 +1698,7 @@ export default function VerseReaderScreen() {
 
   const compareBar = splitMode ? (
     <View style={styles.compareBar} testID="compare-bar">
-      <Text style={styles.compareBarText} numberOfLines={1}>
+      <Text style={styles.compareBarText} numberOfLines={1} maxFontSizeMultiplier={READING_CHROME_FONT_CAP}>
         {splitLoadFailed
           ? `${splitTranslationLabel} unavailable. Compare ${translationDisplay} with`
           : `Comparing ${translationDisplay} with`}
@@ -1717,7 +1711,9 @@ export default function VerseReaderScreen() {
         onPress={() => setShowSplitTranslationPicker(!showSplitTranslationPicker)}
         style={styles.compareBarVersion}
       >
-        <Text style={styles.compareBarVersionText}>{splitTranslationLabel}</Text>
+        <Text style={styles.compareBarVersionText} numberOfLines={1} maxFontSizeMultiplier={READING_CHROME_FONT_CAP}>
+          {splitTranslationLabel}
+        </Text>
         <Ionicons name="chevron-down" size={12} color={RV2_INK} />
       </Pressable>
       {showSplitTranslationPicker ? (
@@ -1770,7 +1766,11 @@ export default function VerseReaderScreen() {
               style={[styles.headerTitleButton, headerTitleMaxWidth !== undefined && { maxWidth: headerTitleMaxWidth }]}
               testID="reader-header-title"
             >
-              <Text style={[styles.headerTitleText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+              <Text
+                style={[styles.headerTitleText, { color: textColor }]}
+                numberOfLines={1} ellipsizeMode="tail"
+                maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+              >
                 {bookName} {chapter}
               </Text>
               <Ionicons name="chevron-down" size={14} color={RV2_INK_MUTED} />
@@ -1798,6 +1798,8 @@ export default function VerseReaderScreen() {
                 style={[styles.headerToggle, kjvWordStudy && wordStudyMode && styles.headerToggleOn]}
               >
                 <Text
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
                   style={[
                     styles.headerToggleText,
                     kjvWordStudy && wordStudyMode && styles.headerToggleTextOn,
@@ -1815,7 +1817,13 @@ export default function VerseReaderScreen() {
                 onPress={toggleSplitMode}
                 style={[styles.headerToggle, splitMode && styles.headerToggleOn]}
               >
-                <Text style={[styles.headerToggleText, splitMode && styles.headerToggleTextOn]}>Compare</Text>
+                <Text
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+                  style={[styles.headerToggleText, splitMode && styles.headerToggleTextOn]}
+                >
+                  Compare
+                </Text>
               </Pressable>
               <Pressable
                 hitSlop={12}
@@ -1824,7 +1832,12 @@ export default function VerseReaderScreen() {
                 accessibilityRole="button"
                 style={styles.headerIconBtn}
               >
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: RV2_INK, letterSpacing: -0.5 }}>AA</Text>
+                <Text
+                  maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+                  style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: RV2_INK, letterSpacing: -0.5 }}
+                >
+                  AA
+                </Text>
               </Pressable>
               <View>
                 <Pressable
@@ -1841,6 +1854,7 @@ export default function VerseReaderScreen() {
                       style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
+                      maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
                     >
                       {translationDisplay}
                     </Text>
@@ -2062,12 +2076,12 @@ export default function VerseReaderScreen() {
                           borderRadius: (isActive || hasHighlightBg) ? 8 : 4,
                           borderLeftWidth: isSpeaking ? 2 : 0,
                           borderLeftColor: isSpeaking ? RV2_INK_MUTED : "transparent",
-                          marginTop: providerParagraphStarts.has(v.verse) && i > 0 ? 12 : 0,
+                          marginTop: providerParagraphStarts.has(v.verse) && i > 0 ? 12 * fontScale : 0,
                         },
                       ]}
                     >
-                      <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                        <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
+                      <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
+                        <Text allowFontScaling={false} style={[styles.verseNumInline, { color: verseNumColor, fontSize: Math.min(11 * fontScale, 18 * fontScale * 0.62), lineHeight: Math.min(11 * fontScale, 18 * fontScale * 0.62) * 1.2 }]}>
                           {v.verse}{"\u00a0"}
                         </Text>
                         <VerseSpokenText
@@ -2098,7 +2112,7 @@ export default function VerseReaderScreen() {
                             {heading.text}
                           </Text>
                         ))}
-                        <Text style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
+                        <Text allowFontScaling={false} style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
                           <Text style={styles.stackedCompanionLabel}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
                           <VerseSpokenText
                             text={splitVerseByNum.get(v.verse)!.text}
@@ -2217,8 +2231,8 @@ export default function VerseReaderScreen() {
                             </Text>
                           ))}
                           <View style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
-                          <Text style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                            <Text style={[styles.verseNumInline, { color: verseNumColor, lineHeight: 30 * fontScale }]}>
+                          <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
+                            <Text allowFontScaling={false} style={[styles.verseNumInline, { color: verseNumColor, fontSize: Math.min(11 * fontScale, 18 * fontScale * 0.62), lineHeight: Math.min(11 * fontScale, 18 * fontScale * 0.62) * 1.2 }]}>
                               {v.verse}{"\u00a0"}
                             </Text>
                             <VerseSpokenText
@@ -2477,24 +2491,7 @@ export default function VerseReaderScreen() {
             <View style={[styles.lightSheet, { paddingBottom: bottomPad + 16 }]}>
               <View style={styles.sheetHandleLight} />
               <Text style={styles.lightSheetTitle}>Text Size</Text>
-              <View style={styles.fontScaleRow}>
-                <Text style={{ fontFamily: "Lora_600SemiBold", fontSize: 14, color: RV2_INK_MUTED }}>A</Text>
-                <View style={styles.fontScaleTrack}>
-                  {FONT_SCALE_STEPS.map((s) => (
-                    <Pressable
-                      key={s}
-                      onPress={() => applyFontScale(s)}
-                      hitSlop={10}
-                      accessibilityLabel={`Text size ${Math.round(s * 100)} percent`}
-                      style={[styles.fontScaleStop, fontScale === s && styles.fontScaleStopActive]}
-                    />
-                  ))}
-                </View>
-                <Text style={{ fontFamily: "Lora_600SemiBold", fontSize: 24, color: RV2_INK_MUTED }}>A</Text>
-              </View>
-              <Text style={[styles.fontScalePreview, { fontSize: 18 * fontScale, lineHeight: 30 * fontScale }]}>
-                For by grace are ye saved through faith.
-              </Text>
+              <ReadingSizeControl scale={readingScale} onChange={applyFontScale} />
             </View>
           </>
         )}
@@ -2594,7 +2591,8 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexShrink: 0,
+    flexShrink: 1,
+    maxWidth: "100%",
     gap: 6,
   },
   headerTitleButton: {
@@ -2614,6 +2612,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "transparent",
+    flexShrink: 1,
+    minWidth: 0,
   },
   headerToggleOn: {
     backgroundColor: READER_TOGGLE_ON_TINT,
@@ -2817,6 +2817,8 @@ const styles = StyleSheet.create({
   compareBar: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
+    flexWrap: "wrap" as const,
+    rowGap: 4,
     gap: 4,
     paddingHorizontal: 20,
     paddingVertical: 8,
@@ -2831,9 +2833,13 @@ const styles = StyleSheet.create({
   compareBarVersion: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: "100%",
     gap: 3,
   },
   compareBarVersionText: {
+    flexShrink: 1,
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     color: RV2_INK,

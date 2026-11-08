@@ -277,7 +277,8 @@ describe("reader word-study chrome", () => {
     assert.match(reader, /READER_TOGGLE_ON_TINT = "#FBE9E4"/);
     assert.match(reader, /style=\{\[styles\.headerToggle, kjvWordStudy && wordStudyMode && styles\.headerToggleOn\]\}/);
     assert.match(reader, /style=\{\[styles\.headerToggle, splitMode && styles\.headerToggleOn\]\}/);
-    assert.match(reader, /<Text style=\{\[styles\.headerToggleText, splitMode && styles\.headerToggleTextOn\]\}>Compare<\/Text>/);
+    assert.match(reader, /style=\{\[styles\.headerToggleText, splitMode && styles\.headerToggleTextOn\]\}/);
+    assert.match(reader, />\s*Compare\s*</);
     assert.match(reader, /"Turn off Compare" : "Turn on Compare"/);
     assert.match(reader, /"Compare on" : "Compare off"/);
     assert.doesNotMatch(reader, /tablet-landscape-outline/);

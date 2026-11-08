@@ -4,6 +4,8 @@ import { F } from "@/components/home-v2/theme";
 import { useTranslation } from "@/context/TranslationContext";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import { parseScriptureReference } from "@/lib/scripture-reference";
+import { readingSpace, readingType } from "@/lib/reading-font-scale";
+import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 import type { MemoryText } from "@/lib/sabbath-school-memory-text";
 
 interface MemoryVerseCardProps {
@@ -16,6 +18,7 @@ interface MemoryVerseCardProps {
  */
 export function MemoryVerseCard({ memoryText, testID }: MemoryVerseCardProps) {
   const { translation } = useTranslation();
+  const scale = useReadingFontScale() * useSystemFontScale();
   const parsed = memoryText.reference
     ? parseScriptureReference(memoryText.reference)
     : null;
@@ -23,14 +26,18 @@ export function MemoryVerseCard({ memoryText, testID }: MemoryVerseCardProps) {
   const body = (
     <>
       <Text style={styles.label}>MEMORY VERSE</Text>
-      <Text style={styles.verse}>{memoryText.verse}</Text>
-      {memoryText.reference && <Text style={styles.reference}>{memoryText.reference}</Text>}
+      <Text allowFontScaling={false} style={[styles.verse, readingType(17, 27, scale)]}>{memoryText.verse}</Text>
+      {memoryText.reference && (
+        <Text allowFontScaling={false} style={[styles.reference, readingType(12.5, 18, scale)]}>
+          {memoryText.reference}
+        </Text>
+      )}
     </>
   );
 
   if (!parsed) {
     return (
-      <View style={styles.card} testID={testID}>
+      <View style={[styles.card, { gap: readingSpace(10, scale) }]} testID={testID}>
         {body}
       </View>
     );
@@ -38,7 +45,7 @@ export function MemoryVerseCard({ memoryText, testID }: MemoryVerseCardProps) {
 
   return (
     <Pressable
-      style={styles.card}
+      style={[styles.card, { gap: readingSpace(10, scale) }]}
       testID={testID}
       accessibilityRole="link"
       accessibilityLabel={memoryText.reference || "Memory verse"}

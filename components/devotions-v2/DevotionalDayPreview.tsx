@@ -26,6 +26,8 @@ import { useTranslation } from "@/context/TranslationContext";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { getCalendarDate } from "@/shared/calendar-date";
 import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
+import { readingSpace, readingType } from "@/lib/reading-font-scale";
+import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 
 type Day = {
   id: string;
@@ -74,6 +76,7 @@ function Reflection({
   passage?: string | null;
   title: string;
 }) {
+  const scale = useReadingFontScale() * useSystemFontScale();
   const [answer, setAnswer] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [pending, setPending] = useState(false);
@@ -129,23 +132,23 @@ function Reflection({
 
   return (
     <View style={s.reflection}>
-      <Text style={s.question}>{question}</Text>
+      <Text allowFontScaling={false} style={[s.question, readingType(14, 21, scale)]}>{question}</Text>
       {exchanges.map((exchange, index) => (
         <View key={`${exchange.answer}-${index}`} style={s.exchange}>
           <Text style={s.responseLabel}>Your reflection</Text>
-          <Text style={s.responseText}>{exchange.answer}</Text>
+          <Text allowFontScaling={false} style={[s.responseText, readingType(14, 22, scale)]}>{exchange.answer}</Text>
           <View style={s.response}>
             <View style={{ marginBottom: 8 }}>
               <AIGeneratedLabel />
             </View>
             <Text style={s.responseLabel}>A reflection to carry</Text>
-            <Text style={s.responseText}>{exchange.response}</Text>
+            <Text allowFontScaling={false} style={[s.responseText, readingType(14, 22, scale)]}>{exchange.response}</Text>
           </View>
         </View>
       ))}
       {latest?.followUp ? (
         <>
-          <Text style={s.followUp}>{latest.followUp}</Text>
+          <Text allowFontScaling={false} style={[s.followUp, readingType(13, 20, scale)]}>{latest.followUp}</Text>
           <View style={s.answerRow}>
             <TextInput
               value={followUp}
@@ -153,7 +156,8 @@ function Reflection({
               multiline
               placeholder="Continue the conversation…"
               placeholderTextColor={D2.muted}
-              style={s.input}
+              allowFontScaling={false}
+              style={[s.input, readingType(13, 20, scale)]}
             />
             <Pressable
               onPress={() => submit(latest.followUp!, followUp)}
@@ -172,7 +176,8 @@ function Reflection({
             multiline
             placeholder="Write a few thoughts…"
             placeholderTextColor={D2.muted}
-            style={s.input}
+            allowFontScaling={false}
+            style={[s.input, readingType(13, 20, scale)]}
           />
           <Pressable
             onPress={() => submit(question, answer)}
@@ -191,6 +196,8 @@ export default function DevotionalDayPreview() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { showToast } = useToast();
+  const scale = useReadingFontScale() * useSystemFontScale();
+  const cardGap = { gap: readingSpace(10, scale) };
   const {
     planId,
     groupId,
@@ -373,15 +380,15 @@ export default function DevotionalDayPreview() {
         </View>
 
         {verses.length ? (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <Text style={s.label}>SCRIPTURE READING</Text>
               <Text style={[s.label, { color: D2.muted, fontFamily: F.inter, letterSpacing: 0 }]}>{day.passageLabel ? `${day.passageLabel} · ${versionLabel}` : versionLabel}</Text>
             </View>
             {verses.map((v) => (
-              <View style={s.verse} key={v.id}>
-                <Text style={s.verseNum}>{v.verse}</Text>
-                <Text style={s.verseText}>{v.text}</Text>
+              <View style={[s.verse, { gap: readingSpace(10, scale) }]} key={v.id}>
+                <Text allowFontScaling={false} style={[s.verseNum, readingType(12, 18, scale), { width: 20 * scale }]}>{v.verse}</Text>
+                <Text allowFontScaling={false} style={[s.verseText, readingType(16, 25, scale)]}>{v.text}</Text>
               </View>
             ))}
             {passage.data?.attribution ? (
@@ -391,35 +398,35 @@ export default function DevotionalDayPreview() {
         ) : null}
 
         {day.contextNote && (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <Text style={s.label}>
               {depth === "quick" ? "KEY INSIGHT" : "CONTEXT NOTE"}
             </Text>
-            <Text style={s.body}>{day.contextNote}</Text>
+            <Text allowFontScaling={false} style={[s.body, readingType(14, 22, scale)]}>{day.contextNote}</Text>
             {depth === "quick" && day.nowApplication ? (
-              <Text style={s.application}>{day.nowApplication}</Text>
+              <Text allowFontScaling={false} style={[s.application, readingType(13, 19, scale)]}>{day.nowApplication}</Text>
             ) : null}
           </View>
         )}
 
         {depth !== "quick" && day.thenContext ? (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <Text style={s.label}>THEN · HISTORICAL CONTEXT</Text>
-            <Text style={s.body}>{day.thenContext}</Text>
+            <Text allowFontScaling={false} style={[s.body, readingType(14, 22, scale)]}>{day.thenContext}</Text>
           </View>
         ) : null}
 
         {depth !== "quick" && day.nowApplication ? (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <Text style={s.label}>NOW · MODERN APPLICATION</Text>
-            <Text style={s.body}>{day.nowApplication}</Text>
+            <Text allowFontScaling={false} style={[s.body, readingType(14, 22, scale)]}>{day.nowApplication}</Text>
           </View>
         ) : null}
 
         {day.historicVoiceExcerpt && depth !== "quick" ? (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <Text style={s.label}>FURTHER READING</Text>
-            <Text style={s.body}>
+            <Text allowFontScaling={false} style={[s.body, readingType(14, 22, scale)]}>
               {day.historicVoiceExcerpt
                 .replace(/\(https:\/\/egwwritings\.org\S*/g, "")
                 .replace(/\s+/g, " ")
@@ -443,7 +450,7 @@ export default function DevotionalDayPreview() {
         ) : null}
 
         {depth === "deep" && day.passageLabel ? (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <Text style={s.label}>DEEP STUDY</Text>
             <Pressable
               style={s.link}
@@ -475,7 +482,7 @@ export default function DevotionalDayPreview() {
         ) : null}
 
         {depth !== "quick" && day.reflectionQuestions?.length ? (
-          <View style={s.card}>
+          <View style={[s.card, cardGap]}>
             <Text style={s.label}>REFLECTION</Text>
             {day.reflectionQuestions.map((q, i) => (
               <Reflection key={i} question={q} passage={day.passageLabel} title={day.title} />
@@ -484,13 +491,13 @@ export default function DevotionalDayPreview() {
         ) : null}
 
         {depth !== "quick" && day.prayerPrompt ? (
-          <View style={[s.card, s.prayer]}>
+          <View style={[s.card, s.prayer, cardGap]}>
             <Text style={s.label}>PRAYER PROMPT</Text>
-            <Text style={s.prayerText}>{day.prayerPrompt}</Text>
+            <Text allowFontScaling={false} style={[s.prayerText, readingType(16, 25, scale)]}>{day.prayerPrompt}</Text>
           </View>
         ) : null}
 
-        <View style={s.card}>
+        <View style={[s.card, cardGap]}>
           <Text style={s.label}>JOURNAL · OPTIONAL</Text>
           {depth !== "quick" ? (
             <TextInput
@@ -499,7 +506,8 @@ export default function DevotionalDayPreview() {
               multiline
               placeholder="What are you taking with you today?"
               placeholderTextColor={D2.muted}
-              style={s.journal}
+              allowFontScaling={false}
+              style={[s.journal, readingType(13, 20, scale)]}
               editable={canComplete && !pending}
             />
           ) : null}

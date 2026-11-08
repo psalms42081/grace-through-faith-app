@@ -16,6 +16,7 @@ import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import { VerseWordSpans, type VerseWordRangeHighlight } from "@/components/reader/VerseWordSpans";
 import { ReaderVerseWords } from "@/components/reader/ReaderVerseWords";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
+import { readingType } from "@/lib/reading-font-scale";
 import { verseSurfaceStyle } from "@/lib/verse-selection";
 import { wordsOfChristRanges } from "@/lib/words-of-christ";
 
@@ -96,7 +97,8 @@ export function TypographyPreviewProse({
   }, [verses]);
   const bodySize = 18 * fontScale;
   const bodyLine = 32 * fontScale;
-  const superSize = 10 * fontScale;
+  const superSize = Math.min(10 * fontScale, bodySize * 0.62);
+  const paragraphGap = 10 * fontScale;
 
   const versesRef = useRef(verses);
   versesRef.current = verses;
@@ -120,12 +122,18 @@ export function TypographyPreviewProse({
         return runs.map((run) => {
           const lead = run.verses[0];
           return (
-            <View key={`p-${lead.id}`} style={s.paragraphBlock}>
+            <View key={`p-${lead.id}`} style={[s.paragraphBlock, { marginBottom: paragraphGap }]}>
               {run.headings.map((heading, headingIndex) =>
                 heading.text ? (
                   <Text
                     key={`${lead.id}-heading-${headingIndex}`}
-                    style={[s.heading, heading.kind === "qa" && s.headingQa]}
+                    allowFontScaling={false}
+                    style={[
+                      s.heading,
+                      heading.kind === "qa" && s.headingQa,
+                      readingType(heading.kind === "qa" ? 14 : 16, heading.kind === "qa" ? 20 : 23, fontScale),
+                      { marginTop: 4 * fontScale, marginBottom: 8 * fontScale },
+                    ]}
                     accessibilityRole="header"
                   >
                     {heading.text}
@@ -133,6 +141,7 @@ export function TypographyPreviewProse({
                 ) : null,
               )}
               <Text
+                allowFontScaling={false}
                 style={[s.body, { fontSize: bodySize, lineHeight: bodyLine }]}
                 suppressHighlighting
                 pointerEvents="box-none"
@@ -191,13 +200,14 @@ export function TypographyPreviewProse({
                       {...(IS_WEB ? { dataSet: { verse: String(v.verse) } } : undefined)}
                     >
                       <Text
+                        allowFontScaling={false}
                         pointerEvents={wordStudyMode ? "none" : "auto"}
                         onPress={wordStudyMode ? undefined : () => onVerseTap(v)}
-                        style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine }]}
+                        style={[s.verseNum, { fontSize: superSize, lineHeight: superSize * 1.2 }]}
                       >
                         {v.verse}
+                        {"\u00a0\u00a0"}
                       </Text>
-                      {"\u00a0"}
                       {wordStudyMode && useWordTokens ? (
                         <ReaderVerseWords
                           verseId={v.id}

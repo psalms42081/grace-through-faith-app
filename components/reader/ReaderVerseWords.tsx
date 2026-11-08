@@ -180,6 +180,7 @@ export function ReaderVerseWords({
           return (
             <Text
               key={`${verseId}-s-${index}`}
+              allowFontScaling={false}
               pointerEvents={wordStudyMode ? "none" : "auto"}
               onPress={wordStudyMode ? undefined : onVerseTap}
               style={[webInline, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
@@ -193,6 +194,7 @@ export function ReaderVerseWords({
         return (
           <Animated.Text
             key={`${verseId}-w-${index}`}
+            allowFontScaling={false}
             testID={testId}
             nativeID={testId}
             onPress={() => {

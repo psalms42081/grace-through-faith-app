@@ -8,6 +8,8 @@ import {
   type LessonBlock,
   type LessonInline,
 } from "@/lib/sabbath-lesson-structure";
+import { readingSpace, readingType } from "@/lib/reading-font-scale";
+import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 
 function ScriptureInline({
@@ -20,6 +22,7 @@ function ScriptureInline({
   const { translation } = useTranslation();
   return (
     <Text
+      allowFontScaling={false}
       accessibilityRole="link"
       accessibilityLabel={inline.text}
       onPress={() =>
@@ -41,7 +44,7 @@ function ScriptureInline({
 
 function InlineRun({ inlines, style }: { inlines: LessonInline[]; style?: object }) {
   return (
-    <Text style={style}>
+    <Text allowFontScaling={false} style={style}>
       {inlines.map((inline, index) =>
         inline.kind === "text" ? (
           <Text key={index}>{inline.text}</Text>
@@ -57,29 +60,36 @@ function QuestionBlock({
   block,
   answer,
   onAnswer,
+  questionStyle,
+  answerStyle,
+  fieldStyle,
 }: {
   block: Extract<LessonBlock, { kind: "question" }>;
   answer: string;
   onAnswer: (key: string, value: string) => void;
+  questionStyle: object;
+  answerStyle: object;
+  fieldStyle: object;
 }) {
   return (
     <View style={styles.question} testID="ss-lesson-question">
-      <InlineRun inlines={block.inlines} style={styles.questionText} />
+      <InlineRun inlines={block.inlines} style={[styles.questionText, questionStyle]} />
       {answer.trim().length > 0 ? (
-        <Text style={styles.printedAnswer} testID="ss-lesson-answer-print">
+        <Text allowFontScaling={false} style={[styles.printedAnswer, answerStyle]} testID="ss-lesson-answer-print">
           {answer}
         </Text>
       ) : null}
       <TextInput
         testID="ss-lesson-answer"
         accessibilityLabel="Your answer"
+        allowFontScaling={false}
         value={answer}
         onChangeText={(value) => onAnswer(block.key, value)}
         placeholder="Your answer"
         placeholderTextColor={D2.muted}
         multiline
         textAlignVertical="top"
-        style={styles.answer}
+        style={[styles.answer, fieldStyle]}
       />
     </View>
   );
@@ -95,13 +105,19 @@ export function LessonDayBody({
   onAnswer: (key: string, value: string) => void;
 }) {
   const blocks = React.useMemo(() => parseLessonDay(content), [content]);
+  const scale = useReadingFontScale() * useSystemFontScale();
+  const reading = readingType(17, 28, scale);
+  const instruction = readingType(16, 24, scale);
+  const question = readingType(17, 26, scale);
+  const answer = readingType(16, 24, scale);
+  const field = readingType(15, 22, scale);
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { gap: readingSpace(14, scale) }]}>
       {blocks.map((block, index) => {
         if (block.kind === "instruction") {
           return (
             <View key={index} style={styles.instruction} testID="ss-lesson-instruction">
-              <InlineRun inlines={block.inlines} style={styles.instructionText} />
+              <InlineRun inlines={block.inlines} style={[styles.instructionText, instruction]} />
             </View>
           );
         }
@@ -112,12 +128,15 @@ export function LessonDayBody({
               block={block}
               answer={answers[block.key] ?? ""}
               onAnswer={onAnswer}
+              questionStyle={question}
+              answerStyle={answer}
+              fieldStyle={field}
             />
           );
         }
         return (
           <View key={index} testID="ss-lesson-reading">
-            <InlineRun inlines={block.inlines} style={styles.reading} />
+            <InlineRun inlines={block.inlines} style={[styles.reading, reading]} />
           </View>
         );
       })}

@@ -22,6 +22,7 @@ export function ScriptureLinkedText({
     nodes.push(
       <Text
         key={`${hit.start}-${index}`}
+        allowFontScaling={false}
         onPress={() =>
           navigateToScriptureByParts(
             hit.bookId,
