@@ -1,3 +1,5 @@
+import { transformBibleHtml } from "@youversion/platform-core/server";
+import { JSDOM } from "jsdom";
 import type { ProviderChapterStructure, ProviderHeading, ProviderParagraph } from "./scripture-service";
 
 export interface YouVersionFootnote {
@@ -19,119 +21,87 @@ export interface YouVersionChapter {
   footnotes: YouVersionFootnote[];
 }
 
-const ENTITY: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+const FOOTNOTE = "[data-verse-footnote]";
 
-function decodeEntities(value: string): string {
-  return value.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, name: string) => {
-    if (name[0] === "#") {
-      const code = name[1].toLowerCase() === "x" ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : whole;
-    }
-    return ENTITY[name.toLowerCase()] ?? whole;
-  });
+function cleanText(value: string | null | undefined): string {
+  return (value ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function plainText(html: string): string {
-  return decodeEntities(html.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim();
+/** Text of an element without verse labels or footnote anchors. */
+function readingText(el: Element): string {
+  const copy = el.cloneNode(true) as Element;
+  copy.querySelectorAll(`.yv-vlbl, ${FOOTNOTE}`).forEach((node) => node.remove());
+  return cleanText(copy.textContent);
 }
 
-/** End index (exclusive) of the span opened at `start`, honouring nested spans. */
-function balancedSpanEnd(html: string, start: number): number {
-  const tag = /<(\/?)span\b[^>]*>/gi;
-  tag.lastIndex = start;
-  let depth = 0;
-  let match: RegExpExecArray | null;
-  while ((match = tag.exec(html))) {
-    depth += match[1] ? -1 : 1;
-    if (depth === 0) return tag.lastIndex;
-  }
-  return html.length;
+function footnoteText(anchor: Element): string {
+  const holder = anchor.ownerDocument.createElement("div");
+  holder.innerHTML = anchor.getAttribute("data-verse-footnote-content") ?? "";
+  holder.querySelectorAll(".fr").forEach((node) => node.remove());
+  return cleanText(holder.textContent);
 }
-
-const NOTE_MARK = "\u0001";
-const VERSE_MARK = "\u0002";
 
 function isHeadingBlock(cls: string): boolean {
   const classes = cls.split(/\s+/);
   return classes.includes("yv-h") || /^(?:s\d*|ms\d*|mt\d*|d|r|qa\d*|sp|cl)$/i.test(classes[0] ?? "");
 }
 
-/** Parse a YouVersion `format=html` chapter into verses, headings, paragraphs and notes. */
+/**
+ * Normalise a YouVersion `format=html` passage into verses, headings, paragraphs
+ * and footnotes. The YouVersion SDK's server transformer cleans the markup first:
+ * every verse fragment is wrapped in `.yv-v[v]` and each footnote becomes an
+ * anchor carrying its own content.
+ */
 export function parseYouVersionChapterHtml(
-  html: string,
+  rawHtml: string,
   context: { code: string; bookId: number; chapter: number },
 ): YouVersionChapter {
+  const { html } = transformBibleHtml(rawHtml);
+  const doc = new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`).window.document;
+
   const verseText = new Map<number, string>();
   const order: number[] = [];
   const headings: ProviderHeading[] = [];
   const paragraphs: ProviderParagraph[] = [];
   const footnotes: YouVersionFootnote[] = [];
   let pendingHeadings: ProviderHeading[] = [];
-  let currentVerse = 0;
 
-  const append = (piece: string, newLine: boolean) => {
-    const text = piece.replace(/\s+/g, " ").trim();
-    if (!text || currentVerse <= 0) return;
-    const existing = verseText.get(currentVerse);
-    if (!existing) verseText.set(currentVerse, text);
-    else verseText.set(currentVerse, existing + (newLine ? "\n" : " ") + text);
-  };
+  const blocks = [...doc.querySelectorAll("div[class]")].filter((div) => !div.querySelector("div[class]"));
+  for (const block of blocks) {
+    const cls = (block.getAttribute("class") ?? "").trim();
+    const wrappers = [...block.querySelectorAll(".yv-v[v]")].filter((el) => !el.parentElement?.closest(".yv-v[v]"));
 
-  for (const block of html.matchAll(/<div\b[^>]*class="([^"]*)"[^>]*>([\s\S]*?)<\/div>/gi)) {
-    const cls = block[1].trim();
-    let body = block[2];
-
-    const notes: string[] = [];
-    let rebuilt = "";
-    let cursor = 0;
-    for (;;) {
-      const at = body.slice(cursor).search(/<span\b[^>]*class="yv-n\b[^"]*"/i);
-      if (at < 0) break;
-      const start = cursor + at;
-      const end = balancedSpanEnd(body, start);
-      const inner = body.slice(start, end).replace(/<span\b[^>]*class="fr"[^>]*>[\s\S]*?<\/span>/gi, "");
-      rebuilt += body.slice(cursor, start) + NOTE_MARK + notes.length + NOTE_MARK;
-      notes.push(plainText(inner));
-      cursor = end;
-    }
-    body = rebuilt + body.slice(cursor);
-
-    body = body
-      .replace(/<span\b[^>]*class="yv-vlbl"[^>]*>[\s\S]*?<\/span>/gi, "")
-      .replace(/<span\b[^>]*class="yv-v"[^>]*\bv="(\d+)[^"]*"[^>]*>\s*<\/span>/gi, `${VERSE_MARK}$1${VERSE_MARK}`)
-      .replace(/<br\s*\/?>/gi, " ");
-    const text = decodeEntities(body.replace(/<[^>]*>/g, ""));
-
-    const hasVerse = text.includes(VERSE_MARK);
-    if (isHeadingBlock(cls) && !hasVerse) {
-      const heading = plainText(text.replace(new RegExp(`${NOTE_MARK}\\d+${NOTE_MARK}`, "g"), ""));
-      if (heading) pendingHeadings.push(/^qa/i.test(cls) ? { text: heading, kind: "qa" } : { text: heading });
+    if (!wrappers.length) {
+      if (isHeadingBlock(cls)) {
+        const heading = readingText(block);
+        if (heading) pendingHeadings.push(/^qa/i.test(cls) ? { text: heading, kind: "qa" } : { text: heading });
+      }
       continue;
     }
 
     const blockVerses: number[] = [];
-    let firstPiece = true;
-    for (const token of text.split(new RegExp(`(${VERSE_MARK}\\d+${VERSE_MARK}|${NOTE_MARK}\\d+${NOTE_MARK})`))) {
-      if (token.startsWith(VERSE_MARK)) {
-        currentVerse = Number(token.slice(1, -1));
-        if (!verseText.has(currentVerse)) {
-          verseText.set(currentVerse, "");
-          order.push(currentVerse);
-        }
-        blockVerses.push(currentVerse);
-        if (pendingHeadings.length) {
-          headings.push(...pendingHeadings.map((heading) => ({ ...heading, beforeVerse: currentVerse })));
-          pendingHeadings = [];
-        }
-        firstPiece = false;
-      } else if (token.startsWith(NOTE_MARK)) {
-        const note = notes[Number(token.slice(1, -1))];
-        if (note && currentVerse > 0) footnotes.push({ verse: currentVerse, text: note });
-      } else if (token.trim()) {
-        append(token, firstPiece);
-        firstPiece = false;
+    wrappers.forEach((wrapper, index) => {
+      const verse = parseInt(wrapper.getAttribute("v") ?? "", 10);
+      if (!Number.isFinite(verse) || verse <= 0) return;
+      if (!verseText.has(verse)) {
+        verseText.set(verse, "");
+        order.push(verse);
       }
-    }
+      blockVerses.push(verse);
+      if (pendingHeadings.length) {
+        headings.push(...pendingHeadings.map((heading) => ({ ...heading, beforeVerse: verse })));
+        pendingHeadings = [];
+      }
+      wrapper.querySelectorAll(FOOTNOTE).forEach((anchor) => {
+        const text = footnoteText(anchor);
+        if (text) footnotes.push({ verse, text });
+      });
+      const text = readingText(wrapper);
+      if (!text) return;
+      const existing = verseText.get(verse);
+      verseText.set(verse, existing ? `${existing}${index === 0 ? "\n" : " "}${text}` : text);
+    });
+
     if (blockVerses.length && /^(?:p\d*|m|nb|pi\d*|mi)$/i.test(cls.split(/\s+/)[0] ?? "")) {
       paragraphs.push({ verseStart: blockVerses[0], verseEnd: blockVerses[blockVerses.length - 1] });
     }

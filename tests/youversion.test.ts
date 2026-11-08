@@ -162,6 +162,46 @@ describe("YouVersion text stays off the device and the key stays on the server",
     }
   });
 
+  it("the YouVersion SDK runs only inside the server proxy, never the React or Expo SDKs", () => {
+    const users = [...sourceFiles("server"), ...sourceFiles("app"), ...sourceFiles("components"), ...sourceFiles("lib"), ...sourceFiles("shared")]
+      .filter((file) => /@youversion\//.test(read(file)))
+      .map((file) => file.replace(/\\/g, "/"))
+      .sort();
+    assert.deepEqual(users, ["server/services/youversion-html.ts", "server/services/youversion.ts"]);
+    const pkg = JSON.parse(read("package.json"));
+    const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+    assert.deepEqual(deps.filter((name) => name.startsWith("@youversion/")), ["@youversion/platform-core"]);
+  });
+
+  it("backs off when YouVersion rate-limits the key and keeps the last good catalog", () => {
+    const service = read("server/services/youversion.ts");
+    assert.match(service, /status === 429\) \{\s*throttledUntil = Date\.now\(\) \+ RATE_LIMIT_COOLDOWN_MS/);
+    assert.match(service, /if \(throttledUntil > Date\.now\(\)\)/);
+    assert.match(service, /if \(!value && failure && failure\.until > Date\.now\(\)\) throw failure\.error/);
+    assert.match(service, /value = \{ data: value\.data, expires: Date\.now\(\) \+ RETRY_AFTER_FAILURE_MS \}/);
+  });
+
+  it("logs the HTTP status of the versions call without the key", () => {
+    const service = read("server/services/youversion.ts");
+    assert.match(service, /\[youversion\] versions call HTTP \$\{getHttpStatus\(err\) \?\? "error"\}/);
+    assert.match(service, /\[youversion\] versions call HTTP 200: \$\{bibles\.length\} versions/);
+    assert.doesNotMatch(service, /console\.\w+\([^)]*\bkey\b/);
+  });
+
+  it("refreshes a catalog that came back without YouVersion instead of keeping it for a day", async () => {
+    const { catalogStaleTime } = await import("../hooks/useTranslationCatalog");
+    const local: CatalogTranslation[] = [{ id: "KJV", abbreviation: "KJV", name: "King James Version", language: "en", source: "db" }];
+    const full: CatalogTranslation[] = [...local, { id: "YV3034", abbreviation: "YV3034", name: "Berean Standard Bible", language: "en", source: "youversion" }];
+    assert.equal(catalogStaleTime(local), 60 * 1000);
+    assert.equal(catalogStaleTime(full), 60 * 60 * 1000);
+    assert.match(read("server/routes/bible.ts"), /catalog unavailable:", err\?\.message\);\s*res\.set\("Cache-Control", "no-store"\)/);
+    for (const screen of ["app/read/[bookId]/[chapter].tsx", "app/book-picker.tsx", "app/verse-actions.tsx", "app/discover-v2.tsx"]) {
+      const source = read(screen);
+      assert.match(source, /useTranslationCatalog\(\)/, screen);
+      assert.doesNotMatch(source, /queryKey: \["\/api\/translations"\]/, screen);
+    }
+  });
+
   it("leaves out The Passion Translation", () => {
     assert.match(read("server/services/youversion.ts"), /\[1849, "The Passion Translation/);
   });

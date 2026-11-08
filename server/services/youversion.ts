@@ -6,6 +6,13 @@
  * this module. AI features resolve Scripture through scripture-service, which maps
  * every YouVersion code to the local KJV.
  */
+import {
+  ApiClient,
+  BibleClient,
+  getHttpStatus,
+  getPassageAttribution,
+  type BibleVersion,
+} from "@youversion/platform-core";
 import { youVersionBibleId, youVersionCode } from "../../shared/youversion";
 import { parseYouVersionChapterHtml, type YouVersionChapter } from "./youversion-html";
 import {
@@ -16,7 +23,6 @@ import {
 
 export { parseYouVersionChapterHtml, type YouVersionChapter, type YouVersionFootnote } from "./youversion-html";
 
-const API_BASE = "https://api.youversion.com/v1";
 /** The Platform serves Scripture with Cache-Control: public, max-age=3600. */
 const TEXT_TTL_MS = 60 * 60 * 1000;
 const LANGUAGE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -34,20 +40,7 @@ export const YOUVERSION_EXCLUDED_BIBLES: ReadonlyMap<number, string> = new Map([
   [177, "Ang Biblia — identical local public-domain text (TAGV)"],
 ]);
 
-interface YouVersionBible {
-  id: number;
-  abbreviation: string;
-  localized_abbreviation?: string | null;
-  title?: string | null;
-  localized_title?: string | null;
-  language_tag: string;
-  books?: string[] | null;
-  copyright?: string | null;
-  promotional_content?: string | null;
-  info?: string | null;
-  publisher_name?: string | null;
-  publisher_url?: string | null;
-}
+type YouVersionBible = BibleVersion & { publisher_name?: string | null };
 
 export interface YouVersionCatalogEntry {
   id: string;
@@ -77,35 +70,77 @@ export function hasYouVersionKey(): boolean {
   return !!process.env.YOUVERSION_APP_KEY?.trim();
 }
 
-async function youVersionGet<T>(path: string, params?: URLSearchParams): Promise<T> {
+let clients: { key: string; api: ApiClient; bible: BibleClient } | null = null;
+
+/** The YouVersion JavaScript SDK, configured with the server-side app key. */
+function sdk(): { api: ApiClient; bible: BibleClient } {
   const key = process.env.YOUVERSION_APP_KEY?.trim();
   if (!key) {
     throw new ScriptureError("PROVIDER_UNAVAILABLE", "YouVersion is not configured", 503);
   }
-  const url = `${API_BASE}${path}${params ? `?${params.toString()}` : ""}`;
-  const response = await fetch(url, { headers: { "X-YVP-App-Key": key, Accept: "application/json" } });
-  if (response.status === 404) {
-    throw new ScriptureError("CHAPTER_NOT_FOUND", "This passage isn't in this version.", 404);
+  if (clients?.key !== key) {
+    const api = new ApiClient({ appKey: key });
+    clients = { key, api, bible: new BibleClient(api) };
   }
-  if (response.status === 401 || response.status === 403) {
-    throw new ScriptureError("PROVIDER_UNAVAILABLE", `YouVersion authorization error (${response.status})`, 503);
-  }
-  if (!response.ok) {
-    throw new ScriptureError("PROVIDER_ERROR", `YouVersion returned ${response.status}`, 502);
-  }
-  return (await response.json()) as T;
+  return clients;
 }
+
+/** After a 429 every YouVersion call waits this long; the Platform sends Retry-After: 300. */
+const RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000;
+let throttledUntil = 0;
+
+/** Map SDK failures onto the reader's ScriptureError codes. */
+async function youVersionCall<T>(load: () => Promise<T>): Promise<T> {
+  if (throttledUntil > Date.now()) {
+    throw new ScriptureError("PROVIDER_UNAVAILABLE", "YouVersion is busy. Try again in a few minutes.", 503);
+  }
+  try {
+    return await load();
+  } catch (err) {
+    if (err instanceof ScriptureError) throw err;
+    const status = getHttpStatus(err);
+    if (status === 404) {
+      throw new ScriptureError("CHAPTER_NOT_FOUND", "This passage isn't in this version.", 404);
+    }
+    if (status === 401 || status === 403) {
+      throw new ScriptureError("PROVIDER_UNAVAILABLE", `YouVersion authorization error (${status})`, 503);
+    }
+    if (status === 429) {
+      throttledUntil = Date.now() + RATE_LIMIT_COOLDOWN_MS;
+      throw new ScriptureError("PROVIDER_UNAVAILABLE", "YouVersion is busy. Try again in a few minutes.", 503);
+    }
+    throw new ScriptureError(
+      "PROVIDER_ERROR",
+      status ? `YouVersion returned ${status}` : `YouVersion request failed: ${(err as Error)?.message ?? err}`,
+      502,
+    );
+  }
+}
+
+/** How long a failed refresh keeps serving the last good copy before trying again. */
+const RETRY_AFTER_FAILURE_MS = 5 * 60 * 1000;
 
 function memo<T>(ttlMs: number, load: () => Promise<T>) {
   let value: { data: T; expires: number } | null = null;
+  let failure: { error: unknown; until: number } | null = null;
   let pending: Promise<T> | null = null;
   return async (): Promise<T> => {
     if (value && value.expires > Date.now()) return value.data;
+    if (!value && failure && failure.until > Date.now()) throw failure.error;
     if (!pending) {
       pending = load()
         .then((data) => {
           value = { data, expires: Date.now() + ttlMs };
+          failure = null;
           return data;
+        })
+        .catch((err) => {
+          if (!value) {
+            failure = { error: err, until: Date.now() + RETRY_AFTER_FAILURE_MS };
+            throw err;
+          }
+          value = { data: value.data, expires: Date.now() + RETRY_AFTER_FAILURE_MS };
+          return value.data;
         })
         .finally(() => {
           pending = null;
@@ -117,23 +152,35 @@ function memo<T>(ttlMs: number, load: () => Promise<T>) {
 
 const loadLicensedBibles = memo(TEXT_TTL_MS, async () => {
   const bibles: YouVersionBible[] = [];
+  const { bible } = sdk();
   let pageToken: string | undefined;
+  let pages = 0;
   do {
-    const params = new URLSearchParams({ "language_ranges[]": "*", page_size: "99" });
-    if (pageToken) params.set("page_token", pageToken);
-    const page = await youVersionGet<{ data: YouVersionBible[]; next_page_token?: string | null }>("/bibles", params);
-    bibles.push(...(page.data ?? []));
+    const page = await youVersionCall(async () => {
+      try {
+        return await bible.getVersions("*", undefined, { page_size: 99, ...(pageToken ? { page_token: pageToken } : {}) });
+      } catch (err) {
+        console.warn(`[youversion] versions call HTTP ${getHttpStatus(err) ?? "error"} on page ${pages + 1}`);
+        throw err;
+      }
+    });
+    bibles.push(...(page.data as YouVersionBible[]));
     pageToken = page.next_page_token ?? undefined;
+    pages += 1;
   } while (pageToken);
+  console.log(`[youversion] versions call HTTP 200: ${bibles.length} versions in ${pages} pages`);
   return bibles;
 });
 
+/** English names for every language tag, in one request through the SDK's API client. */
 const loadLanguageNames = memo(LANGUAGE_TTL_MS, async () => {
-  const params = new URLSearchParams();
-  params.append("fields[]", "id");
-  params.append("fields[]", "localized_name");
-  params.set("page_size", "*");
-  const page = await youVersionGet<{ data: Array<{ id: string; localized_name?: string | null }> }>("/languages", params);
+  const { api } = sdk();
+  const page = await youVersionCall(() =>
+    api.get<{ data?: Array<{ id: string; localized_name?: string | null }> }>("/v1/languages", {
+      "fields[]": ["id", "localized_name"],
+      page_size: "*",
+    }),
+  );
   return new Map((page.data ?? []).filter((row) => row.localized_name).map((row) => [row.id, row.localized_name as string]));
 });
 
@@ -186,8 +233,14 @@ export function toCatalogEntry(bible: YouVersionBible, languageNames?: Map<strin
 }
 
 /** Every licensed version the app offers. Empty when the key is not configured. */
+let reportedMissingKey = false;
+
 export async function getYouVersionCatalog(): Promise<YouVersionCatalogEntry[]> {
-  if (!hasYouVersionKey()) return [];
+  if (!hasYouVersionKey()) {
+    if (!reportedMissingKey) console.warn("[youversion] YOUVERSION_APP_KEY is not set; no YouVersion versions listed");
+    reportedMissingKey = true;
+    return [];
+  }
   const [bibles, languageNames] = await Promise.all([loadLicensedBibles(), getLanguageNames()]);
   return bibles
     .filter((bible) => !YOUVERSION_EXCLUDED_BIBLES.has(bible.id))
@@ -199,18 +252,24 @@ const bibleDetailCache = new Map<number, { data: YouVersionBible; expires: numbe
 async function getBibleDetail(bibleId: number): Promise<YouVersionBible> {
   const cached = bibleDetailCache.get(bibleId);
   if (cached && cached.expires > Date.now()) return cached.data;
-  const data = await youVersionGet<YouVersionBible>(`/bibles/${bibleId}`).catch((err) => {
+  const { bible } = sdk();
+  let data: YouVersionBible;
+  try {
+    data = await youVersionCall(() => bible.getVersion(bibleId) as Promise<YouVersionBible>);
+  } catch (err) {
     if (err instanceof ScriptureError && err.code === "CHAPTER_NOT_FOUND") {
       throw new ScriptureError("TRANSLATION_NOT_FOUND", "This version isn't available.", 404);
     }
-    throw err;
-  });
+    if (!cached) throw err;
+    cached.expires = Date.now() + RETRY_AFTER_FAILURE_MS;
+    return cached.data;
+  }
   bibleDetailCache.set(bibleId, { data, expires: Date.now() + TEXT_TTL_MS });
   return data;
 }
 
 export function youVersionAttribution(bible: YouVersionBible): YouVersionAttribution | null {
-  const text = bible.copyright?.trim() || bible.promotional_content?.trim();
+  const text = getPassageAttribution(bible)?.text.trim();
   if (!text) return null;
   return {
     text,
@@ -271,8 +330,10 @@ export async function resolveYouVersionChapter(
   if (cached && cached.expires > Date.now()) {
     data = cached.data;
   } else {
-    const params = new URLSearchParams({ format: "html", include_headings: "true", include_notes: "true" });
-    const passage = await youVersionGet<{ content?: string }>(`/bibles/${bibleId}/passages/${usfmBook}.${chapter}`, params)
+    const { bible: bibleClient } = sdk();
+    const passage = await youVersionCall(() =>
+      bibleClient.getPassage(bibleId, `${usfmBook}.${chapter}`, "html", true, true, false),
+    )
       .catch((err) => {
         if (err instanceof ScriptureError && err.code === "CHAPTER_NOT_FOUND") {
           throw new ScriptureError("CHAPTER_NOT_FOUND", `${displayAbbreviation} doesn't include ${book.name} ${chapter}.`, 404);

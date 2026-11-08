@@ -28,6 +28,7 @@ import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useTranslation } from "@/context/TranslationContext";
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
+import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 
 interface BibleBook {
   id: number;
@@ -61,9 +62,7 @@ export default function BookPickerScreen() {
     router.push((isBibleTabHome ? bibleTabBookPath(bookId) : `/read/${bookId}`) as any);
   };
 
-  const { data: apiTranslations } = useQuery<CatalogTranslation[]>({
-    queryKey: ["/api/translations"],
-  });
+  const { data: apiTranslations } = useTranslationCatalog();
   // Authoritative catalog wins once loaded; only entries with available !== false
   // are selectable. Static fallback is public-domain only (never NKJV).
   const TRANSLATIONS: CatalogTranslation[] =

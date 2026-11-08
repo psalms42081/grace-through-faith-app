@@ -148,15 +148,34 @@ describe("reader word-study chrome", () => {
     assert.match(words, /if \(pressOpensSheet\) tapThenActivate\(\)/);
   });
 
-  it("shows an on state for Word study and side-by-side as a matching pill pair", () => {
+  it("shows Word study and Compare as a matching pair of text chips", () => {
     const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
     assert.match(reader, /READER_TOGGLE_ON_INK = "#C24431"/);
     assert.match(reader, /READER_TOGGLE_ON_TINT = "#FBE9E4"/);
     assert.match(reader, /style=\{\[styles\.headerToggle, kjvWordStudy && wordStudyMode && styles\.headerToggleOn\]\}/);
     assert.match(reader, /style=\{\[styles\.headerToggle, splitMode && styles\.headerToggleOn\]\}/);
-    assert.match(reader, /"Turn off side-by-side reading" : "Turn on side-by-side reading"/);
-    assert.match(reader, /"Side-by-side reading on" : "Side-by-side reading off"/);
+    assert.match(reader, /<Text style=\{\[styles\.headerToggleText, splitMode && styles\.headerToggleTextOn\]\}>Compare<\/Text>/);
+    assert.match(reader, /"Turn off Compare" : "Turn on Compare"/);
+    assert.match(reader, /"Compare on" : "Compare off"/);
+    assert.doesNotMatch(reader, /tablet-landscape-outline/);
     assert.doesNotMatch(reader, /Toggle split screen/);
+  });
+
+  it("keeps the Compare version picker above its close layer so a choice sticks", () => {
+    const reader = readFileSync(new URL("../app/read/[bookId]/[chapter].tsx", import.meta.url), "utf8");
+    assert.match(reader, /`Comparing \$\{translationDisplay\} with`/);
+    assert.match(reader, /\{compareBar\}\s*<View style=\{splitMode && isSideBySide \? styles\.splitRow/);
+    assert.match(reader, /compareBar: \{[^}]*zIndex: 60/);
+    assert.match(reader, /handleSetSplitTranslation\(t\);\s*setShowSplitTranslationPicker\(false\)/);
+    assert.match(reader, /AsyncStorage\.setItem\(SPLIT_TRANSLATION_KEY, t\)/);
+    assert.doesNotMatch(reader, /splitTranslationDropdown/);
+  });
+
+  it("gives the picker search the coral-ink hairline focus style, not the browser outline", () => {
+    const picker = readFileSync(new URL("../components/reader/TranslationPickerList.tsx", import.meta.url), "utf8");
+    assert.match(picker, /searchBoxFocused: \{\s*borderColor: PathB\.coralInk/);
+    assert.match(picker, /borderWidth: StyleSheet\.hairlineWidth/);
+    assert.match(picker, /outlineStyle: "none"/);
   });
 
   it("stacks the second translation under each verse below 600px", () => {

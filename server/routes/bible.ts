@@ -319,6 +319,7 @@ router.get("/api/translations", async (_req, res) => {
       result.push(...(await getYouVersionCatalog()));
     } catch (err: any) {
       console.error("[youversion] catalog unavailable:", err?.message);
+      res.set("Cache-Control", "no-store");
     }
 
     const languageNames = await getLanguageNames();

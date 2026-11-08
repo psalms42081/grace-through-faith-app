@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { PathB } from "@/constants/colors";
 import {
   availableCatalog,
   filterTranslationGroups,
@@ -31,6 +32,7 @@ interface Props {
 /** Translation picker grouped by language, English first, with search across every version. */
 export function TranslationPickerList({ catalog, selected, onSelect, exclude, maxHeight = 420, testID }: Props) {
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const groups = useMemo(
     () =>
       groupTranslationsByLanguage(
@@ -123,11 +125,13 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
 
   return (
     <View style={{ maxHeight }} testID={testID}>
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={14} color={INK_MUTED} />
+      <View style={[styles.searchBox, searchFocused && styles.searchBoxFocused]}>
+        <Ionicons name="search" size={14} color={searchFocused ? PathB.coralInk : INK_MUTED} />
         <TextInput
           value={query}
           onChangeText={setQuery}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
           placeholder="Search versions or languages"
           placeholderTextColor={INK_MUTED}
           style={styles.searchInput}
@@ -163,7 +167,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     paddingHorizontal: 10,
     borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "transparent",
     backgroundColor: PILL,
+  },
+  searchBoxFocused: {
+    borderColor: PathB.coralInk,
   },
   searchInput: {
     flex: 1,
@@ -171,6 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: INK,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null),
   },
   languageRow: {
     flexDirection: "row",

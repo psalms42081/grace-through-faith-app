@@ -18,6 +18,7 @@ import { PathB } from "@/constants/colors";
 import { useTranslation } from "@/context/TranslationContext";
 import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import {
   ChapterAttribution,
@@ -117,9 +118,7 @@ export default function VerseActionsSheet() {
 
   // Comparison editions come from the live, available catalog only — never a
   // hardcoded list — and always exclude the verse's current translation.
-  const { data: catalogTranslations, isLoading: catalogLoading, isError: catalogError } = useQuery<CatalogTranslation[]>({
-    queryKey: ["/api/translations"],
-  });
+  const { data: catalogTranslations, isLoading: catalogLoading, isError: catalogError } = useTranslationCatalog();
 
   const otherTranslations = useMemo(() => {
     if (!catalogTranslations) return [] as CatalogTranslation[];

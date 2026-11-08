@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
 import { isSearchableTranslation } from "@/lib/translation-catalog";
+import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -97,12 +98,6 @@ const FEATURED_GRADIENT = ["#5E2F68", "#7A3E86"] as const;
 // Translations are fetched live from /api/translations — we never hardcode a
 // fixed list (that would risk showing an entry the backend cannot serve, or
 // inventing one like NKJV that requires entitlement verification).
-interface TranslationOption {
-  id: string;
-  abbreviation: string;
-  name?: string;
-  available?: boolean;
-}
 
 const QUICK_REFS = [
   { label: "John 3:16", subtitle: "Popular passage" },
@@ -144,10 +139,7 @@ export default function DiscoverV2Screen() {
   const inputRef = useRef<TextInput>(null);
 
   // ---- Available translations (live) ----
-  const { data: translationsData } = useQuery<TranslationOption[]>({
-    queryKey: ["/api/translations"],
-    staleTime: 1000 * 60 * 10,
-  });
+  const { data: translationsData } = useTranslationCatalog();
   // Only translations the backend reports as available may be selected.
   const availableTranslations = useMemo(
     () =>
