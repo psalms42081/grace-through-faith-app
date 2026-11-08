@@ -1,4 +1,4 @@
-import { YOUVERSION_CODE_IN_TEXT } from "../../shared/youversion";
+import { YOUVERSION_ALIAS_TRANSLATION_FIELD, YOUVERSION_CODE_IN_TEXT } from "../../shared/youversion";
 
 export class YouVersionInAiRequestError extends Error {
   constructor() {
@@ -9,7 +9,10 @@ export class YouVersionInAiRequestError extends Error {
 
 /** Throws when a serialized AI request names a YouVersion version. */
 export function assertNoYouVersionInAiRequest(body: unknown): void {
-  if (typeof body === "string" && YOUVERSION_CODE_IN_TEXT.test(body)) {
+  if (
+    typeof body === "string" &&
+    (YOUVERSION_CODE_IN_TEXT.test(body) || YOUVERSION_ALIAS_TRANSLATION_FIELD.test(body))
+  ) {
     throw new YouVersionInAiRequestError();
   }
 }

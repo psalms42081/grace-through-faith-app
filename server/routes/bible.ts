@@ -17,6 +17,9 @@ import {
   searchApiBible,
   searchNlt,
   discoverNkjvCapability,
+  isApiBibleCandidate,
+  apiBibleUsageKey,
+  setApiBibleCallRecorder,
   resolveChapter,
   resolveBookRecord,
   ScriptureError,
@@ -32,6 +35,11 @@ import {
   type ResolvedYouVersionChapter,
 } from "../services/youversion";
 import { isYouVersionCode } from "../../shared/youversion";
+import {
+  localTranslationLicense,
+  localTranslationNotice,
+  type TranslationNotice,
+} from "../../shared/translation-notices";
 
 const router = Router();
 
@@ -123,6 +131,19 @@ async function storeBibleCache(
   }
 }
 
+setApiBibleCallRecorder(({ path, status }) => {
+  const translation = apiBibleUsageKey();
+  console.log(`[api.bible] HTTP ${status} ${path}`);
+  void db
+    .insert(bibleCacheStats)
+    .values({ translation, cacheHits: 0, cacheMisses: 1, lastMissAt: new Date() } as any)
+    .onConflictDoUpdate({
+      target: [bibleCacheStats.translation],
+      set: { cacheMisses: sql`${bibleCacheStats.cacheMisses} + 1`, lastMissAt: new Date() } as any,
+    })
+    .catch(() => {});
+});
+
 // Cache hooks passed to the canonical resolver so provider chapters are
 // persisted through the same bible_cache path as before.
 const chapterCacheHooks: ChapterCacheHooks = {
@@ -166,6 +187,11 @@ async function resolveYouVersionForReader(
   return resolveYouVersionChapter(translation.trim().toUpperCase(), bookRecord, chapter);
 }
 
+/** The copyright notice a local version must carry (NET); public-domain versions have none. */
+function localNoticeFor(meta: { translation: string; source: string }): TranslationNotice | null {
+  return meta.source === "db" ? localTranslationNotice(meta.translation) : null;
+}
+
 /** YouVersion text is shown at read time only; browsers must not keep a copy. */
 function sendYouVersion(res: any, body: Record<string, unknown>) {
   res.set("Cache-Control", "no-store");
@@ -203,11 +229,13 @@ router.get("/api/passage", async (req, res) => {
       cache: chapterCacheHooks,
     });
 
+    const notice = localNoticeFor(resolved.meta);
     return res.json({
       book: resolved.book,
       chapter: resolved.chapter,
       verses: resolved.verses,
       ...(resolved.providerContent ? { providerContent: resolved.providerContent } : {}),
+      ...(notice ? { attribution: notice } : {}),
       cached: resolved.cached,
       ...resolved.meta,
     });
@@ -257,7 +285,7 @@ router.get("/api/translations", async (_req, res) => {
       language: t.language,
       source: "db",
       provider: "local",
-      license: "public_domain",
+      license: localTranslationLicense(t.abbreviation),
       available: true,
     }));
 
@@ -289,14 +317,11 @@ router.get("/api/translations", async (_req, res) => {
         });
       }
 
-      // NKJV: only list if account catalog confirms entitlement + full coverage
+      // NKJV: only list if account catalog confirms entitlement + full coverage.
+      // The answer is cached for a day; every check spends the monthly API.Bible allowance.
       try {
         const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
-        const nkjvConfig = await discoverNkjvCapability(
-          process.env.API_BIBLE_KEY,
-          allBooks,
-          { forceRefresh: true },
-        );
+        const nkjvConfig = await discoverNkjvCapability(process.env.API_BIBLE_KEY, allBooks);
         if (nkjvConfig) {
           result.push({
             id: "NKJV",
@@ -406,7 +431,8 @@ router.get("/api/verse", async (req, res) => {
       return res.status(404).json({ error: "Verse not found" });
     }
 
-    return res.json({ ...verseRecord, ...resolved.meta });
+    const notice = localNoticeFor(resolved.meta);
+    return res.json({ ...verseRecord, ...(notice ? { attribution: notice } : {}), ...resolved.meta });
   } catch (err) {
     if (err instanceof ScriptureError) {
       return res.status(err.statusCode).json({ error: err.message });
@@ -471,7 +497,7 @@ router.get("/api/search", async (req, res) => {
     }
 
     // API.Bible provider: use provider search API
-    {
+    if (isApiBibleCandidate(translationAbbr)) {
       const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
       const apiBibleTranslations = await getApiBibleTranslations(allBooks);
 
@@ -633,7 +659,9 @@ router.get("/api/bible-cache/stats", async (_req, res) => {
       .groupBy(bibleCache.translation);
 
     const totalChapters = 1189;
-    const apiTranslations = ["NLT", "NIV", "AMP", "NASB"];
+    const apiTranslations = ["NLT", ...Object.keys(API_BIBLE_TRANSLATIONS)];
+    const usageKey = apiBibleUsageKey();
+    const apiBibleCallsThisMonth = stats.find((s) => s.translation === usageKey)?.cacheMisses ?? 0;
 
     const summary = apiTranslations.map((t) => {
       const stat = stats.find((s) => s.translation === t);
@@ -660,6 +688,7 @@ router.get("/api/bible-cache/stats", async (_req, res) => {
     return res.json({
       translations: summary,
       totalCachedRows: cacheRows.reduce((sum, r) => sum + Number(r.cachedChapters), 0),
+      apiBible: { month: usageKey.slice(4), calls: apiBibleCallsThisMonth, monthlyLimit: 5000 },
     });
   } catch (err) {
     console.error(err);

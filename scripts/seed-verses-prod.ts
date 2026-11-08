@@ -40,6 +40,8 @@ const TRANSLATIONS = [
   { id: "LSG", name: "Louis Segond 1910", abbreviation: "LSG", language: "fr", file: "lsg.json" },
   { id: "ARC", name: "Almeida Revista e Corrigida", abbreviation: "ARC", language: "pt", file: "arc.json" },
   { id: "TAGV", name: "Ang Biblia (Tagalog)", abbreviation: "TAGV", language: "fil", file: "tagv.json" },
+  // Built by scripts/prepare-net-bible.ts from the noteless text; quoted by permission (see shared/translation-notices.ts).
+  { id: "NET", name: "NET Bible®, New English Translation", abbreviation: "NET", language: "en", file: "net.json" },
 ];
 
 async function seedTranslation(translationId: string, dataFile: string, bookMap: Map<string, number>) {

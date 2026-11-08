@@ -44,5 +44,9 @@ yarn-error.*
 # STEP Bible source dumps (CC BY 4.0 — download via scripts/ingest-step-strongs.ts)
 data/step-bible/
 
+# NET Bible® text (copyright Biblical Studies Press — build via scripts/prepare-net-bible.ts)
+data/net.json
+data/NETBIBLE21.epub
+
 # Attached assets (screenshots shared during development)
 attached_assets/

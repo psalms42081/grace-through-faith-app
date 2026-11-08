@@ -25,6 +25,7 @@ import { EmptyState, ErrorState, Header, LoadingState, PrimaryButton } from "./P
 import { useTranslation } from "@/context/TranslationContext";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { getCalendarDate } from "@/shared/calendar-date";
+import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 
 type Day = {
   id: string;
@@ -58,7 +59,11 @@ type Today = {
   canComplete?: boolean;
   outline?: PaceDay[];
 };
-type Passage = { verses: { id: string; verse: number; text: string }[] };
+type Passage = {
+  verses: { id: string; verse: number; text: string }[];
+  displayAbbreviation?: string;
+  attribution?: ChapterAttributionData;
+};
 
 function Reflection({
   question,
@@ -220,6 +225,7 @@ export default function DevotionalDayPreview() {
       : null;
 
   const passage = useQuery<Passage>({ queryKey: [passageQuery], enabled: !!passageQuery });
+  const versionLabel = passage.data?.displayAbbreviation || translation;
 
   const verses = useMemo(
     () =>
@@ -370,7 +376,7 @@ export default function DevotionalDayPreview() {
           <View style={s.card}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <Text style={s.label}>SCRIPTURE READING</Text>
-              <Text style={[s.label, { color: D2.muted, fontFamily: F.inter, letterSpacing: 0 }]}>{day.passageLabel ? `${day.passageLabel} · ${translation}` : translation}</Text>
+              <Text style={[s.label, { color: D2.muted, fontFamily: F.inter, letterSpacing: 0 }]}>{day.passageLabel ? `${day.passageLabel} · ${versionLabel}` : versionLabel}</Text>
             </View>
             {verses.map((v) => (
               <View style={s.verse} key={v.id}>
@@ -378,6 +384,9 @@ export default function DevotionalDayPreview() {
                 <Text style={s.verseText}>{v.text}</Text>
               </View>
             ))}
+            {passage.data?.attribution ? (
+              <ScriptureCredit attribution={passage.data.attribution} testID="devotional-scripture-attribution" />
+            ) : null}
           </View>
         ) : null}
 

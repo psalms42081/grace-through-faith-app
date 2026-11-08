@@ -1,3 +1,5 @@
+import { localTranslationNotice } from "@/shared/translation-notices";
+
 /** En-dash used in contiguous verse ranges, e.g. `1–3`. */
 export const VERSE_RANGE_DASH = "\u2013";
 
@@ -98,7 +100,13 @@ export function buildSelectionCopyText(opts: {
     sorted.map((v) => v.verse),
   );
   const body = sorted.map((v) => v.text).join(" ");
-  return `${body}\n\u2014 ${reference} (${opts.translation})`;
+  return withQuotationNotice(`${body}\n\u2014 ${reference} (${opts.translation})`, opts.translation);
+}
+
+/** Quoted text from a by-permission version (NET) carries its copyright acknowledgement. */
+export function withQuotationNotice(quotation: string, translation: string): string {
+  const notice = localTranslationNotice(translation);
+  return notice ? `${quotation}\n${notice.text}` : quotation;
 }
 
 export function buildHighlightSheetPayload(opts: {

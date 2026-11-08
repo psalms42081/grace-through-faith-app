@@ -31,16 +31,13 @@ const MAX_CACHED_CHAPTERS = 400;
 /** Licensed versions the app does not offer, with the reason reported to the owner. */
 export const YOUVERSION_EXCLUDED_BIBLES: ReadonlyMap<number, string> = new Map([
   [1849, "The Passion Translation — left out by request"],
-  [111, "NIV 2011 — served from API.Bible"],
-  [1588, "Amplified Bible — served from API.Bible"],
-  [100, "NASB 1995 — served from API.Bible"],
   [12, "ASV — identical local public-domain text"],
   [93, "Louis Segond 1910 — identical local public-domain text"],
   [147, "Reina-Valera 1909 — identical local public-domain text (RV1909)"],
   [177, "Ang Biblia — identical local public-domain text (TAGV)"],
 ]);
 
-type YouVersionBible = BibleVersion & { publisher_name?: string | null };
+type YouVersionBible = BibleVersion & { publisher_name?: string | null; organization_id?: string | null };
 
 export interface YouVersionCatalogEntry {
   id: string;
@@ -61,10 +58,40 @@ export interface YouVersionCatalogEntry {
 export interface YouVersionAttribution {
   text: string;
   info: string | null;
+  /** The licensor's own designated notice, where its licence asks for one. */
+  notice: string | null;
   publisherName: string | null;
   publisherUrl: string | null;
   versionName: string;
 }
+
+const BIBLICA_ORGANIZATION = "05a9aa40-37b6-4e34-b9f1-a443fa4b1fff";
+const LOCKMAN_ORGANIZATION = "798d8fa4-f640-4155-8cfb-fa91d1d8a06c";
+
+/**
+ * Links the publisher licences require with every display. Biblica: a one-step link to
+ * its website whose text includes "Biblica". Lockman: a clickable link to lockman.org.
+ */
+const LICENSOR_LINKS: ReadonlyMap<string, { name: string; url: string }> = new Map([
+  [BIBLICA_ORGANIZATION, { name: "Biblica, Inc.", url: "https://www.biblica.com" }],
+  [LOCKMAN_ORGANIZATION, { name: "The Lockman Foundation", url: "https://www.lockman.org" }],
+]);
+
+/** Lockman's notice "for selected verses or partial books"; a chapter is a partial book. */
+export const LOCKMAN_NOTICES: ReadonlyMap<number, string> = new Map([
+  [
+    100,
+    "Scripture quotations from the New American Standard Bible – NASB 1995 Copyright © 1960, 1971, 1977, 1995 by The Lockman Foundation. All rights reserved. Used by permission. https://www.Lockman.org",
+  ],
+  [
+    2692,
+    "Scripture quotations from the New American Standard Bible – NASB 2020 Copyright © 1960, 1971, 1977, 1995, 2020 by The Lockman Foundation. All rights reserved. Used by permission. https://www.Lockman.org",
+  ],
+  [
+    1588,
+    "Scripture quotations from the Amplified® Bible – AMP Copyright © 2015 by The Lockman Foundation. All rights reserved. Used by permission. https://www.Lockman.org",
+  ],
+]);
 
 export function hasYouVersionKey(): boolean {
   return !!process.env.YOUVERSION_APP_KEY?.trim();
@@ -271,11 +298,13 @@ async function getBibleDetail(bibleId: number): Promise<YouVersionBible> {
 export function youVersionAttribution(bible: YouVersionBible): YouVersionAttribution | null {
   const text = getPassageAttribution(bible)?.text.trim();
   if (!text) return null;
+  const licensor = bible.organization_id ? LICENSOR_LINKS.get(bible.organization_id) : undefined;
   return {
     text,
     info: bible.info?.trim() || null,
-    publisherName: bible.publisher_name?.trim() || null,
-    publisherUrl: bible.publisher_url?.trim() || null,
+    notice: LOCKMAN_NOTICES.get(bible.id) ?? null,
+    publisherName: bible.publisher_name?.trim() || licensor?.name || null,
+    publisherUrl: bible.publisher_url?.trim() || licensor?.url || null,
     versionName: (bible.localized_title || bible.title || bible.abbreviation).trim(),
   };
 }

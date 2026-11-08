@@ -109,7 +109,8 @@ async function isAlreadyCached(translation: string, bookId: number, chapter: num
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function main() {
-  const translations = ["NLT", "NIV", "AMP", "NASB"];
+  // NIV, AMP and NASB come from YouVersion, whose text may not be stored.
+  const translations = ["NLT", ...Object.keys(API_BIBLE_TRANSLATIONS)];
   let totalFetched = 0;
   let totalSkipped = 0;
   let totalErrors = 0;

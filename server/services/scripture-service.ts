@@ -123,11 +123,48 @@ export interface ApiBibleTranslationConfig {
   license: string;
 }
 
-export const API_BIBLE_TRANSLATIONS: Record<string, ApiBibleTranslationConfig> = {
-  "NIV": { bibleId: "78a9f6124f344018-01", name: "New International Version", license: "API.Bible" },
-  "AMP": { bibleId: "a81b73293d3080c9-01", name: "Amplified Bible", license: "API.Bible" },
-  "NASB": { bibleId: "b8ee27bcd1cae43a-01", name: "New American Standard Bible 1995", license: "API.Bible" },
-};
+/**
+ * Fixed API.Bible versions. NIV, AMP and NASB moved to YouVersion (shared/youversion.ts
+ * aliases); API.Bible now serves only versions YouVersion does not license to the app,
+ * which today means a discovered NKJV. The account's Starter plan allows 5,000 calls a month.
+ */
+export const API_BIBLE_TRANSLATIONS: Record<string, ApiBibleTranslationConfig> = {};
+
+/** Codes that may resolve through API.Bible; nothing else triggers an API.Bible request. */
+export function isApiBibleCandidate(abbreviation: string): boolean {
+  const code = abbreviation.trim().toUpperCase();
+  return code === "NKJV" || Object.hasOwn(API_BIBLE_TRANSLATIONS, code);
+}
+
+/**
+ * bible_cache_stats row counting API.Bible requests in a UTC calendar month, e.g.
+ * "APIB202611" (cache_misses = requests). The Starter plan allows 5,000 a month.
+ */
+export function apiBibleUsageKey(date = new Date()): string {
+  return `APIB${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export interface ApiBibleCall {
+  path: string;
+  status: number;
+}
+
+let recordApiBibleCall: (call: ApiBibleCall) => void = () => {};
+
+/** The routes count every API.Bible request against the monthly allowance. */
+export function setApiBibleCallRecorder(recorder: (call: ApiBibleCall) => void): void {
+  recordApiBibleCall = recorder;
+}
+
+async function apiBibleFetch(url: string, apiKey: string): Promise<Response> {
+  const response = await fetch(url, { headers: { "api-key": apiKey } });
+  try {
+    recordApiBibleCall({ path: new URL(url).pathname, status: response.status });
+  } catch {
+    // counting must never break a read
+  }
+  return response;
+}
 
 // ─── Translation categories ───────────────────────────────────────────────────
 
@@ -494,7 +531,8 @@ export function validateCanonicalCoverage(
 
 // ─── NKJV capability cache ────────────────────────────────────────────────────
 
-const NKJV_CACHE_TTL_MS = 5 * 60 * 1000;
+/** Each check costs one or two API.Bible calls, so the answer is kept for a day. */
+const NKJV_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface NkjvCapabilityCache {
   available: boolean;
@@ -545,9 +583,7 @@ export async function discoverNkjvCapability(
 
   try {
     // 1. Fetch the account's authorized Bible catalog
-    const catalogRes = await fetch("https://rest.api.bible/v1/bibles?language=eng", {
-      headers: { "api-key": apiKey },
-    });
+    const catalogRes = await apiBibleFetch("https://rest.api.bible/v1/bibles?language=eng", apiKey);
 
     if (!catalogRes.ok) {
       if (catalogRes.status === 401 || catalogRes.status === 403) {
@@ -575,9 +611,9 @@ export async function discoverNkjvCapability(
     }
 
     // 2. Validate coverage: fetch books with chapters for this bible
-    const booksRes = await fetch(
+    const booksRes = await apiBibleFetch(
       `https://rest.api.bible/v1/bibles/${nkjvEntry.id}/books?include-chapters=true`,
-      { headers: { "api-key": apiKey } }
+      apiKey,
     );
 
     if (!booksRes.ok) {
@@ -945,9 +981,7 @@ export async function fetchApiBibleChapter(
   const chapterId = `${apiBibleBookCode}.${chapterNum}`;
   const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/chapters/${chapterId}?content-type=html&include-verse-numbers=true&include-titles=true&include-chapter-numbers=false`;
 
-  const response = await fetch(url, {
-    headers: { "api-key": apiKey },
-  });
+  const response = await apiBibleFetch(url, apiKey);
 
   if (!response.ok) {
     const status = response.status;
@@ -1220,9 +1254,7 @@ export async function searchApiBible(
 
   const url = `https://rest.api.bible/v1/bibles/${config.bibleId}/search?query=${encodeURIComponent(query)}&limit=${limit}&sort=relevance`;
 
-  const response = await fetch(url, {
-    headers: { "api-key": apiKey },
-  });
+  const response = await apiBibleFetch(url, apiKey);
 
   if (!response.ok) {
     const status = response.status;
@@ -1391,8 +1423,11 @@ export async function resolveChapter(params: ResolveChapterParams): Promise<Reso
   }
 
   // API.Bible provider translations (includes discovered NKJV)
-  const allBooks = await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex);
-  const apiBibleTranslations = await getRuntimeApiBibleTranslations(allBooks);
+  const apiBibleTranslations = isApiBibleCandidate(translationAbbr)
+    ? await getRuntimeApiBibleTranslations(
+        await db.select().from(bibleBooks).orderBy(bibleBooks.orderIndex),
+      )
+    : API_BIBLE_TRANSLATIONS;
 
   if (apiBibleTranslations[translationAbbr]) {
     const config = apiBibleTranslations[translationAbbr];

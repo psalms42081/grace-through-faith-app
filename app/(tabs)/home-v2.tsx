@@ -21,6 +21,7 @@ import {
 } from "@/components/home-v2/home-data";
 import HomeHeader from "@/components/home-v2/HomeHeader";
 import HeroCard, { HeroTab } from "@/components/home-v2/HeroCard";
+import type { ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 import SSGradientCard from "@/components/home-v2/SSGradientCard";
 import DailyRhythm, { RhythmRowData } from "@/components/home-v2/DailyRhythm";
 import TopicChips from "@/components/home-v2/TopicChips";
@@ -147,7 +148,13 @@ export default function HomeV2Screen() {
     data: votdVerseData,
     isLoading: votdIsLoading,
     isError: votdIsError,
-  } = useQuery<{ id: string; text: string; translation?: string }>({
+  } = useQuery<{
+    id: string;
+    text: string;
+    translation?: string;
+    displayAbbreviation?: string;
+    attribution?: ChapterAttributionData;
+  }>({
     queryKey: [
       "/api/verse",
       {
@@ -405,6 +412,8 @@ export default function HomeV2Screen() {
         reflectionDaypart={localDay.daypart}
         reflectionReadingTarget={reflectionReadingTarget}
         translation={translation}
+        translationLabel={votdVerseData?.displayAbbreviation}
+        verseAttribution={votdVerseData?.attribution}
         verseLoading={verseLoading}
         verseUnavailable={verseUnavailable}
         dayIndex={localDay.dayIndex}

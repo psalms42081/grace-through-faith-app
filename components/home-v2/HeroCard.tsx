@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
+import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 import { HV2, F } from "./theme";
 import {
   assertReflectionReadingAlignment,
@@ -48,6 +49,10 @@ interface Props {
     chapterNumber: number;
   };
   translation?: string;
+  /** Reader-facing label for `translation`, e.g. "NASB1995". */
+  translationLabel?: string;
+  /** Copyright the verse's licence requires wherever it is shown. */
+  verseAttribution?: ChapterAttributionData;
   verseLoading?: boolean;
   verseUnavailable?: boolean;
   dayIndex?: number;
@@ -88,9 +93,10 @@ function artPixelHeight(width: number): number {
 
 export default function HeroCard({
   activeTab, onTabChange, verse, bookId, chapterNumber, userId, signpost, reflection,
-  reflectionDaypart, reflectionReadingTarget, translation, verseLoading, verseUnavailable,
-  dayIndex = dayOfYear(),
+  reflectionDaypart, reflectionReadingTarget, translation, translationLabel, verseAttribution,
+  verseLoading, verseUnavailable, dayIndex = dayOfYear(),
 }: Props) {
+  const versionLabel = translationLabel || translation;
   const [saved, setSaved] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
   const [rowWidth, setRowWidth] = useState(0);
@@ -152,6 +158,13 @@ export default function HeroCard({
     }
   };
 
+  const verseCredit =
+    activeTab === "verse" && verse.text && !verseLoading && !verseUnavailable && verseAttribution ? (
+      <View style={s.body}>
+        <ScriptureCredit attribution={verseAttribution} testID="hero-verse-attribution" />
+      </View>
+    ) : null;
+
   // HeadBlock lives in the art row. Body is a full-width sibling below the row.
   // Verse: eyebrow + quote + citation. Signpost: eyebrow + title. Reflection: eyebrow + thought.
   const head =
@@ -162,14 +175,14 @@ export default function HeroCard({
           <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
         ) : verseUnavailable ? (
           <Text style={[s.verseQuote, { fontStyle: "italic", opacity: 0.75 }]}>
-            {translation
-              ? `This verse is currently unavailable in ${translation}. Open your Bible to read it.`
+            {versionLabel
+              ? `This verse is currently unavailable in ${versionLabel}. Open your Bible to read it.`
               : "This verse is currently unavailable. Open your Bible to read it."}
           </Text>
         ) : verse.text ? (
           <Text style={s.verseQuote}>{`\u201C${verse.text}\u201D`}</Text>
         ) : null}
-        <Text style={s.cite}>{verse.reference}{translation ? ` · ${translation}` : ""}</Text>
+        <Text style={s.cite}>{verse.reference}{versionLabel ? ` · ${versionLabel}` : ""}</Text>
       </>
     ) : activeTab === "signpost" ? (
       <>
@@ -243,6 +256,7 @@ export default function HeroCard({
       </View>
 
       {body}
+      {verseCredit}
 
       <View style={s.actions} testID="hero-actions">
         {activeTab === "signpost" ? (

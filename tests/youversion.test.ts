@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import {
   aiScriptureTranslation,
   isYouVersionCode,
+  isYouVersionScriptureQuery,
   isYouVersionScriptureQueryKey,
   youVersionBibleId,
   youVersionCode,
@@ -45,13 +46,26 @@ describe("YouVersion codes", () => {
     assert.equal(youVersionBibleId("yv2692"), 2692);
     assert.equal(youVersionBibleId("KJV"), null);
     assert.equal(isYouVersionCode("YV110"), true);
-    assert.equal(isYouVersionCode("NIV"), false);
+    assert.equal(isYouVersionCode("NLT"), false);
+  });
+
+  it("serves NIV, AMP and NASB from YouVersion under their familiar codes", () => {
+    assert.equal(youVersionBibleId("niv"), 111);
+    assert.equal(youVersionBibleId("AMP"), 1588);
+    assert.equal(youVersionBibleId("NASB"), 100);
+    assert.equal(youVersionCode(111), "NIV");
+    assert.equal(youVersionCode(1588), "AMP");
+    assert.equal(youVersionCode(100), "NASB");
+    assert.equal(youVersionCode(2692), "YV2692");
+    assert.equal(youVersionBibleId("constructor"), null);
   });
 
   it("maps every YouVersion code to the local KJV for AI features", () => {
     assert.equal(aiScriptureTranslation("YV2692"), "KJV");
     assert.equal(aiScriptureTranslation("yv110"), "KJV");
-    assert.equal(aiScriptureTranslation("NIV"), "NIV");
+    assert.equal(aiScriptureTranslation("NIV"), "KJV");
+    assert.equal(aiScriptureTranslation("NASB"), "KJV");
+    assert.equal(aiScriptureTranslation("NLT"), "NLT");
     assert.equal(aiScriptureTranslation("KJV"), "KJV");
   });
 });
@@ -66,6 +80,18 @@ describe("YouVersion Scripture never reaches an AI request", () => {
     }
     assert.doesNotThrow(() =>
       assertNoYouVersionInAiRequest(JSON.stringify({ messages: [{ role: "user", content: "John 3:16 (KJV)" }] })),
+    );
+  });
+
+  it("rejects an aliased version named as the request's translation, without blocking prose", () => {
+    for (const body of [
+      JSON.stringify({ translation: "NIV" }),
+      JSON.stringify({ messages: [{ role: "user", content: JSON.stringify({ translationCode: "nasb" }) }] }),
+    ]) {
+      assert.throws(() => assertNoYouVersionInAiRequest(body), YouVersionInAiRequestError);
+    }
+    assert.doesNotThrow(() =>
+      assertNoYouVersionInAiRequest(JSON.stringify({ messages: [{ role: "user", content: "I grew up reading the NIV" }] })),
     );
   });
 
@@ -145,8 +171,19 @@ describe("YouVersion text stays off the device and the key stays on the server",
   it("query persistence skips YouVersion passages", () => {
     assert.equal(isYouVersionScriptureQueryKey("/api/passage?book=41&chapter=1&translation=YV2692"), true);
     assert.equal(isYouVersionScriptureQueryKey("/api/verse?book=41&chapter=1&verse=17&translation=YV110"), true);
+    assert.equal(isYouVersionScriptureQueryKey("/api/passage?book=41&chapter=1&translation=NIV"), true);
     assert.equal(isYouVersionScriptureQueryKey("/api/passage?book=41&chapter=1&translation=KJV"), false);
-    assert.match(read("app/_layout.tsx"), /isYouVersionScriptureQueryKey\(/);
+    assert.equal(isYouVersionScriptureQuery(["/api/verse", { book: 43, chapter: 3, verse: 16, translation: "NASB" }]), true);
+    assert.equal(isYouVersionScriptureQuery(["/api/passage", 43, 3, "YV2692"]), true);
+    assert.equal(isYouVersionScriptureQuery(["/api/verse", { book: 43, chapter: 3, verse: 16, translation: "KJV" }]), false);
+    assert.equal(isYouVersionScriptureQuery(["/api/signposts/daily", "NIV"]), false);
+    assert.match(read("app/_layout.tsx"), /isYouVersionScriptureQuery\(query\.queryKey\)/);
+  });
+
+  it("Scripture shown outside the reader carries its licence credit", () => {
+    assert.match(read("app/(tabs)/home-v2.tsx"), /verseAttribution=\{votdVerseData\?\.attribution\}/);
+    assert.match(read("components/home-v2/HeroCard.tsx"), /<ScriptureCredit attribution=\{verseAttribution\}/);
+    assert.match(read("components/devotions-v2/DevotionalDayPreview.tsx"), /<ScriptureCredit attribution=\{passage\.data\.attribution\}/);
   });
 
   it("the reader routes send YouVersion text with no-store", () => {
@@ -244,14 +281,14 @@ describe("translation picker catalog", () => {
     { id: "YV149", abbreviation: "YV149", displayAbbreviation: "RVR1960", name: "Reina Valera 1960", language: "es", languageName: "Spanish", source: "youversion" },
     { id: "KJV", abbreviation: "KJV", name: "King James Version", language: "en", languageName: "English", source: "db" },
     { id: "YV2692", abbreviation: "YV2692", displayAbbreviation: "NASB2020", name: "New American Standard Bible 2020", language: "en", languageName: "English", source: "youversion" },
-    { id: "NIV", abbreviation: "NIV", name: "New International Version", language: "en", languageName: "English", source: "api_bible" },
+    { id: "NLT", abbreviation: "NLT", name: "New Living Translation", language: "en", languageName: "English", source: "nlt_provider" },
     { id: "YV1", abbreviation: "YV1", displayAbbreviation: "AFR53", name: "Afrikaans 1953", language: "af", languageName: "Afrikaans", source: "youversion" },
   ];
 
   it("groups by language with English first, local and API.Bible before YouVersion", () => {
     const groups = groupTranslationsByLanguage(catalog);
     assert.deepEqual(groups.map((g) => g.languageName), ["English", "Afrikaans", "Spanish"]);
-    assert.deepEqual(groups[0].entries.map((e) => e.abbreviation), ["KJV", "NIV", "YV2692"]);
+    assert.deepEqual(groups[0].entries.map((e) => e.abbreviation), ["KJV", "NLT", "YV2692"]);
   });
 
   it("searches by language, abbreviation or name", () => {
@@ -264,7 +301,8 @@ describe("translation picker catalog", () => {
     assert.equal(translationLabel("YV2692", catalog), "NASB2020");
     assert.equal(translationLabel("KJV", catalog), "KJV");
     assert.equal(isSearchableTranslation("YV2692"), false);
-    assert.equal(isSearchableTranslation("NIV"), true);
+    assert.equal(isSearchableTranslation("NIV"), false);
+    assert.equal(isSearchableTranslation("NLT"), true);
   });
 
   it("the reader shows each version's copyright at the foot of the chapter", () => {

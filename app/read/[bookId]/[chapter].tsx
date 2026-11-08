@@ -37,6 +37,7 @@ import {
   type ChapterFootnote,
 } from "@/components/reader/ChapterAttribution";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
+import { READER_VERSION_CHIP_MAX_WIDTH, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
 import { type ReaderHeading } from "@/lib/group-verses-by-paragraph";
@@ -800,6 +801,8 @@ export default function VerseReaderScreen() {
   const isSyncingScroll = useRef(false);
   /** Reader column width; on web the app is a centred column narrower than the window. */
   const [readerWidth, setReaderWidth] = useState(0);
+  const [headerChipsWidth, setHeaderChipsWidth] = useState(0);
+  const headerTitleMaxWidth = readerHeaderTitleMaxWidth(readerWidth, headerChipsWidth);
 
   useEffect(() => {
     AsyncStorage.getItem(SPLIT_MODE_KEY).then((val) => {
@@ -1703,16 +1706,21 @@ export default function VerseReaderScreen() {
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={`${bookName} chapter ${chapter}, open chapter selector`}
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              style={[styles.headerTitleButton, headerTitleMaxWidth !== undefined && { maxWidth: headerTitleMaxWidth }]}
+              testID="reader-header-title"
             >
-              <Text style={[styles.headerTitleText, { color: textColor }]} numberOfLines={1}>
+              <Text style={[styles.headerTitleText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
                 {bookName} {chapter}
               </Text>
               <Ionicons name="chevron-down" size={14} color={RV2_INK_MUTED} />
             </Pressable>
           ),
           headerRight: () => (
-            <View style={styles.headerRow}>
+            <View
+              style={styles.headerRow}
+              testID="reader-header-chips"
+              onLayout={(event) => setHeaderChipsWidth(Math.ceil(event.nativeEvent.layout.width))}
+            >
               <Pressable
                 testID="reader-word-study-toggle"
                 accessibilityRole="button"
@@ -1766,9 +1774,13 @@ export default function VerseReaderScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Translation ${translationDisplay}, change`}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                     <Ionicons name="globe-outline" size={13} color={isDark ? "#AAAAAA" : "#777"} />
-                    <Text style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}>
+                    <Text
+                      style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {translationDisplay}
                     </Text>
                   </View>
@@ -2452,14 +2464,22 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    flexShrink: 0,
+    gap: 6,
+  },
+  headerTitleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
+    minWidth: 0,
   },
   headerIconBtn: {
     padding: 4,
   },
   headerToggle: {
     minHeight: 26,
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
@@ -2479,7 +2499,7 @@ const styles = StyleSheet.create({
     color: READER_TOGGLE_ON_INK,
   },
   headerPill: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
   },
@@ -2488,10 +2508,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
   headerTitleText: {
+    flexShrink: 1,
     fontSize: 17,
     fontFamily: "Lora_600SemiBold",
   },
   translationBadgeText: {
+    maxWidth: READER_VERSION_CHIP_MAX_WIDTH,
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },

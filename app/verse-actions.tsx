@@ -26,6 +26,7 @@ import {
   type ChapterFootnote,
 } from "@/components/reader/ChapterAttribution";
 import { isYouVersionCode } from "@/shared/youversion";
+import { withQuotationNotice } from "@/lib/verse-selection";
 
 const TEAL = "#2A8B8B";
 
@@ -100,7 +101,9 @@ export default function VerseActionsSheet() {
   const txDisplay = canonicalVerse?.displayAbbreviation || txLabel;
   const txName = canonicalVerse?.translationName || "";
   const youVersionText = isYouVersionCode(txLabel);
-  const fullText = canonicalText ? `${canonicalText}\n\u2014 ${reference} (${txDisplay})` : reference;
+  const fullText = canonicalText
+    ? withQuotationNotice(`${canonicalText}\n\u2014 ${reference} (${txDisplay})`, txLabel)
+    : reference;
 
   const [copiedTx, setCopiedTx] = useState<string | null>(null);
 
@@ -111,7 +114,7 @@ export default function VerseActionsSheet() {
   }, [fullText]);
 
   const handleCopyTranslation = async (verseText: string, txCode: string) => {
-    await Clipboard.setStringAsync(`${reference} (${txCode})\n${verseText}`);
+    await Clipboard.setStringAsync(withQuotationNotice(`${reference} (${txCode})\n${verseText}`, txCode));
     setCopiedTx(txCode);
     setTimeout(() => setCopiedTx(null), 1500);
   };
