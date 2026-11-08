@@ -53,12 +53,6 @@ check "POST /api/auth/delete-account (bogus token)" "401" "$(status -X POST "$BA
 echo ""
 echo "--- 3. Pro-only endpoints return 401 without auth ---"
 check "GET /api/chapter-context/1/1" "401" "$(status "$BASE/api/chapter-context/1/1")"
-check "GET /api/family/stats" "401" "$(status "$BASE/api/family/stats")"
-check "GET /api/family/children" "401" "$(status "$BASE/api/family/children")"
-check "GET /api/family/heatmap" "401" "$(status "$BASE/api/family/heatmap")"
-check "GET /api/family/prayers" "401" "$(status "$BASE/api/family/prayers")"
-check "POST /api/family/prayers" "401" "$(status -X POST "$BASE/api/family/prayers" -H 'Content-Type: application/json' -d '{}')"
-check "GET /api/family/dinner-topics" "401" "$(status "$BASE/api/family/dinner-topics")"
 
 echo ""
 echo "--- 4. Spoofed userId ignored on protected reads ---"
@@ -111,7 +105,6 @@ check "POST /api/feedback (guest)" "200" "$(status -X POST "$BASE/api/feedback" 
 
 echo ""
 echo "--- 10. Community writes require auth ---"
-check "POST /api/family/create" "401" "$(status -X POST "$BASE/api/family/create" -H 'Content-Type: application/json' -d '{"name":"test"}')"
 check "POST /api/groups/create" "401" "$(status -X POST "$BASE/api/groups/create" -H 'Content-Type: application/json' -d '{"name":"test"}')"
 
 echo "--- 11. Organization endpoints require auth ---"

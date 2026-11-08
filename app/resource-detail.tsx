@@ -365,7 +365,7 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
           isExpanded={isSectionExpanded("familyWorship")}
           onToggleExpand={() => toggleExpand("familyWorship")}
           stepLabel={getSectionStepLabel("familyWorship")}
-          previewText={typeof content.familyWorshipAdaptation === "string" ? content.familyWorshipAdaptation : content.familyWorshipAdaptation?.kidsVersion || ""}
+          previewText={typeof content.familyWorshipAdaptation === "string" ? content.familyWorshipAdaptation : content.familyWorshipAdaptation?.activityIdea || ""}
           isCurrent={firstIncompleteKey === "familyWorship"}
         >
           {typeof content.familyWorshipAdaptation === "string" ? (
@@ -380,17 +380,6 @@ function SabbathSchoolContent({ content, theme, completedSections, toggleSection
             </View>
           ) : (
             <>
-              {content.familyWorshipAdaptation.kidsVersion && (
-                <View style={sStyles.guidanceBlock}>
-                  <View style={sStyles.guidanceHeader}>
-                    <Ionicons name="book-outline" size={14} color="#2E7D32" />
-                    <Text style={[sStyles.guidanceLabel, { color: "#2E7D32" }]}>For the children</Text>
-                  </View>
-                  <Text style={[sStyles.bodyText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {content.familyWorshipAdaptation.kidsVersion}
-                  </Text>
-                </View>
-              )}
               {content.familyWorshipAdaptation.activityIdea && (
                 <View style={sStyles.guidanceBlock}>
                   <View style={sStyles.guidanceHeader}>

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import {
@@ -42,8 +42,24 @@ describe("words of Christ", () => {
     assert.doesNotMatch(reader, /Words of Christ in red/);
     assert.match(settings, /Red Letters/);
     assert.match(settings, /settings-red-letters/);
-    assert.match(settings, /Profile → Notifications/);
+    assert.match(settings, /renderRow\("notifications-outline", "Notifications"/);
+    assert.match(settings, /router\.push\("\/\(tabs\)\/profile"/);
+    assert.doesNotMatch(settings, /Profile → Notifications/);
+    assert.doesNotMatch(settings, /Streak Notifications/);
     assert.doesNotMatch(settings, /Daily Reminder Time/);
     assert.match(toggle, /activeThumbColor: PATH_B_SWITCH_THUMB/);
+    const spans = readFileSync(
+      path.join(process.cwd(), "components", "reader", "VerseWordSpans.tsx"),
+      "utf8",
+    );
+    assert.match(spans, /VerseTextRuns[\s\S]*style=\{spoken \? \{ color: WORDS_OF_CHRIST_INK \} : undefined\}/);
+  });
+
+  it("ships the KJV words-of-Christ table in the web export", () => {
+    const dir = path.join(process.cwd(), "dist", "_expo", "static", "js", "web");
+    const files = readdirSync(dir).filter((name) => name.endsWith(".js"));
+    assert.ok(files.length > 0, "web export has no JS bundle");
+    const bundle = files.map((name) => readFileSync(path.join(dir, name), "utf8")).join("\n");
+    assert.match(bundle, /"40\.5\.3":\s*\[\s*\[\s*0\s*,\s*12\s*\]\s*\]/);
   });
 });

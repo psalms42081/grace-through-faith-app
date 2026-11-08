@@ -171,7 +171,10 @@ export function VerseWordSpans({
               onTap();
             }}
           >
-            <VerseTextRuns text={piece.text} />
+            <VerseTextRuns
+              text={piece.text}
+              style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
+            />
           </Text>
         );
       })}

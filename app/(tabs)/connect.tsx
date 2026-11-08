@@ -22,7 +22,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_IMAGES: Record<string, any> = {
   church: require("@/assets/connect-cards/church-connect.png"),
   fellowship: require("@/assets/connect-cards/live-fellowship.png"),
-  family: require("@/assets/connect-cards/family-dashboard.png"),
   speakers: require("@/assets/connect-cards/speakers.png"),
   broadcasts: require("@/assets/connect-cards/broadcasts.png"),
   radio: require("@/assets/connect-cards/radio.png"),
@@ -104,14 +103,6 @@ export default function ConnectScreen() {
           title={t("connect.smallGroups")}
           subtitle={t("connect.smallGroupsSub")}
           onPress={() => router.push("/groups" as any)}
-          theme={theme}
-        />
-
-        <VisualCard
-          imageKey="family"
-          title={t("connect.familyDashboard")}
-          subtitle={t("connect.familyDashboardSub")}
-          onPress={() => router.push("/(tabs)/family" as any)}
           theme={theme}
         />
 

@@ -19,11 +19,6 @@ import {
   progressTracks,
   progressLessons,
   userPlanEnrollments,
-  kidsPurchases,
-  kidsProgress,
-  kidsStreaks,
-  kidsDailyQuests,
-  kidsUserBadges,
 } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { JWT_SECRET, requireAuth, getAuthUserId, getDeviceId, touchUserActivity } from "../middleware/auth";
@@ -189,11 +184,6 @@ router.post("/api/auth/migrate-guest-data", requireAuth, async (req, res) => {
       { table: progressTracks, col: progressTracks.userId },
       { table: progressLessons, col: progressLessons.userId },
       { table: userPlanEnrollments, col: userPlanEnrollments.userId },
-      { table: kidsPurchases, col: kidsPurchases.userId },
-      { table: kidsProgress, col: kidsProgress.userId },
-      { table: kidsStreaks, col: kidsStreaks.userId },
-      { table: kidsDailyQuests, col: kidsDailyQuests.userId },
-      { table: kidsUserBadges, col: kidsUserBadges.userId },
     ];
 
     let totalMigrated = 0;

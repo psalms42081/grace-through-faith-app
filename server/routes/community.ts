@@ -3,7 +3,6 @@ import { Router } from "express";
   import { cachedResponse } from "../middleware/response-cache";
   import {
     users,
-    families,
     prayerGroups,
     prayerGroupMembers,
     prayerRequests,
@@ -105,110 +104,6 @@ import { Router } from "express";
       return res.status(500).json({ error: "Failed to register push token" });
     }
   });
-
-  router.post("/api/family/create", requireAuth, async (req, res) => {
-  try {
-    const userId = req.authUserId!;
-    const { name } = req.body;
-    if (!name) return res.status(400).json({ error: "Family name is required" });
-
-    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
-    if (existingUser?.familyId) {
-      return res.status(400).json({ error: "You are already in a family group" });
-    }
-
-    let inviteCode = generateCode();
-    let attempts = 0;
-    while (attempts < 5) {
-      const existing = await db.select().from(families).where(eq(families.inviteCode, inviteCode));
-      if (existing.length === 0) break;
-      inviteCode = generateCode();
-      attempts++;
-    }
-
-    const [family] = await db.insert(families).values({
-      name,
-      inviteCode,
-      createdBy: userId,
-    }).returning();
-
-    await db.update(users).set({ familyId: family.id }).where(eq(users.id, userId));
-
-    return res.json({ family });
-  } catch (err) {
-    console.error("Family create error:", err);
-    return res.status(500).json({ error: "Failed to create family" });
-  }
-});
-
-router.post("/api/family/join", requireAuth, async (req, res) => {
-  try {
-    const userId = req.authUserId!;
-    const { inviteCode } = req.body;
-    if (!inviteCode) return res.status(400).json({ error: "Invite code is required" });
-
-    const [existingUser] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
-    if (existingUser?.familyId) {
-      return res.status(400).json({ error: "You are already in a family group" });
-    }
-
-    const [family] = await db.select().from(families).where(eq(families.inviteCode, inviteCode.toUpperCase()));
-    if (!family) {
-      return res.status(404).json({ error: "Invalid invite code" });
-    }
-
-    await db.update(users).set({ familyId: family.id }).where(eq(users.id, userId));
-
-    return res.json({ family });
-  } catch (err) {
-    console.error("Family join error:", err);
-    return res.status(500).json({ error: "Failed to join family" });
-  }
-});
-
-router.get("/api/family/info", async (req, res) => {
-  try {
-    const userId = extractUserId(req);
-    const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
-    if (!user?.familyId) {
-      return res.json({ family: null });
-    }
-
-    const [family] = await db.select().from(families).where(eq(families.id, user.familyId));
-    if (!family) return res.json({ family: null });
-
-    const members = await db.select({
-      id: users.id,
-      displayName: users.displayName,
-      username: users.username,
-    }).from(users).where(eq(users.familyId, family.id));
-
-    return res.json({ family, members });
-  } catch (err) {
-    console.error("Family info error:", err);
-    return res.status(500).json({ error: "Failed to get family info" });
-  }
-});
-
-router.get("/api/family/members", async (req, res) => {
-  try {
-    const userId = extractUserId(req);
-    const [user] = await db.select({ familyId: users.familyId }).from(users).where(eq(users.id, userId));
-    if (!user?.familyId) return res.json({ members: [] });
-
-    const members = await db.select({
-      id: users.id,
-      displayName: users.displayName,
-      username: users.username,
-    }).from(users).where(eq(users.familyId, user.familyId));
-
-    return res.json({ members });
-  } catch (err) {
-    console.error("Family members error:", err);
-    return res.status(500).json({ error: "Failed to get family members" });
-  }
-});
-
 
   router.post("/api/groups/create", requireAuth, async (req, res) => {
   try {

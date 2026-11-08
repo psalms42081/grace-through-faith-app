@@ -149,7 +149,10 @@ export function ReaderVerseWords({
               pointerEvents="none"
               style={[webInline, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
             >
-              <VerseTextRuns text={token.surface} />
+              <VerseTextRuns
+                text={token.surface}
+                style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
+              />
             </Text>
           );
         }
@@ -188,7 +191,10 @@ export function ReaderVerseWords({
             {tagged ? (
               token.surface
             ) : (
-              <VerseTextRuns text={token.surface} />
+              <VerseTextRuns
+                text={token.surface}
+                style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
+              />
             )}
           </Text>
         );

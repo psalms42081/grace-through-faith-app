@@ -23,12 +23,6 @@ import {
   progressLessons,
   userPlanEnrollments,
   deviceTokens,
-  childProfiles,
-  kidsPurchases,
-  kidsProgress,
-  kidsStreaks,
-  kidsDailyQuests,
-  kidsUserBadges,
 } from "../../shared/schema";
 import { eq, and, sql, desc, asc, ilike, or } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth";
@@ -249,11 +243,6 @@ router.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Re
     }
 
     const relatedTables = [
-      { table: kidsPurchases, col: kidsPurchases.userId },
-      { table: kidsProgress, col: kidsProgress.userId },
-      { table: kidsStreaks, col: kidsStreaks.userId },
-      { table: kidsDailyQuests, col: kidsDailyQuests.userId },
-      { table: kidsUserBadges, col: kidsUserBadges.userId },
       { table: userActivityCounters, col: userActivityCounters.userId },
       { table: readingHistory, col: readingHistory.userId },
       { table: readingStreaks, col: readingStreaks.userId },
@@ -273,10 +262,6 @@ router.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Re
       { table: deviceTokens, col: deviceTokens.userId },
       { table: organizationMembers, col: organizationMembers.userId },
     ];
-
-    try {
-      await db.delete(childProfiles).where(eq(childProfiles.parentId, id));
-    } catch {}
 
     for (const { table, col } of relatedTables) {
       try {

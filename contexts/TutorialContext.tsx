@@ -12,7 +12,6 @@ export type TutorialId =
   | "explore"
   | "profile"
   | "prayer-journal"
-  | "family-dashboard"
   | "spiritual-rings"
   | "home_daily_rhythm"
   | "home_for_you"

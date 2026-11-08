@@ -27,7 +27,6 @@ import devotionalRoutes from "./routes/devotionals";
 import ttsRoutes from "./routes/tts";
 import communityRoutes from "./routes/community";
 import pushRoutes from "./routes/push";
-import familyDashboardRoutes from "./routes/family-dashboard";
 import formationRoutes from "./routes/formation";
 import greatControversyRoutes from "./routes/great-controversy";
 import sabbathSchoolRoutes from "./routes/sabbath-school";
@@ -153,7 +152,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(ttsRoutes);
   app.use(communityRoutes);
   app.use(pushRoutes);
-  app.use(familyDashboardRoutes);
   app.use(formationRoutes);
   app.use(greatControversyRoutes);
   app.use(sabbathSchoolRoutes);

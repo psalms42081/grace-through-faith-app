@@ -35,7 +35,6 @@ const companionSchema = z.object({
     applicationPrompt: z.string().min(30),
   }),
   familyWorshipAdaptation: z.object({
-    kidsVersion: z.string().min(300),
     activityIdea: z.string().min(30),
     discussionForKids: z.array(z.string().min(10)).min(2),
     prayer: z.string().min(20),
@@ -99,7 +98,6 @@ export interface SabbathSchoolCompanionContent {
     applicationPrompt: string;
   };
   familyWorshipAdaptation: {
-    kidsVersion: string;
     activityIdea: string;
     discussionForKids: string[];
     prayer: string;
@@ -214,7 +212,6 @@ Return a JSON object with this exact structure:
     "applicationPrompt": "a specific, practical application prompt — not generic. Tie it to a real-life scenario (work, family, church, or personal struggle)."
   },
   "familyWorshipAdaptation": {
-    "kidsVersion": "Write 2-3 full paragraphs retelling the lesson's theme for children ages 5-10. Use a story, analogy, or everyday scenario they can relate to. Avoid abstract theology — make it concrete and vivid. Aim for 400+ characters.",
     "activityIdea": "a specific, creative hands-on activity unique to THIS lesson's theme (avoid generic 'kindness chart' activities — tie it directly to the lesson's imagery or narrative)",
     "discussionForKids": ["age-appropriate question tied to the lesson theme", "question that connects to their daily life", "question about how God helps them with this"],
     "prayer": "a warm, simple prayer children can pray — 2-3 sentences, using language a 6-year-old would understand"

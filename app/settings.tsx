@@ -382,17 +382,10 @@ export default function SettingsScreen() {
         })}
 
         {renderSectionHeader("FORMATION")}
-        {renderRow("notifications-outline", "Profile → Notifications", {
+        {renderRow("notifications-outline", "Notifications", {
           onPress: () => router.push("/(tabs)/profile" as any),
           showChevron: true,
           testID: "settings-profile-notifications",
-        })}
-        {renderRow("flame-outline", "Streak Notifications", {
-          onPress: () => comingSoon("Streak Notifications"),
-          showChevron: !ENABLE_PREMIUM,
-          rightElement: ENABLE_PREMIUM ? (
-            <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} style={{ marginRight: 4 }} />
-          ) : undefined,
           isLast: true,
         })}
 

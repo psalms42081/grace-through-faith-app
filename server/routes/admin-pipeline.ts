@@ -410,7 +410,7 @@ router.get("/api/admin/pipeline/resource/:id/preview", requirePipelineAccess, as
       contentSections.push({ key: "memoryVerseGuide", label: "Memory Verse Guide", preview: contentJson.memoryVerseGuide.reference || "" });
     }
     if (contentJson?.familyWorshipAdaptation) {
-      contentSections.push({ key: "familyWorshipAdaptation", label: "Family Worship", preview: String(contentJson.familyWorshipAdaptation.kidsVersion || "").substring(0, 150) });
+      contentSections.push({ key: "familyWorshipAdaptation", label: "Family Worship", preview: String(contentJson.familyWorshipAdaptation.activityIdea || "").substring(0, 150) });
     }
     if (contentJson?.egwConnections) {
       contentSections.push({ key: "egwConnections", label: "EGW Connections", preview: `${contentJson.egwConnections.length} connections` });

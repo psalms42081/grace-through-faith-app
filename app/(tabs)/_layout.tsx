@@ -196,16 +196,6 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="family"
-        options={{
-          title: "Family",
-          href: null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="study"
         options={{
           title: "Study",

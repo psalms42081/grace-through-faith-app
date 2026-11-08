@@ -197,17 +197,14 @@ function getTimeSince(dateStr: string): string {
   return `${Math.floor(days / 7)}w ago`;
 }
 
-export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
+export default function PrayerWall({ groupId }: { groupId: string }) {
   const { theme, isDark } = useTheme();
   const { isPro } = useProStatus();
   const { userId, user } = useAuth();
   const qc = useQueryClient();
-  const displayName = user?.displayName || "Family Member";
+  const displayName = user?.displayName || "Group Member";
 
-  const isGroupMode = !!groupId;
-  const queryKeyStr = isGroupMode
-    ? `/api/groups/${groupId}/prayers`
-    : `/api/family/prayers?userId=${userId}`;
+  const queryKeyStr = `/api/groups/${groupId}/prayers`;
 
   const [showForm, setShowForm] = useState(false);
   const [prayerTitle, setPrayerTitle] = useState("");
@@ -221,9 +218,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
 
   const postMutation = useMutation({
     mutationFn: async (data: { title: string; content: string; authorName: string }) => {
-      const endpoint = isGroupMode
-        ? `/api/groups/${groupId}/prayers`
-        : "/api/family/prayers";
+      const endpoint = `/api/groups/${groupId}/prayers`;
       const res = await apiRequest("POST", endpoint, {
         userId,
         familyId: userId,
@@ -241,9 +236,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
 
   const supportMutation = useMutation({
     mutationFn: async (prayerId: string) => {
-      const endpoint = isGroupMode
-        ? `/api/groups/${groupId}/prayers/${prayerId}/support`
-        : `/api/family/prayers/${prayerId}/support`;
+      const endpoint = `/api/groups/${groupId}/prayers/${prayerId}/support`;
       const res = await apiRequest("POST", endpoint, {
         userId,
         memberName: displayName,
@@ -257,9 +250,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
 
   const answeredMutation = useMutation({
     mutationFn: async ({ id, answered }: { id: string; answered: boolean }) => {
-      const endpoint = isGroupMode
-        ? `/api/groups/${groupId}/prayers/${id}/answered`
-        : `/api/family/prayers/${id}/answered`;
+      const endpoint = `/api/groups/${groupId}/prayers/${id}/answered`;
       const res = await apiRequest("POST", endpoint, {
         userId,
         answered,
@@ -276,9 +267,9 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
     postMutation.mutate({
       title: prayerTitle.trim(),
       content: prayerContent.trim(),
-      authorName: authorName.trim() || (isGroupMode ? "Group Member" : "Family Member"),
+      authorName: authorName.trim() || "Group Member",
     });
-  }, [authorName, isGroupMode, postMutation, prayerContent, prayerTitle]);
+  }, [authorName, postMutation, prayerContent, prayerTitle]);
 
   const handleToggleAnswered = useCallback((id: string, answered: boolean) => {
     if (answered) {
@@ -293,8 +284,8 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
       <View style={styles.titleRow}>
-        <Ionicons name={isGroupMode ? "heart" : "flame"} size={18} color={PathB.ink} />
-        <Text style={[styles.title, { color: theme.text }]}>{isGroupMode ? "Group Prayer Wall" : "Family Altar"}</Text>
+        <Ionicons name="heart" size={18} color={PathB.ink} />
+        <Text style={[styles.title, { color: theme.text }]}>Group Prayer Wall</Text>
         <Pressable
           style={[styles.addButton, { backgroundColor: PathB.ink + "0F" }]}
           onPress={() => setShowForm(!showForm)}
@@ -305,7 +296,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
       </View>
 
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-        {isGroupMode ? "Lift up your group in prayer together" : "Lift up your family in prayer together"}
+        Lift up your group in prayer together
       </Text>
 
       {showForm && (
@@ -359,7 +350,7 @@ export default function PrayerWall({ groupId }: { groupId?: string } = {}) {
         <EmptyState appearance="dark"
           icon="flame-outline"
           title="No prayer requests yet"
-          description={isGroupMode ? "Lift your group up in prayer together" : "Lift your family up in prayer together"}
+          description="Lift your group up in prayer together"
         />
       )}
 
