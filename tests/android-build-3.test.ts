@@ -23,9 +23,9 @@ describe("status bar clearance", () => {
 
   it("keeps the reader and chapter list on the stack header, which already includes the top inset", () => {
     const stack = read("../app/(tabs)/read/_layout.tsx");
-    assert.match(stack, /name="\[bookId\]\/index" options=\{\{ headerShown: true \}\}/);
-    assert.match(stack, /name="\[bookId\]\/\[chapter]"/);
-    assert.match(stack, /headerShown: true/);
+    assert.match(stack, /name="\[bookId\]\/index" options=\{chapterListScreenOptions\}/);
+    assert.match(stack, /name="\[bookId\]\/\[chapter]" options=\{readerScreenOptions\}/);
+    assert.match(read("../components/reader/ReaderStackHeader.tsx"), /headerShown: true/);
     assert.doesNotMatch(read("../app/read/[bookId]/[chapter].tsx"), /headerStatusBarHeight:\s*0/);
     assert.doesNotMatch(read("../app/read/[bookId]/index.tsx"), /headerStatusBarHeight:\s*0/);
   });

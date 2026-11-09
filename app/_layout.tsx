@@ -73,6 +73,7 @@ if (_isExpoGo()) {
     });
   }
 }
+import { chapterListScreenOptions, readerScreenOptions } from "@/components/reader/ReaderStackHeader";
 import {
   useFonts,
   Lora_400Regular,
@@ -173,9 +174,9 @@ function RootLayoutNav() {
       <Stack.Screen name="onboarding" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="book-picker" options={{ headerShown: false }} />
-      <Stack.Screen name="read/[bookId]/index" options={{ headerShown: true }} />
-      <Stack.Screen name="read/[bookId]/[chapter]" options={{ headerShown: true }} />
-      <Stack.Screen name="scripture" options={{ headerShown: true, title: "" }} />
+      <Stack.Screen name="read/[bookId]/index" options={chapterListScreenOptions} />
+      <Stack.Screen name="read/[bookId]/[chapter]" options={readerScreenOptions} />
+      <Stack.Screen name="scripture" options={readerScreenOptions} />
       <Stack.Screen name="ss-reading" options={{ headerShown: false }} />
       <Stack.Screen name="read-legacy/[bookId]/[chapter]" options={{ headerShown: false }} />
       <Stack.Screen
@@ -252,6 +253,32 @@ function RootLayoutNav() {
       <Stack.Screen name="privacy" options={{ headerShown: false }} />
       <Stack.Screen name="giving" options={{ headerShown: false }} />
       <Stack.Screen name="conference-portal" options={{ headerShown: false }} />
+      {/* Routes with a dynamic segment must never fall back to the raw "[id]" route name as a title. */}
+      <Stack.Screen name="journey-route/[id]" options={{ headerShown: true, title: "Journey Route" }} />
+      <Stack.Screen name="kingdom-overlay/[id]" options={{ headerShown: true, title: "Kingdom" }} />
+      <Stack.Screen name="location/[id]" options={{ headerShown: true, title: "Location" }} />
+      <Stack.Screen name="people-group/[id]" options={{ headerShown: true, title: "People Group" }} />
+      <Stack.Screen name="prophecy-link/[id]" options={{ headerShown: true, title: "Prophecy" }} />
+      <Stack.Screen name="tribe-overlay/[id]" options={{ headerShown: true, title: "Tribe" }} />
+      <Stack.Screen name="speaker/[id]" options={{ headerShown: false }} />
+      {/* Screens that draw their own header, redirect, or set a title from inside the screen. */}
+      <Stack.Screen name="admin-review" options={{ headerShown: true, title: "Content Pipeline" }} />
+      <Stack.Screen name="ai-guidelines" options={{ headerShown: false }} />
+      <Stack.Screen name="broadcasts" options={{ headerShown: false }} />
+      <Stack.Screen name="create-plan" options={{ headerShown: false }} />
+      <Stack.Screen name="discover" options={{ headerShown: false }} />
+      <Stack.Screen name="leader-analytics" options={{ headerShown: false }} />
+      <Stack.Screen name="leader-broadcast" options={{ headerShown: true, title: "Broadcast Announcements" }} />
+      <Stack.Screen name="library" options={{ headerShown: true, title: "Saved" }} />
+      <Stack.Screen name="maps-timeline" options={{ headerShown: true, title: "" }} />
+      <Stack.Screen name="music" options={{ headerShown: true, title: "" }} />
+      <Stack.Screen name="org-members" options={{ headerShown: true, title: "Church Members" }} />
+      <Stack.Screen name="org-onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="sda-studies" options={{ headerShown: false }} />
+      <Stack.Screen name="semantic-search" options={{ headerShown: true, title: "" }} />
+      <Stack.Screen name="series" options={{ headerShown: false }} />
+      <Stack.Screen name="speakers" options={{ headerShown: false }} />
+      <Stack.Screen name="verse-explain" options={{ headerShown: false }} />
     </Stack>
   );
 }

@@ -16,6 +16,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
 import { bibleTabBookPath, goBibleReaderBack, isBibleTabSegments } from "@/lib/bible-tab-navigation";
+import { chapterListTitle } from "@/lib/reader-header-layout";
 import {
   useCanPopNestedStack,
   useHardwareBackToHomeWhenAtStackRoot,
@@ -92,7 +93,7 @@ export default function ChapterPickerScreen() {
     <>
       <Stack.Screen
         options={{
-          title: book?.name ?? "Chapters",
+          title: book?.name || chapterListTitle({ bookId }),
           headerStyle: { backgroundColor: SWEEP_LIGHT.background },
           headerTintColor: SWEEP_LIGHT.text,
           headerLeft: () => (

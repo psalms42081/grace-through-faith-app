@@ -51,7 +51,8 @@ import {
 import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { formatSheetReference } from "@/lib/verse-sheet";
-import { READER_VERSION_CHIP_MAX_WIDTH, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
+import { READER_VERSION_CHIP_MAX_WIDTH } from "@/lib/reader-header-layout";
+import { registerReaderHeaderActions, setReaderHeaderWidths } from "@/lib/reader-header-store";
 import { bibleBookName } from "@/lib/scripture-reference";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { withAcrosticHeadings } from "@/lib/group-verses-by-paragraph";
@@ -829,8 +830,9 @@ export default function VerseReaderScreen() {
   const isSyncingScroll = useRef(false);
   /** Reader column width; on web the app is a centred column narrower than the window. */
   const [readerWidth, setReaderWidth] = useState(0);
-  const [headerChipsWidth, setHeaderChipsWidth] = useState(0);
-  const headerTitleMaxWidth = readerHeaderTitleMaxWidth(readerWidth, headerChipsWidth);
+  useEffect(() => {
+    setReaderHeaderWidths({ headerWidth: readerWidth });
+  }, [readerWidth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1107,9 +1109,28 @@ export default function VerseReaderScreen() {
   const routeChapter = Array.isArray(chapter) ? chapter[0] ?? "" : chapter ?? "";
   const bookName = data?.book?.name || bibleBookName(routeBookId);
   const headerLabel = `${bookName} ${routeChapter}`.trim();
+  // The layout options already derive this title from the route params for the first frame;
+  // this keeps the header in step if the passage's book name differs (set before paint).
   useLayoutEffect(() => {
     navigation.setOptions({ title: headerLabel });
   }, [navigation, headerLabel]);
+  // The header's back and title buttons are rendered by the layout; the focused reader owns
+  // what they do.
+  const headerActionsRef = useRef({ openChapterPicker: () => {}, goBack: () => {} });
+  headerActionsRef.current = {
+    openChapterPicker: () => setShowChapterPicker(true),
+    goBack: handleReaderBack,
+  };
+  useFocusEffect(
+    useCallback(
+      () =>
+        registerReaderHeaderActions({
+          openChapterPicker: () => headerActionsRef.current.openChapterPicker(),
+          goBack: () => headerActionsRef.current.goBack(),
+        }),
+      [],
+    ),
+  );
   const totalChapters = data?.book?.chapterCount ?? 0;
   const translationChapterCount = data?.translationChapterCount ?? totalChapters;
   const chapterNum = Number(chapter);
@@ -1765,46 +1786,16 @@ export default function VerseReaderScreen() {
     <>
       <Stack.Screen
         options={{
-          title: headerLabel,
+          // The title, back button and title button live in the route's layout options
+          // (components/reader/ReaderStackHeader.tsx) so they exist on the first header frame.
           headerStyle: { backgroundColor: readerBg },
           headerShadowVisible: false,
           headerTintColor: textColor,
-          headerLeft: () => (
-            <Pressable
-              onPress={handleReaderBack}
-              hitSlop={12}
-              style={styles.headerIconBtn}
-              testID="bible-reader-back"
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <Ionicons name="chevron-back" size={22} color={textColor} />
-            </Pressable>
-          ),
-          headerTitle: () => (
-            <Pressable
-              onPress={() => setShowChapterPicker(true)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={headerLabel ? `${headerLabel}, open chapter selector` : "Open chapter selector"}
-              style={[styles.headerTitleButton, headerTitleMaxWidth !== undefined && { maxWidth: headerTitleMaxWidth }]}
-              testID="reader-header-title"
-            >
-              <Text
-                style={[styles.headerTitleText, { color: textColor }]}
-                numberOfLines={1} ellipsizeMode="tail"
-                maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
-              >
-                {headerLabel}
-              </Text>
-              <Ionicons name="chevron-down" size={14} color={RV2_INK_MUTED} />
-            </Pressable>
-          ),
           headerRight: () => (
             <View
               style={styles.headerRow}
               testID="reader-header-chips"
-              onLayout={(event) => setHeaderChipsWidth(Math.ceil(event.nativeEvent.layout.width))}
+              onLayout={(event) => setReaderHeaderWidths({ chipsWidth: Math.ceil(event.nativeEvent.layout.width) })}
             >
               <Pressable
                 testID="reader-word-study-toggle"
@@ -2619,13 +2610,6 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     gap: 6,
   },
-  headerTitleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexShrink: 1,
-    minWidth: 0,
-  },
   headerIconBtn: {
     padding: 4,
   },
@@ -2660,11 +2644,6 @@ const styles = StyleSheet.create({
   headerPillText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-  },
-  headerTitleText: {
-    flexShrink: 1,
-    fontSize: 17,
-    fontFamily: "Lora_600SemiBold",
   },
   translationBadgeText: {
     maxWidth: READER_VERSION_CHIP_MAX_WIDTH,

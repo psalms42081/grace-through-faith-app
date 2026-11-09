@@ -36,6 +36,17 @@ import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage } from "@/lib/words-of-c
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { APP_CONTACT_EMAIL } from "@/constants/app";
+import Constants from "expo-constants";
+import * as Updates from "expo-updates";
+import { appVersionLine } from "@/lib/app-version-line";
+
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
+const RUNNING_BUILD_LINE = appVersionLine({
+  version: APP_VERSION,
+  channel: Updates.channel,
+  updateId: Updates.updateId,
+  isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+});
 
 // Path B light sweep tokens
 const CORAL = "#E8604C";
@@ -436,7 +447,7 @@ export default function SettingsScreen() {
           onPress: () => showToast("Informed Ministries — an independent spiritual formation app for Adventist believers", "info"),
         })}
         {renderRow("code-slash-outline", "App Version", {
-          rightText: "1.0.0",
+          rightText: APP_VERSION,
           showChevron: false,
           isLast: true,
         })}
@@ -494,6 +505,15 @@ export default function SettingsScreen() {
             </Text>
           </Pressable>
         )}
+
+        <Text
+          style={s.buildLine}
+          testID="settings-app-version"
+          accessibilityLabel={`App version. ${RUNNING_BUILD_LINE}`}
+          selectable
+        >
+          {RUNNING_BUILD_LINE}
+        </Text>
       </ScrollView>
 
       <Modal
@@ -792,6 +812,15 @@ const s = StyleSheet.create({
   signOutText: {
     fontSize: 16,
     color: "#EF4444",
+  },
+  buildLine: {
+    marginTop: 28,
+    marginHorizontal: 20,
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 16,
+    color: TEXT_MUTED,
+    fontFamily: "Inter_400Regular",
   },
   profileInput: {
     backgroundColor: CARD_BG,
