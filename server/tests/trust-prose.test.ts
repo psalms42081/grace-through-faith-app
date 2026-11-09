@@ -15,10 +15,8 @@
 
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import {
-  shouldGenerateAiStrongMap,
-  strongMapCacheHash,
-} from "../../lib/strong-map-policy";
+import { shouldGenerateAiStrongMap } from "../../lib/strong-map-policy";
+import { strongMapCacheHash } from "../services/strong-map-cache";
 
 class ScriptureError extends Error {
   code: string;

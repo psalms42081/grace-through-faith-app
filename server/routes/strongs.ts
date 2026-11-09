@@ -12,11 +12,13 @@ import {
 import {
   AI_STRONG_SOURCE,
   STEP_STRONG_SOURCE,
-  STRONG_MAP_CACHE_VERSION,
   isKjvTranslation,
   shouldGenerateAiStrongMap,
-  strongMapCacheHash,
 } from "../../lib/strong-map-policy";
+import {
+  STRONG_MAP_CACHE_VERSION,
+  strongMapCacheHash,
+} from "../services/strong-map-cache";
 import { normalizeStrongId } from "../../lib/step-bible-tagged";
 import { aiScriptureTranslation } from "../../shared/youversion";
 

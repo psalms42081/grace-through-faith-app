@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   cleanEnglishGloss,
@@ -249,5 +250,12 @@ describe("AI fallback policy", () => {
     assert.equal(shouldGenerateAiStrongMap("kjv"), false);
     assert.equal(shouldGenerateAiStrongMap("NIV"), true);
     assert.equal(shouldGenerateAiStrongMap("ASV"), true);
+  });
+
+  it("keeps Strong map policy free of Node built-ins so the reader can import it", () => {
+    const source = readFileSync(new URL("../lib/strong-map-policy.ts", import.meta.url), "utf8");
+    assert.doesNotMatch(source, /from ["']crypto["']/);
+    assert.doesNotMatch(source, /from ["']node:/);
+    assert.doesNotMatch(source, /strongMapCacheHash/);
   });
 });
