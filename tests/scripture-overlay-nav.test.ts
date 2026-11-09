@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { findScriptureCitations, parseScriptureReference } from "../lib/scripture-reference";
+import { bibleBookName, findScriptureCitations, parseScriptureReference } from "../lib/scripture-reference";
 import { VERSE_SELECTION_WASH } from "../lib/verse-selection";
 
 describe("scripture overlay href", () => {
@@ -10,6 +10,19 @@ describe("scripture overlay href", () => {
     assert.match(nav, /export const SCRIPTURE_OVERLAY_PATH = "\/scripture"/);
     assert.match(nav, /pathname: SCRIPTURE_OVERLAY_PATH/);
     assert.match(nav, /params\.verse = String\(opts\.verse\)/);
+  });
+});
+
+describe("bible book names", () => {
+  it("resolves the English title from the book id before a passage request", () => {
+    assert.equal(bibleBookName(40), "Matthew");
+    assert.equal(bibleBookName("40"), "Matthew");
+    assert.equal(bibleBookName(23), "Isaiah");
+    assert.equal(bibleBookName(19), "Psalms");
+    assert.equal(bibleBookName("19"), "Psalms");
+    assert.equal(bibleBookName(66), "Revelation");
+    assert.equal(bibleBookName(0), "");
+    assert.equal(bibleBookName("nope"), "");
   });
 });
 

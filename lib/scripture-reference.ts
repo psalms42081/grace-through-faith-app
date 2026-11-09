@@ -68,6 +68,21 @@ const BIBLE_BOOK_IDS: Record<string, number> = {
   Revelation: 66,
 };
 
+const BIBLE_BOOK_NAMES_BY_ID: Readonly<Record<number, string>> = (() => {
+  const names: Record<number, string> = {};
+  for (const [name, id] of Object.entries(BIBLE_BOOK_IDS)) {
+    if (names[id] === undefined) names[id] = name;
+  }
+  return names;
+})();
+
+/** English book title for a book id. Available on the first render, before `/api/passage` returns. */
+export function bibleBookName(bookId: string | number | null | undefined): string {
+  const id = typeof bookId === "number" ? bookId : Number(String(bookId ?? "").trim());
+  if (!Number.isInteger(id) || id < 1) return "";
+  return BIBLE_BOOK_NAMES_BY_ID[id] ?? "";
+}
+
 const BOOK_ALIASES: Record<string, string> = {
   gen: "Genesis",
   "gen.": "Genesis",

@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Dimensions,
   PanResponder,
 } from "react-native";
-import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments, usePathname } from "expo-router";
+import { router, useLocalSearchParams, Stack, useFocusEffect, useNavigation, useSegments, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -52,6 +52,7 @@ import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { formatSheetReference } from "@/lib/verse-sheet";
 import { READER_VERSION_CHIP_MAX_WIDTH, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
+import { bibleBookName } from "@/lib/scripture-reference";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { withAcrosticHeadings } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
@@ -722,6 +723,7 @@ const NAV_VERSE_WASH_FADE_MS = 400;
 
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam, verseEnd: verseEndParam, verses: versesParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string; verseEnd?: string; verses?: string }>();
+  const navigation = useNavigation();
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
   const pathname = usePathname();
@@ -1101,7 +1103,13 @@ export default function VerseReaderScreen() {
     return set;
   }, [bookmarksData]);
 
-  const bookName = data?.book?.name ?? "";
+  const routeBookId = Array.isArray(bookId) ? bookId[0] : bookId;
+  const routeChapter = Array.isArray(chapter) ? chapter[0] ?? "" : chapter ?? "";
+  const bookName = data?.book?.name || bibleBookName(routeBookId);
+  const headerLabel = `${bookName} ${routeChapter}`.trim();
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: headerLabel });
+  }, [navigation, headerLabel]);
   const totalChapters = data?.book?.chapterCount ?? 0;
   const translationChapterCount = data?.translationChapterCount ?? totalChapters;
   const chapterNum = Number(chapter);
@@ -1757,7 +1765,7 @@ export default function VerseReaderScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "",
+          title: headerLabel,
           headerStyle: { backgroundColor: readerBg },
           headerShadowVisible: false,
           headerTintColor: textColor,
@@ -1778,7 +1786,7 @@ export default function VerseReaderScreen() {
               onPress={() => setShowChapterPicker(true)}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={`${bookName} chapter ${chapter}, open chapter selector`}
+              accessibilityLabel={headerLabel ? `${headerLabel}, open chapter selector` : "Open chapter selector"}
               style={[styles.headerTitleButton, headerTitleMaxWidth !== undefined && { maxWidth: headerTitleMaxWidth }]}
               testID="reader-header-title"
             >
@@ -1787,7 +1795,7 @@ export default function VerseReaderScreen() {
                 numberOfLines={1} ellipsizeMode="tail"
                 maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
               >
-                {bookName} {chapter}
+                {headerLabel}
               </Text>
               <Ionicons name="chevron-down" size={14} color={RV2_INK_MUTED} />
             </Pressable>

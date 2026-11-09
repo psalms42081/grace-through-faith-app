@@ -158,6 +158,9 @@ describe("reader header", () => {
   it("the title truncates and the version chip ellipsizes", () => {
     const reader = read("app/read/[bookId]/[chapter].tsx");
     assert.match(reader, /headerTitleMaxWidth !== undefined && \{ maxWidth: headerTitleMaxWidth \}/);
+    assert.match(reader, /const bookName = data\?\.book\?\.name \|\| bibleBookName\(routeBookId\)/);
+    assert.match(reader, /title: headerLabel/);
+    assert.match(reader, /navigation\.setOptions\(\{ title: headerLabel \}\)/);
     assert.match(reader, /testID="reader-header-chips"\s+onLayout=/);
     assert.match(reader, /styles\.headerTitleText[^>]*numberOfLines=\{1\} ellipsizeMode="tail"/);
     assert.match(reader, /maxWidth: READER_VERSION_CHIP_MAX_WIDTH/);
