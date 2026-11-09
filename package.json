@@ -9,7 +9,7 @@
     "expo:start:static:build": "npx expo start --no-dev --minify --localhost",
     "expo:static:build": "node scripts/build.js",
     "legal:render": "npx tsx scripts/render-legal-docs.ts",
-    "web:export": "npx tsx scripts/render-legal-docs.ts && npx expo export --platform web --output-dir dist && node scripts/copy-web-pwa-assets.mjs",
+    "web:export": "npx tsx scripts/render-legal-docs.ts && node scripts/export-web.mjs && node scripts/copy-web-pwa-assets.mjs",
     "server:build": "esbuild server/index.ts --platform=node --packages=external --bundle --format=cjs --outdir=server_dist",
     "server:prod": "NODE_ENV=production node server_dist/index.js",
     "db:push": "drizzle-kit push",

@@ -368,6 +368,7 @@ export default function NotificationSettings() {
           onValueChange={onVerseChange}
           disabled={!ready || busy}
           testID="profile-daily-verse-switch"
+          accessibilityLabel="Daily verse"
         />
       </View>
       <ReminderTimeField
@@ -403,6 +404,7 @@ export default function NotificationSettings() {
           onValueChange={onPlanChange}
           disabled={!ready || busy}
           testID="profile-plan-reminder-switch"
+          accessibilityLabel="Reading plan"
         />
       </View>
       <View style={styles.row}>
@@ -416,6 +418,7 @@ export default function NotificationSettings() {
           onValueChange={onSabbathChange}
           disabled={!ready || busy}
           testID="profile-ss-reminder-switch"
+          accessibilityLabel="Sabbath School reminder"
         />
       </View>
       <ReminderTimeField
@@ -435,6 +438,7 @@ export default function NotificationSettings() {
           onValueChange={onPrayerChange}
           disabled={!ready || busy}
           testID="profile-prayer-times-switch"
+          accessibilityLabel="Times of prayer"
         />
       </View>
       {prayerTimes.map((time, index) => (

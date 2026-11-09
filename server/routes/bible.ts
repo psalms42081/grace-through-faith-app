@@ -7,7 +7,7 @@ import {
   bibleCache,
   bibleCacheStats,
 } from "../../shared/schema";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { cachedResponse } from "../middleware/response-cache";
 import { getTranslationId } from "../services/languageAwareContent";
 import {
@@ -39,6 +39,12 @@ import {
 import { isKjvTranslation } from "../../lib/strong-map-policy";
 import { isYouVersionCode } from "../../shared/youversion";
 import { stripAcrosticMarker } from "../../shared/acrostic-markers";
+import {
+  postgresWholeWord,
+  queryWords,
+  rankBibleSearchResults,
+  type RankableVerse,
+} from "../../lib/bible-search";
 import {
   localTranslationLicense,
   localTranslationNotice,
@@ -194,6 +200,24 @@ async function resolveYouVersionForReader(
 /** The copyright notice a local version must carry (NET); public-domain versions have none. */
 function localNoticeFor(meta: { translation: string; source: string }): TranslationNotice | null {
   return meta.source === "db" ? localTranslationNotice(meta.translation) : null;
+}
+
+function searchAttribution(abbreviation: string) {
+  const notice = localTranslationNotice(abbreviation);
+  if (!notice) return {};
+  return {
+    attribution: {
+      text: notice.text,
+      links: notice.links,
+      publisherName: notice.publisherName,
+      publisherUrl: notice.publisherUrl,
+      versionName: notice.versionName,
+    },
+  };
+}
+
+function presentSearchRows<T extends RankableVerse>(rows: T[], query: string, limit: number): T[] {
+  return rankBibleSearchResults(rows, query).slice(0, limit);
 }
 
 /**
@@ -516,11 +540,13 @@ router.get("/api/search", async (req, res) => {
           "nlt_provider",
           "NLT API"
         );
+        const results = presentSearchRows(providerResponse.results, query, resultLimit);
         return res.json({
-          results: providerResponse.results,
-          total: providerResponse.total,
-          returned: providerResponse.results.length,
+          results,
+          total: results.length,
+          returned: results.length,
           ...meta,
+          ...searchAttribution("NLT"),
         });
       } catch (err: any) {
         console.error("NLT search provider error:", err?.message);
@@ -558,11 +584,13 @@ router.get("/api/search", async (req, res) => {
             localBookRefs
           );
           const meta = buildTranslationResponseMeta(translationAbbr, config.name, "api_bible", "API.Bible", config.bibleId);
+          const results = presentSearchRows(providerResults, query, resultLimit);
           return res.json({
-            results: providerResults,
-            total: providerResults.length,
-            returned: providerResults.length,
+            results,
+            total: results.length,
+            returned: results.length,
             ...meta,
+            ...searchAttribution(translationAbbr),
           });
         } catch (err: any) {
           console.error(`API.Bible search (${translationAbbr}) error:`, err?.message);
@@ -589,7 +617,16 @@ router.get("/api/search", async (req, res) => {
       return res.status(404).json({ error: "Default translation (KJV) not found in database" });
     }
 
-    const results = await db
+    const words = queryWords(query);
+    if (!words.length) {
+      return res.status(400).json({ error: "q (query) is required" });
+    }
+    const wordMatch = and(
+      eq(bibleVerses.translationId, translationRecord[0].id),
+      ...words.map((word) => sql`${bibleVerses.text} ~* ${postgresWholeWord(word)}`),
+    );
+
+    const candidates = await db
       .select({
         id: bibleVerses.id,
         bookId: bibleVerses.bookId,
@@ -601,26 +638,27 @@ router.get("/api/search", async (req, res) => {
       })
       .from(bibleVerses)
       .innerJoin(bibleBooks, eq(bibleVerses.bookId, bibleBooks.id))
-      .where(
-        and(
-          eq(bibleVerses.translationId, translationRecord[0].id),
-          ilike(bibleVerses.text, `%${query}%`)
-        )
+      .where(wordMatch)
+      .orderBy(
+        sql`CASE WHEN ${bibleVerses.bookId} IN (43, 19, 45, 40, 42, 41, 49, 23, 20, 1, 50, 62) THEN 0 ELSE 1 END`,
+        sql`char_length(${bibleVerses.text})`,
+        bibleBooks.orderIndex,
+        bibleVerses.chapter,
+        bibleVerses.verse,
       )
-      .orderBy(bibleBooks.orderIndex, bibleVerses.chapter, bibleVerses.verse)
-      .limit(resultLimit);
+      .limit(Math.max(resultLimit, 200));
 
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(bibleVerses)
-      .where(
-        and(
-          eq(bibleVerses.translationId, translationRecord[0].id),
-          ilike(bibleVerses.text, `%${query}%`)
-        )
-      );
+      .where(wordMatch);
 
     const totalCount = Number(countResult[0]?.count ?? 0);
+    const ranked = presentSearchRows(
+      candidates.map((row) => ({ ...row, text: stripAcrosticMarker(row.text) })),
+      query,
+      resultLimit,
+    );
 
     const meta = buildTranslationResponseMeta(
       translationRecord[0].abbreviation,
@@ -629,10 +667,11 @@ router.get("/api/search", async (req, res) => {
       "local"
     );
     return res.json({
-      results: results.map((row) => ({ ...row, text: stripAcrosticMarker(row.text) })),
+      results: ranked,
       total: totalCount,
-      returned: results.length,
+      returned: ranked.length,
       ...meta,
+      ...searchAttribution(translationRecord[0].abbreviation),
     });
   } catch (err) {
     console.error(err);

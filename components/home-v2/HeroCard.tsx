@@ -318,7 +318,7 @@ const s = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#F3F0EC",
   },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 999, alignItems: "center" },
+  tab: { flex: 1, minHeight: 44, paddingVertical: 12, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   tabActive: { backgroundColor: "#FFFFFF", ...HV2.rowShadow },
   tabLabel: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText },
   tabLabelActive: { color: HV2.ink },
@@ -365,7 +365,7 @@ const s = StyleSheet.create({
   },
   primary: {
     flex: 1,
-    backgroundColor: HV2.coral,
+    backgroundColor: "#C24431",
     borderRadius: 999,
     paddingVertical: 12,
     alignItems: "center",

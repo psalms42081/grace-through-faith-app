@@ -280,8 +280,18 @@ function ProfileScreenInner() {
       <View style={st.headerSection}>
         <Pressable
           onPress={() => router.push("/settings" as any)}
-          hitSlop={12}
-          style={{ position: "absolute", top: 0, right: 20, zIndex: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 12,
+            zIndex: 10,
+            width: 44,
+            height: 44,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           testID="profile-settings-gear"
         >
           <Ionicons name="settings-outline" size={24} color={C.coral} />

@@ -84,20 +84,18 @@ function setupCors(app: express.Application) {
       origin?.startsWith("http://127.0.0.1:")
     );
 
-    // React Native apps don't send Origin headers — allow all non-browser requests
-    const isMobileApp = !origin;
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS",
+    );
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id, X-Content-Language");
 
-    if (
-      isMobileApp ||
-      (origin && (origins.has(origin) || isLocalhost || isSameOrigin(req, origin)))
-    ) {
+    // A missing Origin must not be reflected as the literal header "undefined".
+    // Credentialed responses name the app's own origin. Native clients omit Origin.
+    if (origin && (origins.has(origin) || isLocalhost || isSameOrigin(req, origin))) {
       res.header("Access-Control-Allow-Origin", origin);
-      res.header(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS",
-      );
-      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Id, X-Content-Language");
       res.header("Access-Control-Allow-Credentials", "true");
+      res.header("Vary", "Origin");
     }
 
     if (req.method === "OPTIONS") {

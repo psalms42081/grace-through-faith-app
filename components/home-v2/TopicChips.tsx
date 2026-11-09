@@ -47,6 +47,6 @@ const s = StyleSheet.create({
   section: { marginTop: 28 },
   heading: { fontFamily: F.loraSemi, fontSize: 19, color: HV2.ink, paddingHorizontal: 20 },
   rail: { flexDirection: "row", gap: 8, marginTop: 14, paddingHorizontal: 20 },
-  chip: { borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
+  chip: { borderRadius: 999, paddingHorizontal: 16, minHeight: 44, paddingVertical: 12, justifyContent: "center" },
   chipLabel: { fontFamily: F.interSemi, fontSize: 13 },
 });

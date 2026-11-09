@@ -21,8 +21,11 @@ function load(docPath: string): { markdown: string; doc: LegalDocument } {
   if (/Drafting notes for review/i.test(markdown)) {
     throw new Error(`Drafting notes leaked into rendered markdown: ${docPath}`);
   }
-  if (!/Draft for legal review/i.test(markdown)) {
-    throw new Error(`Missing draft banner in ${docPath}`);
+  if (/Draft for legal review|not yet in force|Version 0\.1/i.test(markdown)) {
+    throw new Error(`Draft wording is still in ${docPath}`);
+  }
+  if (!/Version 1\.0 — effective 9 November 2026/.test(markdown)) {
+    throw new Error(`Missing Version 1.0 effective date in ${docPath}`);
   }
   return { markdown, doc: parseLegalMarkdown(raw) };
 }
@@ -53,7 +56,7 @@ writeFileSync(
   legalDocumentToHtml(terms.doc, {
     pageTitle: "Terms of Use — Informed Ministries",
     description:
-      "Terms of Use for the Informed Ministries app. Draft for legal review — not yet in force.",
+      "Terms of Use for the Informed Ministries app. Version 1.0 — effective 9 November 2026.",
     canonicalPath: "/terms",
     siblingHref: "/privacy",
     siblingLabel: "Privacy Policy",
@@ -66,7 +69,7 @@ writeFileSync(
   legalDocumentToHtml(privacy.doc, {
     pageTitle: "Privacy Policy — Informed Ministries",
     description:
-      "Privacy Policy for the Informed Ministries app. Draft for legal review — not yet in force.",
+      "Privacy Policy for the Informed Ministries app. Version 1.0 — effective 9 November 2026.",
     canonicalPath: "/privacy",
     siblingHref: "/terms",
     siblingLabel: "Terms of Use",

@@ -10,22 +10,22 @@
   "theme_color": "#FBF7EE",
   "icons": [
     {
-      "src": "/assets/images/informed-ministries-icon.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/images/informed-ministries-icon.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/images/informed-ministries-icon.png",
-      "sizes": "1024x1024",
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ]
 }

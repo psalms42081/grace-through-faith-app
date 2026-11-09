@@ -1,7 +1,6 @@
 # Informed Ministries App — Privacy Policy
 
-**Draft for legal review — not yet in force**
-Version 0.1 · Prepared 7 September 2026
+**Version 1.0 — effective 9 November 2026**
 
 Informed Ministries (ABN 39 741 036 497) ("we", "us", "our") operates the Informed Ministries mobile and web application (the "App"). This policy explains what personal information we collect, why, how we hold it, and your choices. We handle personal information in accordance with the Australian Privacy Principles in the *Privacy Act 1988* (Cth).
 
@@ -83,11 +82,3 @@ We may update this policy. If we make a material change we will tell you in the 
 Informed Ministries
 ABN 39 741 036 497
 hello@informedministries.app
-
----
-
-*Drafting notes for review (delete before publishing):*
-- *Provider names in section 3 now follow the live stack (Render, Neon, LiveKit, YouTube, HeyGen, Cloudinary, OpenAI). There is no third-party analytics or error reporter.*
-- *Ask the Bible cache rows older than 30 days are deleted by the daily retention job. Confirm a solicitor is content with that description.*
-- *If any store listing is aimed at under-13s, the children's section needs redrafting; check Play Store family policy requirements before submission.*
-- *Google Play requires a public URL for this policy; host it on informedministries.com.au or the app domain and link from the store listing and Profile → About.*

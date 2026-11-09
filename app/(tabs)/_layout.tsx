@@ -31,8 +31,9 @@ function ClassicTabLayout() {
       backBehavior="firstRoute"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: PathB.coral,
-        tabBarInactiveTintColor: PathB.inkMuted,
+        tabBarActiveTintColor: PathB.coralInk,
+        tabBarInactiveTintColor: "#3F3A34",
+        tabBarItemStyle: { minHeight: 44 },
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS

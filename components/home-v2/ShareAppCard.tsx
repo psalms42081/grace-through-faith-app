@@ -52,6 +52,7 @@ export default function ShareAppCard({ onDismiss }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Share now"
             testID="home-share-now"
+            style={s.actionBtn}
           >
             <Text style={s.share}>Share now</Text>
           </Pressable>
@@ -60,6 +61,7 @@ export default function ShareAppCard({ onDismiss }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Dismiss"
             testID="home-share-dismiss"
+            style={s.actionBtn}
           >
             <Text style={s.dismiss}>Dismiss</Text>
           </Pressable>
@@ -103,6 +105,7 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 14,
   },
+  actionBtn: { minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
   share: { fontFamily: F.interSemi, fontSize: 14, color: HV2.coralInk },
   dismiss: { fontFamily: F.interMed, fontSize: 14, color: HV2.inkMutedText },
 });

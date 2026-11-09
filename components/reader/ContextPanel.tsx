@@ -19,6 +19,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { queryClient } from "@/lib/query-client";
+import { useAuth } from "@/contexts/AuthContext";
 import Colors, { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { displayInitials } from "@/lib/user-initials";
@@ -57,11 +58,12 @@ export default function ContextPanel({
   const fabGlow = useSharedValue(0);
   const hadDataRef = useRef(false);
 
+  const { isAuthenticated } = useAuth();
   const hasCachedContext = !!queryClient.getQueryData([`/api/chapter-context/${bookId}/${chapter}`]);
 
   const { data, isLoading } = useQuery<ChapterContext>({
     queryKey: [`/api/chapter-context/${bookId}/${chapter}`],
-    enabled: expanded || hasCachedContext,
+    enabled: isAuthenticated && (expanded || hasCachedContext),
   });
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PathB } from "@/constants/colors";
 
 export type ConfirmOptions = {
@@ -90,6 +91,9 @@ export function WebSafeConfirmHost({ children }: { children: React.ReactNode }) 
   const confirmVisible = confirmReq != null;
   const actionsVisible = actionReq != null;
   const hideCancel = confirmReq?.cancelLabel === null;
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const sheetMaxHeight = Math.max(240, windowHeight - insets.top - insets.bottom - 24);
 
   return (
     <>
@@ -101,21 +105,23 @@ export function WebSafeConfirmHost({ children }: { children: React.ReactNode }) 
         onRequestClose={() => settleConfirm(false)}
       >
         <Pressable
-          style={s.overlay}
+          style={[s.overlay, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}
           onPress={() => {
             if (!hideCancel) settleConfirm(false);
           }}
         >
           <Pressable
-            style={s.sheet}
+            style={[s.sheet, { maxHeight: sheetMaxHeight }]}
             onPress={() => {}}
             testID={confirmReq?.testID ?? "web-safe-confirm"}
           >
-            <View style={s.handle} />
-            <Text style={s.title}>{confirmReq?.title}</Text>
-            {confirmReq?.message ? (
-              <Text style={s.message}>{confirmReq.message}</Text>
-            ) : null}
+            <ScrollView bounces={false} style={{ flexGrow: 0 }} contentContainerStyle={s.sheetBody}>
+              <View style={s.handle} />
+              <Text style={s.title}>{confirmReq?.title}</Text>
+              {confirmReq?.message ? (
+                <Text style={s.message}>{confirmReq.message}</Text>
+              ) : null}
+            </ScrollView>
             <View style={s.row}>
               {!hideCancel ? (
                 <Pressable
@@ -156,9 +162,12 @@ export function WebSafeConfirmHost({ children }: { children: React.ReactNode }) 
         animationType="fade"
         onRequestClose={() => setActionReq(null)}
       >
-        <Pressable style={s.overlay} onPress={() => setActionReq(null)}>
+        <Pressable
+          style={[s.overlay, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}
+          onPress={() => setActionReq(null)}
+        >
           <Pressable
-            style={s.sheet}
+            style={[s.sheet, s.actionsSheet, { maxHeight: sheetMaxHeight }]}
             onPress={() => {}}
             testID={actionReq?.testID ?? "web-safe-actions"}
           >
@@ -201,14 +210,21 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(31,26,18,0.45)",
     justifyContent: "flex-end",
+    paddingHorizontal: 12,
   },
   sheet: {
     backgroundColor: PathB.surfaceCard,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
+    paddingBottom: 16,
+    overflow: "hidden",
+  },
+  sheetBody: {
     paddingTop: 12,
-    paddingBottom: 28,
     paddingHorizontal: 20,
+  },
+  actionsSheet: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
   handle: {
     width: 40,
@@ -236,9 +252,12 @@ const s = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
   secondaryBtn: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
@@ -252,6 +271,7 @@ const s = StyleSheet.create({
   },
   primaryBtn: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 14,
     borderRadius: 12,
     backgroundColor: PathB.coral,

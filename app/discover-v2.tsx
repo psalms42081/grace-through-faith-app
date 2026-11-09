@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { HV2, F } from "@/components/home-v2/theme";
+import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
@@ -102,7 +103,12 @@ interface SearchResult {
   id: string; bookId: number; chapter: number; verse: number;
   text: string; bookName: string; bookAbbreviation: string;
 }
-interface SearchResponse { results: SearchResult[]; total: number; returned: number }
+interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+  returned: number;
+  attribution?: ChapterAttributionData;
+}
 interface ReferenceResponse { isReference: boolean; bookId?: number; bookName?: string; chapter?: number; verse?: number | null }
 interface TouchpointsResponse {
   categories: string[];
@@ -416,6 +422,9 @@ export default function DiscoverV2Screen() {
                     </Text>
                   </Pressable>
                 ))}
+                {searchData.attribution ? (
+                  <ScriptureCredit attribution={searchData.attribution} testID="discover-search-attribution" />
+                ) : null}
               </>
             ) : null}
 
@@ -775,7 +784,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#E8604C",
+    backgroundColor: "#C24431",
     borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 10,

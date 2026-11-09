@@ -63,12 +63,13 @@ describe("words of Christ", () => {
     assert.doesNotMatch(reader, /<VerseTextRuns text=\{v\.text\} \/>/);
     assert.match(
       reader,
-      /<VerseSpokenText[\s\S]*?wordsOfChrist && isKjvTranslation\(translation\)[\s\S]*?wordsOfChristRanges\(Number\(bookId\), chapterNum, v\.verse\)/,
+      /spokenRanges=\{spokenRangesForLine\(\{[\s\S]*?readingTranslation: translation,[\s\S]*?lineTranslation: translation,/,
     );
     assert.match(
       reader,
-      /<VerseSpokenText[\s\S]*?wordsOfChrist && isKjvTranslation\(splitTranslation\)[\s\S]*?wordsOfChristRanges\(Number\(bookId\), chapterNum, v\.verse\)/,
+      /spokenRanges=\{spokenRangesForLine\(\{[\s\S]*?readingTranslation: translation,[\s\S]*?lineTranslation: splitTranslation,/,
     );
+    assert.match(reader, /Red letters available in KJV/);
     const spoken = readFileSync(
       path.join(process.cwd(), "components", "reader", "VerseSpokenText.tsx"),
       "utf8",

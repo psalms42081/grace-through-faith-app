@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -27,12 +27,21 @@ import { useTranslation } from "@/context/TranslationContext";
 import TTSPlayerBar from "@/components/reader/TTSPlayerBar";
 import { TypographyPreviewProse } from "@/components/reader/TypographyPreviewProse";
 import { VerseSpokenText } from "@/components/reader/VerseSpokenText";
-import { OriginalWordsSheet } from "@/components/reader/OriginalWordsSheet";
 import { ReadingSizeControl } from "@/components/reader/ReadingSizeControl";
 import { READING_CHROME_FONT_CAP } from "@/lib/reading-font-scale";
 import { setReadingFontScale, useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
-import { WordStudySheet, type WordStudySheetTarget } from "@/components/reader/WordStudySheet";
-import { VerseSheet, VERSE_SHEET_COLLAPSED_HEIGHT } from "@/components/reader/VerseSheet";
+import type { WordStudySheetTarget } from "@/components/reader/WordStudySheet";
+import { VERSE_SHEET_COLLAPSED_HEIGHT } from "@/lib/verse-sheet";
+
+const VerseSheet = React.lazy(() =>
+  import("@/components/reader/VerseSheet").then((mod) => ({ default: mod.VerseSheet })),
+);
+const WordStudySheet = React.lazy(() =>
+  import("@/components/reader/WordStudySheet").then((mod) => ({ default: mod.WordStudySheet })),
+);
+const OriginalWordsSheet = React.lazy(() =>
+  import("@/components/reader/OriginalWordsSheet").then((mod) => ({ default: mod.OriginalWordsSheet })),
+);
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
 import {
   ChapterAttribution,
@@ -44,12 +53,11 @@ import { translationLabel, type CatalogTranslation } from "@/lib/translation-cat
 import { formatSheetReference } from "@/lib/verse-sheet";
 import { READER_VERSION_CHIP_MAX_WIDTH, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
-import { isYouVersionCode } from "@/shared/youversion";
 import { withAcrosticHeadings } from "@/lib/group-verses-by-paragraph";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { comparisonTranslation } from "@/lib/compare-translation";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
-import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage, wordsOfChristRanges } from "@/lib/words-of-christ";
+import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage, spokenRangesForLine } from "@/lib/words-of-christ";
 import useBibleAudio from "@/hooks/useBibleAudio";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -1103,6 +1111,19 @@ export default function VerseReaderScreen() {
     [data?.verses, data?.providerContent?.headings],
   );
   const verses = primaryAcrostic.verses;
+  const [paintedCount, setPaintedCount] = useState(24);
+  useEffect(() => {
+    const jump = Number(verseParam);
+    setPaintedCount(Math.max(24, Number.isFinite(jump) && jump > 0 ? jump : 0));
+  }, [bookId, chapter, translation, verseParam]);
+  useEffect(() => {
+    if (paintedCount >= verses.length) return;
+    const frame = requestAnimationFrame(() => {
+      setPaintedCount((count) => Math.min(verses.length, count + 36));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [paintedCount, verses.length]);
+  const visibleVerses = paintedCount >= verses.length ? verses : verses.slice(0, paintedCount);
   const wordRanges = useMemo((): VerseWordRangeHighlight[] => {
     const rows: VerseWordRangeHighlight[] = [];
     const seen = new Set<string>();
@@ -1195,21 +1216,19 @@ export default function VerseReaderScreen() {
   }, [verseEndParam, verseParam, verses, versesParam]);
 
   const kjvWordStudy = isKjvTranslation(translation);
-  const strongMapQueries = useQueries({
-    queries: verses.map((verse) => ({
-      queryKey: [`/api/strong/verse/${verse.id}?translation=KJV`],
-      enabled: kjvWordStudy && !!verse.id,
-    })),
+  const chapterStrongEnabled = kjvWordStudy && (wordStudyMode || !!originalWordsVerse);
+  const { data: chapterStrongMaps, isFetching: chapterStrongFetching } = useQuery<Record<string, ReaderStrongMap[]>>({
+    queryKey: [`/api/strong/chapter/${bookId}/${chapterNum}?translation=KJV`],
+    enabled: chapterStrongEnabled && Number.isFinite(Number(bookId)) && Number.isFinite(chapterNum),
   });
   const mapsByVerseId = useMemo(() => {
     const map = new Map<string, ReaderStrongMap[]>();
-    if (!kjvWordStudy) return map;
-    verses.forEach((verse, index) => {
-      const rows = strongMapQueries[index]?.data;
-      if (Array.isArray(rows)) map.set(verse.id, rows as ReaderStrongMap[]);
-    });
+    if (!chapterStrongEnabled || !chapterStrongMaps) return map;
+    for (const [verseId, rows] of Object.entries(chapterStrongMaps)) {
+      if (Array.isArray(rows)) map.set(verseId, rows);
+    }
     return map;
-  }, [kjvWordStudy, verses, strongMapQueries]);
+  }, [chapterStrongEnabled, chapterStrongMaps]);
   const originalWordsMaps = useMemo(
     () => (originalWordsVerse ? mapsByVerseId.get(originalWordsVerse.id) ?? [] : []),
     [originalWordsVerse, mapsByVerseId],
@@ -1220,7 +1239,7 @@ export default function VerseReaderScreen() {
   );
   const originalWordsLoading = !!originalWordsVerse
     && !mapsByVerseId.has(originalWordsVerse.id)
-    && strongMapQueries.some((query) => query.isLoading || query.isFetching);
+    && chapterStrongFetching;
   const selectedVerseSet = useMemo(() => new Set(selectedVerseNums), [selectedVerseNums]);
   const selectedVerseObjs = useMemo(
     () => verses.filter((v) => selectedVerseSet.has(v.verse)).sort((a, b) => a.verse - b.verse),
@@ -1312,33 +1331,15 @@ export default function VerseReaderScreen() {
 
   useEffect(() => {
     if (!data?.verses?.length || !bookId || !chapter) return;
+    if (!isAuthenticated) return;
     const prefetchKey = `${bookId}-${chapter}-${translation}`;
     if (prefetchedRef.current === prefetchKey) return;
     prefetchedRef.current = prefetchKey;
 
     const bId = Number(bookId);
     const ch = Number(chapter);
-    const vrs = data.verses;
-
     queryClient.prefetchQuery({ queryKey: [`/api/chapter-context/${bId}/${ch}`] });
-    if (isYouVersionCode(translation)) return;
-
-    const prefetchCount = Math.min(5, vrs.length);
-    for (let i = 0; i < prefetchCount; i++) {
-      const v = vrs[i];
-      const encodedTranslation = encodeURIComponent(translation);
-      queryClient.prefetchQuery({
-        queryKey: [
-          `/api/verse-map/${v.id}?translation=${encodedTranslation}`,
-        ],
-      });
-      queryClient.prefetchQuery({
-        queryKey: [
-          `/api/strong/verse/${v.id}?translation=${encodedTranslation}`,
-        ],
-      });
-    }
-  }, [data?.verses, bookId, chapter, translation]);
+  }, [data?.verses, bookId, chapter, translation, isAuthenticated]);
 
   const goToPrev = useCallback(() => {
     if (canGoPrev) {
@@ -1368,6 +1369,10 @@ export default function VerseReaderScreen() {
     fontScale,
     chromeHeight: sheetOpen && !wordStudyMode ? VERSE_SHEET_COLLAPSED_HEIGHT : READER_FLOATING_CHROME_HEIGHT,
   });
+  const listenClearance =
+    !audio.isActive && !sheetOpen && !wordStudyTarget
+      ? chromeBottom + READER_FLOATING_CHROME_HEIGHT
+      : 0;
 
   const handleVerseTap = useCallback((item: Verse) => {
     if (wordStudyMode) return;
@@ -1857,9 +1862,9 @@ export default function VerseReaderScreen() {
                   accessibilityLabel={`Translation ${translationDisplay}, change`}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <Ionicons name="globe-outline" size={13} color={isDark ? "#AAAAAA" : "#777"} />
+                    <Ionicons name="globe-outline" size={13} color={isDark ? "#AAAAAA" : RV2_INK_MUTED} />
                     <Text
-                      style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : "#777" }]}
+                      style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : RV2_INK_MUTED }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
@@ -1953,7 +1958,10 @@ export default function VerseReaderScreen() {
 
             <View style={splitMode && isSideBySide ? styles.splitRow : { flex: 1 }}>
             <ScrollView
-              style={splitMode && isSideBySide ? styles.splitPanePrimary : undefined}
+              style={[
+                splitMode && isSideBySide ? styles.splitPanePrimary : { flex: 1 },
+                listenClearance > 0 ? { marginBottom: listenClearance } : null,
+              ]}
               ref={scrollViewRef}
               onScrollBeginDrag={() => {
                 audio.onUserScroll();
@@ -2015,7 +2023,7 @@ export default function VerseReaderScreen() {
               <View style={styles.proseContainer}>
                 {useNewTypography && !splitMode ? (
                   <TypographyPreviewProse
-                    verses={verses}
+                    verses={visibleVerses}
                     headingsByVerse={providerHeadings}
                     paragraphStarts={providerParagraphStarts}
                     fontScale={fontScale}
@@ -2046,7 +2054,7 @@ export default function VerseReaderScreen() {
                     wordsOfChrist={wordsOfChrist && isKjvTranslation(translation)}
                     pulseToken={wordStudyPulse}
                   />
-                ) : verses.map((v, i) => {
+                ) : visibleVerses.map((v, i) => {
                   const isActive = selectedVerseSet.has(v.verse);
                   const highlightBg = getHighlightBg(v.id, v.verse, i);
                   const isBookmarked = bookmarkedVerseIds.has(v.id) || bookmarkedVerseIds.has(`${bookId}:${chapterNum}:${v.verse}`);
@@ -2094,11 +2102,14 @@ export default function VerseReaderScreen() {
                         </Text>
                         <VerseSpokenText
                           text={v.text}
-                          spokenRanges={
-                            wordsOfChrist && isKjvTranslation(translation)
-                              ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse)
-                              : []
-                          }
+                          spokenRanges={spokenRangesForLine({
+                            redLettersEnabled: wordsOfChrist,
+                            readingTranslation: translation,
+                            lineTranslation: translation,
+                            bookId: Number(bookId),
+                            chapter: chapterNum,
+                            verse: v.verse,
+                          })}
                         />
                         {isBookmarked && (
                           <Text style={{ color: RV2_INK_MUTED, fontSize: 10 }}> ◆</Text>
@@ -2111,11 +2122,14 @@ export default function VerseReaderScreen() {
                           <Text style={styles.stackedCompanionLabel}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
                           <VerseSpokenText
                             text={splitVerseByNum.get(v.verse)!.text}
-                            spokenRanges={
-                              wordsOfChrist && isKjvTranslation(splitTranslation)
-                                ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse)
-                                : []
-                            }
+                            spokenRanges={spokenRangesForLine({
+                              redLettersEnabled: wordsOfChrist,
+                              readingTranslation: translation,
+                              lineTranslation: splitTranslation,
+                              bookId: Number(bookId),
+                              chapter: chapterNum,
+                              verse: v.verse,
+                            })}
                           />
                         </Text>
                       </View>
@@ -2139,7 +2153,7 @@ export default function VerseReaderScreen() {
                   versionLabel={splitTranslationLabel}
                   chapter={chapterNum}
                   attribution={splitData.attribution}
-                  footnotes={splitData.footnotes}
+                  footnotes={undefined}
                   testID="split-chapter-attribution"
                 />
               ) : null}
@@ -2190,6 +2204,7 @@ export default function VerseReaderScreen() {
                   ref={splitScrollRef}
                   onScroll={handleSplitScroll}
                   scrollEventThrottle={16}
+                  style={listenClearance > 0 ? { marginBottom: listenClearance } : undefined}
                   contentContainerStyle={[
                     styles.scrollContent,
                     { paddingBottom: readerScrollBottomPad, paddingHorizontal: 16 },
@@ -2210,7 +2225,7 @@ export default function VerseReaderScreen() {
                         </Text>
                       </View>
                     ) : (
-                      splitVerses.map((v) => (
+                      splitVerses.slice(0, paintedCount).map((v) => (
                         <View key={v.id}>
                           <View style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
                           <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
@@ -2219,11 +2234,14 @@ export default function VerseReaderScreen() {
                             </Text>
                             <VerseSpokenText
                               text={v.text}
-                              spokenRanges={
-                                wordsOfChrist && isKjvTranslation(splitTranslation)
-                                  ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse)
-                                  : []
-                              }
+                              spokenRanges={spokenRangesForLine({
+                                redLettersEnabled: wordsOfChrist,
+                                readingTranslation: translation,
+                                lineTranslation: splitTranslation,
+                                bookId: Number(bookId),
+                                chapter: chapterNum,
+                                verse: v.verse,
+                              })}
                             />
                           </Text>
                           </View>
@@ -2235,7 +2253,7 @@ export default function VerseReaderScreen() {
                         versionLabel={splitTranslationLabel}
                         chapter={chapterNum}
                         attribution={splitData.attribution}
-                        footnotes={splitData.footnotes}
+                        footnotes={undefined}
                         testID="split-chapter-attribution"
                       />
                     ) : null}
@@ -2246,6 +2264,7 @@ export default function VerseReaderScreen() {
             </View>
 
             {sheetOpen && selectedVerseObjs.length > 0 && !wordStudyMode && (
+              <Suspense fallback={null}>
               <VerseSheet
                 verses={selectedVerseObjs}
                 bookName={bookName ?? ""}
@@ -2292,6 +2311,7 @@ export default function VerseReaderScreen() {
                   } as any)
                 }
               />
+              </Suspense>
             )}
 
             {/* New chrome: one floating play + chapter pill. Legacy keeps the A.3 strip. */}
@@ -2475,6 +2495,11 @@ export default function VerseReaderScreen() {
               <View style={styles.sheetHandleLight} />
               <Text style={styles.lightSheetTitle}>Text Size</Text>
               <ReadingSizeControl scale={readingScale} onChange={applyFontScale} />
+              {!isKjvTranslation(translation) ? (
+                <Text style={styles.lightSheetNote} testID="red-letters-kjv-note">
+                  Red letters available in KJV
+                </Text>
+              ) : null}
             </View>
           </>
         )}
@@ -2522,6 +2547,7 @@ export default function VerseReaderScreen() {
         )}
 
       </View>
+      <Suspense fallback={null}>
       <WordStudySheet
         target={wordStudyTarget}
         onClose={() => setWordStudyTarget(null)}
@@ -2552,6 +2578,7 @@ export default function VerseReaderScreen() {
           handleWordActivate(surface, mapping, verse?.verse, verse?.text);
         }}
       />
+      </Suspense>
       {stripToast && useNewTypography ? (
         <View
           pointerEvents="none"
@@ -2995,6 +3022,14 @@ const styles = StyleSheet.create({
     fontFamily: "Lora_600SemiBold",
     color: "#1F1A12",
     marginBottom: 12,
+  },
+  lightSheetNote: {
+    marginTop: 14,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "Inter_500Medium",
+    color: "#3F3A34",
+    textAlign: "center",
   },
   browseBooksRow: {
     flexDirection: "row",

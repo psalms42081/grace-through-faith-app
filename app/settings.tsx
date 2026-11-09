@@ -19,8 +19,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProStatus } from "@/contexts/ProContext";
 import { useToast } from "@/contexts/ToastContext";
-import { PIONEERS } from "@/constants/pioneers";
-import type { Pioneer } from "@/constants/pioneers";
+import { AI_VOICE_OPTIONS } from "@/hooks/useBibleAudio";
 import { queryClient, apiRequest } from "@/lib/query-client";
 import {
   SUPPORTED_LANGUAGES,
@@ -133,7 +132,7 @@ export default function SettingsScreen() {
       if (vn !== null) setVerseNumbers(vn === "true");
       if (di !== null) setDownloadImages(di === "true");
       if (fs !== null && FONT_SIZE_OPTIONS.includes(fs as any)) setFontSize(fs as any);
-      if (nv && PIONEERS.some((p) => p.voiceKey === nv)) setNarratorVoiceKey(nv);
+      if (nv && AI_VOICE_OPTIONS.some((voice) => voice.id === nv)) setNarratorVoiceKey(nv);
     })();
   }, []);
 
@@ -159,13 +158,13 @@ export default function SettingsScreen() {
     await AsyncStorage.setItem(STORAGE_KEYS.fontSize, next);
   }, [fontSize]);
 
-  const narratorPioneer = PIONEERS.find((p) => p.voiceKey === narratorVoiceKey) ?? PIONEERS[0];
+  const narratorLabel = AI_VOICE_OPTIONS.find((voice) => voice.id === narratorVoiceKey)?.label ?? "Clara";
 
-  const handleSelectNarrator = useCallback(async (pioneer: Pioneer) => {
+  const handleSelectNarrator = useCallback(async (voiceId: string, label: string) => {
     setShowNarratorPicker(false);
-    setNarratorVoiceKey(pioneer.voiceKey);
-    await AsyncStorage.setItem(NARRATOR_VOICE_KEY, pioneer.voiceKey);
-    showToast(`Narrator set to ${pioneer.shortName}`, "success");
+    setNarratorVoiceKey(voiceId);
+    await AsyncStorage.setItem(NARRATOR_VOICE_KEY, voiceId);
+    showToast(`Narrator voice set to ${label}`, "success");
   }, [showToast]);
 
   const handleClearCache = useCallback(async () => {
@@ -324,8 +323,14 @@ export default function SettingsScreen() {
     value: boolean,
     onValueChange: (v: boolean) => void,
     testID: string,
+    label: string,
   ) => (
-    <PathBSwitch value={value} onValueChange={onValueChange} testID={testID} />
+    <PathBSwitch
+      value={value}
+      onValueChange={onValueChange}
+      testID={testID}
+      accessibilityLabel={label}
+    />
   );
 
   return (
@@ -378,16 +383,16 @@ export default function SettingsScreen() {
           onPress: () => showToast("Theme follows your device setting", "info"),
         })}
         {renderRow("cloud-download-outline", "Download Images", {
-          rightElement: pathBSwitch(downloadImages, toggleDownloadImages, "settings-download-images"),
+          rightElement: pathBSwitch(downloadImages, toggleDownloadImages, "settings-download-images", "Download images"),
           showChevron: false,
           isLast: true,
         })}
 
         {renderSectionHeader("VOICES")}
-        {renderRow("mic-outline", "Bible Narrator", {
+        {renderRow("mic-outline", "Narrator voice (AI)", {
           onPress: () => setShowNarratorPicker(true),
           showChevron: true,
-          rightText: narratorPioneer.shortName,
+          rightText: narratorLabel,
           isLast: true,
         })}
 
@@ -397,11 +402,11 @@ export default function SettingsScreen() {
           rightText: fontSize,
         })}
         {renderRow("book-outline", "Red Letters", {
-          rightElement: pathBSwitch(redLetters, toggleRedLetters, "settings-red-letters"),
+          rightElement: pathBSwitch(redLetters, toggleRedLetters, "settings-red-letters", "Red letters"),
           showChevron: false,
         })}
         {renderRow("list-outline", "Show Verse Numbers", {
-          rightElement: pathBSwitch(verseNumbers, toggleVerseNumbers, "settings-verse-numbers"),
+          rightElement: pathBSwitch(verseNumbers, toggleVerseNumbers, "settings-verse-numbers", "Show verse numbers"),
           showChevron: false,
           isLast: true,
         })}
@@ -491,70 +496,56 @@ export default function SettingsScreen() {
         )}
       </ScrollView>
 
-      {/* ── Bible narrator voice picker ──────────────────────────────────── */}
-      {[
-        {
-          visible: showNarratorPicker,
-          title: "Bible Narrator",
-          subtitle: "The pioneer voice that reads Scripture aloud",
-          selectedKey: narratorVoiceKey,
-          matchKey: (p: Pioneer) => p.voiceKey,
-          onSelect: handleSelectNarrator,
-          onClose: () => setShowNarratorPicker(false),
-        },
-      ].map((picker) => (
-        <Modal
-          key={picker.title}
-          visible={picker.visible}
-          animationType="slide"
-          transparent
-          onRequestClose={picker.onClose}
-        >
-          <View style={s.modalOverlay}>
-            <View style={[s.modalSheet, { backgroundColor: "#FFFFFF" }]}>
-              <View style={s.modalHandle} />
-              <Text style={[s.modalTitle, { color: TEXT, fontFamily: "Inter_700Bold" }]}>
-                {picker.title}
-              </Text>
-              <Text style={[s.modalSubtitle, { color: TEXT_MUTED, fontFamily: "Inter_400Regular" }]}>
-                {picker.subtitle}
-              </Text>
-
-              <FlatList
-                data={PIONEERS}
-                keyExtractor={(p) => p.id}
-                style={{ maxHeight: 380 }}
-                renderItem={({ item }) => {
-                  const isSelected = picker.matchKey(item) === picker.selectedKey;
-                  return (
-                    <TouchableOpacity
-                      style={[s.voiceRow, { borderColor: ROW_BORDER }]}
-                      onPress={() => picker.onSelect(item)}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={[s.voiceName, { color: isSelected ? CORAL_INK : TEXT, fontFamily: "Inter_600SemiBold" }]}>
-                          {item.name}
-                        </Text>
-                        <Text style={[s.voiceRole, { color: TEXT_MUTED, fontFamily: "Inter_400Regular" }]}>
-                          {item.role} · {item.era}
-                        </Text>
-                      </View>
-                      {isSelected && <Ionicons name="checkmark-circle" size={20} color={CORAL} />}
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-
-              <TouchableOpacity
-                style={[s.modalCancel, { borderColor: ROW_BORDER }]}
-                onPress={picker.onClose}
-              >
-                <Text style={[s.modalCancelText, { color: TEXT_MUTED }]}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+      <Modal
+        visible={showNarratorPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowNarratorPicker(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalSheet, { backgroundColor: "#FFFFFF", maxHeight: "88%" }]}>
+            <View style={s.modalHandle} />
+            <Text style={[s.modalTitle, { color: TEXT, fontFamily: "Inter_700Bold" }]}>
+              Narrator voice (AI)
+            </Text>
+            <Text style={[s.modalSubtitle, { color: TEXT_MUTED, fontFamily: "Inter_400Regular" }]}>
+              A synthetic voice that reads Scripture aloud. It is not a recording of a person.
+            </Text>
+            <FlatList
+              data={[...AI_VOICE_OPTIONS]}
+              keyExtractor={(voice) => voice.id}
+              style={{ maxHeight: 380 }}
+              renderItem={({ item }) => {
+                const isSelected = item.id === narratorVoiceKey;
+                return (
+                  <TouchableOpacity
+                    style={[s.voiceRow, { borderColor: ROW_BORDER }]}
+                    onPress={() => handleSelectNarrator(item.id, item.label)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.label}, synthetic voice`}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.voiceName, { color: isSelected ? CORAL_INK : TEXT, fontFamily: "Inter_600SemiBold" }]}>
+                        {item.label}
+                      </Text>
+                      <Text style={[s.voiceRole, { color: TEXT_MUTED, fontFamily: "Inter_400Regular" }]}>
+                        Synthetic voice
+                      </Text>
+                    </View>
+                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={CORAL} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+            <TouchableOpacity
+              style={[s.modalCancel, { borderColor: ROW_BORDER }]}
+              onPress={() => setShowNarratorPicker(false)}
+            >
+              <Text style={[s.modalCancelText, { color: TEXT_MUTED }]}>Cancel</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
-      ))}
+        </View>
+      </Modal>
 
       <Modal
         visible={showEditProfile}

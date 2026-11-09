@@ -15,18 +15,21 @@ export function PathBSwitch({
   disabled,
   testID,
   style,
+  accessibilityLabel,
 }: {
   value: boolean;
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
 }) {
   return (
     <Switch
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
       trackColor={{ ...PATH_B_SWITCH_TRACK }}
       thumbColor={PATH_B_SWITCH_THUMB}
       // Web uses activeThumbColor while the switch is on, and otherwise paints

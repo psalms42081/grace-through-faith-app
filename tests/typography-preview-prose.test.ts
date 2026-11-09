@@ -151,7 +151,7 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(reader, /previewParam === "typography"/);
     assert.doesNotMatch(reader, /testID="reader-typography-preview-entry"/);
     assert.doesNotMatch(reader, /testID="reader-typography-preview-pill"/);
-    assert.match(reader, /verses\.map\(\(v, i\) =>/);
+    assert.match(reader, /visibleVerses\.map\(\(v, i\) =>/);
     assert.match(reader, /useBibleAudio\(verses,/);
   });
 

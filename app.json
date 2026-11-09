@@ -30,7 +30,7 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#1A1F3C",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "foregroundImage": "./assets/images/icon-maskable.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -52,7 +52,11 @@
         "projectId": "d9393f6d-a589-44e4-8359-04953488bb01"
       },
       "router": {
-        "origin": "https://informedministries.app"
+        "origin": "https://informedministries.app",
+        "asyncRoutes": {
+          "web": true,
+          "default": false
+        }
       }
     },
     "web": {

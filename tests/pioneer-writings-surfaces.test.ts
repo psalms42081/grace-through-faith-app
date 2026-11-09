@@ -18,8 +18,8 @@ describe("Pioneer writings surfaces stay source-only", () => {
   it("routes the live Devotions tab through DevotionsPreview only", () => {
     const tab = readFileSync(tabEntry, "utf8").trim();
     const alias = readFileSync(previewAlias, "utf8").trim();
-    assert.equal(tab, 'export { default } from "@/components/devotions-v2/DevotionsPreview";');
-    assert.equal(alias, 'export { default } from "@/components/devotions-v2/DevotionsPreview";');
+    assert.match(tab, /import\("@\/components\/devotions-v2\/DevotionsPreview"\)/);
+    assert.match(alias, /import\("@\/components\/devotions-v2\/DevotionsPreview"\)/);
   });
 
   it("adds Inspiration after Daily Reading and keeps EGW there", () => {

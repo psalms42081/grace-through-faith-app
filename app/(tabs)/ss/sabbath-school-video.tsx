@@ -1,1 +1,3 @@
-export { default } from "../sabbath-school-video";
+import { lazyScreen } from "@/lib/lazy-screen";
+
+export default lazyScreen(() => import("../sabbath-school-video"));

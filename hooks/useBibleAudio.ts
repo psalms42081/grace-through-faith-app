@@ -13,11 +13,11 @@ const VOICE_STORAGE_KEY = "@grace-through-faith/tts-voice";
 const isMobile = Platform.OS === "ios" || Platform.OS === "android";
 
 const AI_VOICE_OPTIONS = [
-  { id: "ellen_white", label: "Ellen G. White", description: "Prophetic, gentle, Spirit-led", gender: "female" },
-  { id: "james_white", label: "James White", description: "Commanding organizer, pastoral", gender: "male" },
-  { id: "joseph_bates", label: "Joseph Bates", description: "Seasoned mariner, bold conviction", gender: "male" },
-  { id: "uriah_smith", label: "Uriah Smith", description: "Scholarly, meticulous, prophetic", gender: "male" },
-  { id: "jn_andrews", label: "J.N. Andrews", description: "Intellectual, missionary zeal", gender: "male" },
+  { id: "ellen_white", label: "Clara", description: "Synthetic voice", gender: "female" },
+  { id: "james_white", label: "Jonathan", description: "Synthetic voice", gender: "male" },
+  { id: "joseph_bates", label: "Miles", description: "Synthetic voice", gender: "male" },
+  { id: "uriah_smith", label: "Samuel", description: "Synthetic voice", gender: "male" },
+  { id: "jn_andrews", label: "Andrew", description: "Synthetic voice", gender: "male" },
 ] as const;
 
 export type AIVoiceId = (typeof AI_VOICE_OPTIONS)[number]["id"];
@@ -544,7 +544,7 @@ export default function useBibleAudio(
 
   const isActive = isSpeaking || isPaused;
 
-  const currentVoiceLabel = AI_VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "George";
+  const currentVoiceLabel = AI_VOICE_OPTIONS.find((v) => v.id === selectedVoice)?.label ?? "Clara";
 
   return {
     isSpeaking,

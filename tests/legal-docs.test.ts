@@ -17,11 +17,13 @@ const privacyMd = readFileSync(
 );
 
 describe("legal markdown source", () => {
-  it("strips drafting notes and keeps the draft banner and placeholders", () => {
+  it("publishes version 1.0 and keeps the filled-in details", () => {
     const terms = stripDraftingNotes(termsMd);
     const privacy = stripDraftingNotes(privacyMd);
-    assert.match(terms, /Draft for legal review — not yet in force/);
-    assert.match(privacy, /Draft for legal review — not yet in force/);
+    assert.match(terms, /Version 1\.0 — effective 9 November 2026/);
+    assert.match(privacy, /Version 1\.0 — effective 9 November 2026/);
+    assert.doesNotMatch(terms, /Draft for legal review|not yet in force|Version 0\.1/);
+    assert.doesNotMatch(privacy, /Draft for legal review|not yet in force|Version 0\.1/);
     assert.match(terms, /ABN 39 741 036 497/);
     assert.match(terms, /hello@informedministries\.app/);
     assert.doesNotMatch(terms, /\[support email\]/);
@@ -54,11 +56,11 @@ describe("legal markdown source", () => {
   });
 
   it("generated modules match the stripped markdown", () => {
-    assert.equal(LEGAL_TERMS_MARKDOWN_HAS_DRAFT(), true);
+    assert.equal(LEGAL_GENERATED_IS_IN_FORCE(), true);
     assert.match(LEGAL_TERMS.title, /Terms of Use/);
     assert.match(LEGAL_PRIVACY.title, /Privacy Policy/);
-    assert.equal(LEGAL_TERMS.banner, "Draft for legal review — not yet in force");
-    assert.equal(LEGAL_PRIVACY.banner, "Draft for legal review — not yet in force");
+    assert.equal(LEGAL_TERMS.banner, "Version 1.0 — effective 9 November 2026");
+    assert.equal(LEGAL_PRIVACY.banner, "Version 1.0 — effective 9 November 2026");
     const parsedTerms = parseLegalMarkdown(termsMd);
     assert.deepEqual(LEGAL_TERMS, parsedTerms);
     assert.doesNotMatch(JSON.stringify(LEGAL_TERMS), /Drafting notes for review/);
@@ -66,9 +68,11 @@ describe("legal markdown source", () => {
   });
 });
 
-function LEGAL_TERMS_MARKDOWN_HAS_DRAFT() {
-  return /Draft for legal review/.test(
-    readFileSync(new URL("../lib/legal/generated.ts", import.meta.url), "utf8"),
+function LEGAL_GENERATED_IS_IN_FORCE() {
+  const generated = readFileSync(new URL("../lib/legal/generated.ts", import.meta.url), "utf8");
+  return (
+    generated.includes("Version 1.0 — effective 9 November 2026") &&
+    !/Draft for legal review|not yet in force|Version 0\.1/.test(generated)
   );
 }
 
@@ -120,8 +124,10 @@ describe("legal surfaces", () => {
     assert.match(server, /app\.get\("\/terms"/);
     assert.match(server, /app\.get\("\/delete-account"/);
     assert.match(server, /templates", "terms.html"/);
-    assert.match(termsHtml, /Draft for legal review/);
-    assert.match(privacyHtml, /Draft for legal review/);
+    assert.match(termsHtml, /Version 1\.0 — effective 9 November 2026/);
+    assert.match(privacyHtml, /Version 1\.0 — effective 9 November 2026/);
+    assert.doesNotMatch(termsHtml, /Draft for legal review|not yet in force|Version 0\.1/);
+    assert.doesNotMatch(privacyHtml, /Draft for legal review|not yet in force|Version 0\.1/);
     assert.match(termsHtml, /ABN 39 741 036 497/);
     assert.match(termsHtml, /hello@informedministries\.app/);
     assert.doesNotMatch(termsHtml, /\[postal or email address\]/);

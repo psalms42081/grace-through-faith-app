@@ -236,6 +236,48 @@ router.get("/api/strong/:id/uses", async (req, res) => {
   }
 });
 
+router.get("/api/strong/chapter/:bookId/:chapter", async (req, res) => {
+  try {
+    const bookId = Number(req.params.bookId);
+    const chapter = Number(req.params.chapter);
+    const translation = normalizeTranslation(req.query.translation);
+    if (!Number.isInteger(bookId) || !Number.isInteger(chapter) || bookId < 1 || chapter < 1) {
+      return res.status(400).json({ error: "book and chapter are required" });
+    }
+    if (!isKjvTranslation(translation)) {
+      return res.json({});
+    }
+
+    const rows = await db
+      .select({
+        map: verseStrongMaps,
+        entry: strongEntries,
+        verseId: bibleVerses.id,
+      })
+      .from(verseStrongMaps)
+      .innerJoin(bibleVerses, eq(verseStrongMaps.verseId, bibleVerses.id))
+      .leftJoin(strongEntries, eq(verseStrongMaps.strongId, strongEntries.id))
+      .where(and(
+        eq(bibleVerses.bookId, bookId),
+        eq(bibleVerses.chapter, chapter),
+        eq(verseStrongMaps.source, STEP_STRONG_SOURCE),
+        eq(verseStrongMaps.isAiGenerated, false),
+      ))
+      .orderBy(bibleVerses.verse, verseStrongMaps.wordPosition);
+
+    const maps: Record<string, typeof rows> = {};
+    for (const row of rows) {
+      const list = maps[row.verseId] ?? [];
+      list.push(row);
+      maps[row.verseId] = list;
+    }
+    return res.json(maps);
+  } catch (err) {
+    console.error(err);
+    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/api/strong/verse/:verseId", async (req, res) => {
   try {
     const verseId = String(req.params.verseId);

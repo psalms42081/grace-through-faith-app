@@ -41,7 +41,8 @@ export default function LoginScreen() {
     const result = await login(email.trim(), password);
     setLoading(false);
     if (result.success) {
-      router.dismissAll();
+      if (router.canGoBack()) router.back();
+      else router.replace("/home-v2");
     } else {
       setError(result.error || "Sign in failed");
     }

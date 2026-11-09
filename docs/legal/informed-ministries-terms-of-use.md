@@ -1,7 +1,6 @@
 # Informed Ministries App — Terms of Use
 
-**Draft for legal review — not yet in force**
-Version 0.1 · Prepared 7 September 2026
+**Version 1.0 — effective 9 November 2026**
 
 These Terms of Use ("Terms") are an agreement between you and Informed Ministries (ABN 39 741 036 497) ("Informed Ministries", "we", "us", "our"), which operates the Informed Ministries mobile and web application (the "App"). By creating an account or using the App you agree to these Terms. If you do not agree, please do not use the App.
 
@@ -114,13 +113,3 @@ These Terms are governed by the laws of Victoria, Australia, and you agree to th
 Informed Ministries
 ABN 39 741 036 497
 hello@informedministries.app
-
----
-
-*Drafting notes for review (delete before publishing):*
-- *Confirm the legal entity and ABN with Luis, and whether Informed Ministries is incorporated or operates as a sole trader/partnership — this affects who is personally exposed under section 10.*
-- *Confirm Adventech and Our Daily Bread permissions are in writing and whether either requires specific wording in the Terms.*
-- *Confirm the minimum age (13 is the common floor; if any store listing rates the App lower, section 2 changes).*
-- *Have a solicitor confirm the ACL carve-out in section 9 and the limitation in section 10 as drafted.*
-- *Add a link to the Privacy Policy and surface both documents in Profile → About and at sign-up.*
-- *Section 5 promises that every AI-generated surface is labelled in the App. Audit the sparkle generator, Explain This Verse, Deep Dive, cross-references, topic reflections and is_ai_generated plans and add an "AI-generated" marker wherever one is missing before publishing the Terms.*
