@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
-import { chapterListTitle, readerHeaderLabel } from "../lib/reader-header-layout";
+import {
+  chapterListTitle,
+  readerHeaderLabel,
+  readerHeaderTitleKey,
+  readerHeaderTitleNaturalWidth,
+  readerHeaderTitleWidth,
+} from "../lib/reader-header-layout";
 import { currentReaderHeaderActions, registerReaderHeaderActions } from "../lib/reader-header-store";
 import { appVersionLine, shortUpdateId } from "../lib/app-version-line";
 
@@ -18,6 +24,23 @@ describe("reader header on the first native frame", () => {
     assert.equal(readerHeaderLabel(undefined), "");
     assert.equal(chapterListTitle({ bookId: "66" }), "Revelation");
     assert.equal(chapterListTitle({}), "Chapters");
+  });
+
+  it("gives a chapter the same explicit width as the chapter before it, and only clamps long names", () => {
+    assert.equal(readerHeaderTitleKey({ bookId: "42", chapter: "1" }), "42-1");
+    assert.equal(readerHeaderTitleKey({ bookId: ["42"], chapter: ["2"] }), "42-2");
+    const luke1 = readerHeaderTitleWidth("Luke 1", 390, 1);
+    const luke2 = readerHeaderTitleWidth("Luke 2", 390, 1);
+    assert.equal(luke1, luke2);
+    assert.equal(luke1, readerHeaderTitleNaturalWidth("Luke 1", 1));
+    const matthew = readerHeaderTitleWidth("Matthew 5", 390, 1);
+    assert.equal(matthew, readerHeaderTitleNaturalWidth("Matthew 5", 1));
+    assert.ok(matthew > luke1);
+    const thess = readerHeaderTitleWidth("1 Thessalonians 4", 390, 1);
+    const song = readerHeaderTitleWidth("Song of Solomon 2", 390, 1);
+    assert.equal(thess, song);
+    assert.ok(thess < readerHeaderTitleNaturalWidth("1 Thessalonians 4", 1));
+    assert.ok(song < readerHeaderTitleNaturalWidth("Song of Solomon 2", 1));
   });
 
   it("the layouts hand the reader and chapter list their header options, not the screen", () => {
@@ -42,24 +65,28 @@ describe("reader header on the first native frame", () => {
     assert.match(header, /const label = readerHeaderLabel\(route\.params\)/);
     assert.match(header, /title: label/);
     assert.match(header, /headerBackVisible: false/);
-    assert.match(header, /headerLeft: \(\) => <ReaderHeaderBack \/>/);
-    assert.match(header, /headerTitle: \(\{ children \}: \{ children: string \}\) =>/);
-    assert.match(header, /<ReaderHeaderTitle label=\{label\}>\{children\}<\/ReaderHeaderTitle>/);
-    assert.match(header, /typeof children === "string" && children\.trim\(\) \? children : label/);
-    assert.match(header, /flexGrow: 1,\s+flexShrink: 1,\s+minWidth: 0/);
-    assert.doesNotMatch(header, /maxWidth/);
+    assert.match(header, /readerHeaderNavigationOptions\(route\.params, label\)/);
+    assert.match(header, /headerLeft: \(\) => <ReaderHeaderBack key=\{`back-\$\{key\}`\} \/>/);
+    assert.match(header, /<ReaderHeaderTitle key=\{key\} label=\{label\} \/>/);
+    assert.match(header, /style=\{\[styles\.titleButton, \{ width \}\]\}/);
+    assert.match(header, /collapsable=\{false\}/);
+    assert.doesNotMatch(header, /flexGrow|flexShrink|minWidth: 0/);
     assert.match(header, /testID="reader-header-title"/);
     assert.match(header, /testID="bible-reader-back"/);
     assert.match(header, /export function chapterListScreenOptions/);
     assert.match(header, /title: chapterListTitle\(route\.params\)/);
   });
 
-  it("the reader screen no longer sets its own title, headerLeft or headerTitle after mount", () => {
+  it("the reader re-applies a keyed header whenever the chapter changes", () => {
     const reader = read("app/read/[bookId]/[chapter].tsx");
     assert.doesNotMatch(reader, /title: ""/);
     assert.doesNotMatch(reader, /headerLeft:/);
     assert.doesNotMatch(reader, /headerTitle:/);
-    assert.match(reader, /useLayoutEffect\(\(\) => \{\s*navigation\.setOptions\(\{ title: headerLabel \}\);/);
+    assert.match(reader, /readerHeaderNavigationOptions\(\{ bookId: routeBookId, chapter: routeChapter \}, headerLabel\)/);
+    assert.match(
+      reader,
+      /useLayoutEffect\(\(\) => \{\s*navigation\.setOptions\(/,
+    );
     assert.match(reader, /useFocusEffect\(\s*useCallback\(\s*\(\) =>\s*registerReaderHeaderActions\(/);
     assert.match(reader, /openChapterPicker: \(\) => setShowChapterPicker\(true\)/);
     assert.doesNotMatch(reader, /setReaderHeaderWidths/);

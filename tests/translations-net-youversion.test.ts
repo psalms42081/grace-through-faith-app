@@ -148,15 +148,15 @@ describe("NIV, AMP and NASB through YouVersion", () => {
 });
 
 describe("reader header", () => {
-  it("the title ellipsizes in the space beside the chips, and the chips do not shrink", () => {
+  it("the title has an explicit width and the chips do not shrink", () => {
     const reader = read("app/read/[bookId]/[chapter].tsx");
     const header = read("components/reader/ReaderStackHeader.tsx");
-    assert.match(header, /flexGrow: 1,\s+flexShrink: 1,\s+minWidth: 0/);
-    assert.doesNotMatch(header, /maxWidth/);
-    assert.doesNotMatch(header, /readerHeaderTitleMaxWidth|setReaderHeaderWidths|useWindowDimensions/);
+    assert.match(header, /style=\{\[styles\.titleButton, \{ width \}\]\}/);
+    assert.match(header, /readerHeaderTitleWidth\(label, screenWidth, fontScale\)/);
+    assert.doesNotMatch(header, /flexGrow|flexShrink/);
     assert.match(header, /styles\.titleText\}[\s\S]*?numberOfLines=\{1\}\s+ellipsizeMode="tail"/);
     assert.match(reader, /const bookName = data\?\.book\?\.name \|\| bibleBookName\(routeBookId\)/);
-    assert.match(reader, /navigation\.setOptions\(\{ title: headerLabel \}\)/);
+    assert.match(reader, /readerHeaderNavigationOptions\(\{ bookId: routeBookId, chapter: routeChapter \}, headerLabel\)/);
     assert.match(reader, /testID="reader-header-chips"/);
     assert.doesNotMatch(reader, /setReaderHeaderWidths/);
     assert.match(reader, /headerRow: \{[^}]*flexShrink: 0/s);

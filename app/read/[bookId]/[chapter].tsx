@@ -52,6 +52,7 @@ import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { formatSheetReference } from "@/lib/verse-sheet";
 import { READER_VERSION_CHIP_MAX_WIDTH } from "@/lib/reader-header-layout";
+import { readerHeaderNavigationOptions } from "@/components/reader/ReaderStackHeader";
 import { registerReaderHeaderActions } from "@/lib/reader-header-store";
 import { bibleBookName } from "@/lib/scripture-reference";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
@@ -1106,11 +1107,13 @@ export default function VerseReaderScreen() {
   const routeChapter = Array.isArray(chapter) ? chapter[0] ?? "" : chapter ?? "";
   const bookName = data?.book?.name || bibleBookName(routeBookId);
   const headerLabel = `${bookName} ${routeChapter}`.trim();
-  // The layout options already derive this title from the route params for the first frame;
-  // this keeps the header in step if the passage's book name differs (set before paint).
+  // Re-apply the header on every chapter. The title element is keyed by book and chapter so
+  // Android builds a new header subview instead of keeping the previous one's width.
   useLayoutEffect(() => {
-    navigation.setOptions({ title: headerLabel });
-  }, [navigation, headerLabel]);
+    navigation.setOptions(
+      readerHeaderNavigationOptions({ bookId: routeBookId, chapter: routeChapter }, headerLabel),
+    );
+  }, [navigation, headerLabel, routeBookId, routeChapter]);
   // The header's back and title buttons are rendered by the layout; the focused reader owns
   // what they do.
   const headerActionsRef = useRef({ openChapterPicker: () => {}, goBack: () => {} });

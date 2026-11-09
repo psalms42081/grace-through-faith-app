@@ -1,8 +1,13 @@
 import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { PixelRatio, Pressable, StyleSheet, Text, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { READING_CHROME_FONT_CAP } from "@/lib/reading-font-scale";
-import { chapterListTitle, readerHeaderLabel } from "@/lib/reader-header-layout";
+import {
+  chapterListTitle,
+  readerHeaderLabel,
+  readerHeaderTitleKey,
+  readerHeaderTitleWidth,
+} from "@/lib/reader-header-layout";
 import { currentReaderHeaderActions } from "@/lib/reader-header-store";
 
 /** PathB.surface / PathB.ink / muted ink, matching the reader itself. */
@@ -29,19 +34,22 @@ export function ReaderHeaderBack() {
 }
 
 /**
- * "Matthew 5 ⌄" — opens the chapter picker. The label arrives as `children` (the navigation
- * `title`, derived from the route params in the layout options and later refreshed by the screen),
- * so it is present on the first header frame and re-renders whenever the title option changes.
+ * "Matthew 5 ⌄" — opens the chapter picker. `width` is computed from the label (character count
+ * and font size) and clamped to the room beside the chips. The button does not flex inside the
+ * native header subview, which on Android keeps whatever size it measured first.
  */
-export function ReaderHeaderTitle({ children, label }: { children?: React.ReactNode; label?: string }) {
-  const text = typeof children === "string" && children.trim() ? children : label ?? "";
+export function ReaderHeaderTitle({ label }: { label: string }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const fontScale = Math.min(PixelRatio.getFontScale(), READING_CHROME_FONT_CAP);
+  const width = readerHeaderTitleWidth(label, screenWidth, fontScale);
   return (
     <Pressable
       onPress={() => currentReaderHeaderActions()?.openChapterPicker()}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={text ? `${text}, open chapter selector` : "Open chapter selector"}
-      style={styles.titleButton}
+      accessibilityLabel={label ? `${label}, open chapter selector` : "Open chapter selector"}
+      style={[styles.titleButton, { width }]}
+      collapsable={false}
       testID="reader-header-title"
     >
       <Text
@@ -50,11 +58,21 @@ export function ReaderHeaderTitle({ children, label }: { children?: React.ReactN
         ellipsizeMode="tail"
         maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
       >
-        {text}
+        {label}
       </Text>
       <Ionicons name="chevron-down" size={14} color={READER_HEADER_INK_MUTED} />
     </Pressable>
   );
+}
+
+/** Header pieces that must exist on the first frame and be recreated when the chapter changes. */
+export function readerHeaderNavigationOptions(params: object | undefined, label: string) {
+  const key = readerHeaderTitleKey(params);
+  return {
+    title: label,
+    headerLeft: () => <ReaderHeaderBack key={`back-${key}`} />,
+    headerTitle: () => <ReaderHeaderTitle key={key} label={label} />,
+  };
 }
 
 const headerChrome = {
@@ -74,12 +92,8 @@ export function readerScreenOptions({ route }: RouteOptionArgs) {
   const label = readerHeaderLabel(route.params);
   return {
     ...headerChrome,
-    title: label,
     headerBackVisible: false as const,
-    headerLeft: () => <ReaderHeaderBack />,
-    headerTitle: ({ children }: { children: string }) => (
-      <ReaderHeaderTitle label={label}>{children}</ReaderHeaderTitle>
-    ),
+    ...readerHeaderNavigationOptions(route.params, label),
   };
 }
 
@@ -99,17 +113,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    // Fill the left header slot (the back button's sibling, already beside the chips) and
-    // ellipsize only when the label itself is wider than the room left. The width is not
-    // measured: the chips' laid-out width is the stretched toolbar slot, and capping the
-    // title from it shrinks "Luke 2" to "Luke..." once a chapter change rebuilds the header.
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 0,
   },
   titleText: {
-    flexShrink: 1,
-    minWidth: 0,
+    flex: 1,
     fontSize: 17,
     fontFamily: "Lora_600SemiBold",
     color: READER_HEADER_INK,
