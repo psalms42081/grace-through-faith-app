@@ -2,6 +2,7 @@ import React from "react";
 import { Text, type TextStyle } from "react-native";
 import { useTranslation } from "@/context/TranslationContext";
 import { findScriptureCitations } from "@/lib/scripture-reference";
+import { footnoteSuperscript, splitLeadingFootnote } from "@/lib/scripture-footnote";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 
 export function ScriptureLinkedText({
@@ -18,7 +19,16 @@ export function ScriptureLinkedText({
   const nodes: React.ReactNode[] = [];
   let cursor = 0;
   hits.forEach((hit, index) => {
-    if (hit.start > cursor) nodes.push(text.slice(cursor, hit.start));
+    if (hit.start > cursor) {
+      const gap = text.slice(cursor, hit.start);
+      const marker = splitLeadingFootnote(gap);
+      if (marker.digits) {
+        if (marker.plain) nodes.push(marker.plain);
+        nodes.push(footnoteSuperscript(marker.digits));
+      } else {
+        nodes.push(gap);
+      }
+    }
     nodes.push(
       <Text
         key={`${hit.start}-${index}`}

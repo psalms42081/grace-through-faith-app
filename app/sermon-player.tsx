@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -28,21 +28,41 @@ export default function SermonPlayerScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [loading, setLoading] = useState(true);
   const [playerFailed, setPlayerFailed] = useState(false);
-  const appOrigin = Platform.OS === "web" ? (typeof window !== "undefined" ? window.location.origin : "") : "";
-  const originParam = appOrigin ? `&origin=${encodeURIComponent(appOrigin)}` : "";
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1${originParam}`;
+  const readyRef = useRef(false);
+  const embedOrigin = "https://informedministries.app";
+  const appOrigin = Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : embedOrigin;
+  const originParam = `&origin=${encodeURIComponent(appOrigin)}`;
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1${originParam}`;
   const validVideoId = typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId);
+  const nativeHtml = useMemo(() => `<!DOCTYPE html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:#000;height:100%}#player{position:absolute;inset:0;width:100%;height:100%}</style></head><body><div id="player"></div><script src="https://www.youtube.com/iframe_api"></script><script>
+    function post(msg){if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(msg)}
+    function onYouTubeIframeAPIReady(){
+      new YT.Player("player",{
+        videoId:${JSON.stringify(validVideoId ? videoId : "")},
+        playerVars:{playsinline:1,rel:0,modestbranding:1,origin:${JSON.stringify(embedOrigin)}},
+        events:{onReady:function(){post("ready")},onError:function(){post("error")}}
+      });
+    }
+  </script></body></html>`, [embedOrigin, validVideoId, videoId]);
+
+  const markFailed = useCallback(() => {
+    if (readyRef.current) return;
+    setLoading(false);
+    setPlayerFailed(true);
+  }, []);
 
   useEffect(() => {
-    setLoading(true);
-    setPlayerFailed(!validVideoId);
-    if (!validVideoId || !loading) return;
-    const timer = setTimeout(() => {
+    readyRef.current = false;
+    if (!validVideoId) {
       setLoading(false);
       setPlayerFailed(true);
-    }, 12000);
+      return;
+    }
+    setLoading(true);
+    setPlayerFailed(false);
+    const timer = setTimeout(markFailed, 8000);
     return () => clearTimeout(timer);
-  }, [validVideoId, videoId, loading]);
+  }, [validVideoId, videoId, markFailed]);
 
   useEffect(() => {
     if (!validVideoId) return;
@@ -132,15 +152,26 @@ export default function SermonPlayerScreen() {
           </View>
         )}
         <WebView
-          source={{ uri: embedUrl }}
+          source={{ html: nativeHtml, baseUrl: embedOrigin }}
           style={st.webview}
           allowsFullscreenVideo
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
           javaScriptEnabled
-          onLoadEnd={() => setLoading(false)}
-          onError={() => { setLoading(false); setPlayerFailed(true); }}
-          onHttpError={() => { setLoading(false); setPlayerFailed(true); }}
+          domStorageEnabled
+          originWhitelist={["*"]}
+          setSupportMultipleWindows={false}
+          onMessage={(event) => {
+            if (event.nativeEvent.data === "ready") {
+              readyRef.current = true;
+              setLoading(false);
+              setPlayerFailed(false);
+            } else if (event.nativeEvent.data === "error") {
+              markFailed();
+            }
+          }}
+          onError={markFailed}
+          onHttpError={markFailed}
         />
       </View>
     );
@@ -179,17 +210,15 @@ export default function SermonPlayerScreen() {
           </Text>
         ) : null}
 
-        {Platform.OS !== "android" ? (
-          <Pressable
-            onPress={handleOpenInYouTube}
-            style={[st.youtubeBtn, { borderColor: theme.border }]}
-          >
-            <Ionicons name="logo-youtube" size={18} color="#FF0000" />
-            <Text style={[st.youtubeBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
-              Open in YouTube
-            </Text>
-          </Pressable>
-        ) : null}
+        <Pressable
+          onPress={handleOpenInYouTube}
+          style={[st.youtubeBtn, { borderColor: theme.border }]}
+        >
+          <Ionicons name="logo-youtube" size={18} color="#FF0000" />
+          <Text style={[st.youtubeBtnText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
+            Open in YouTube
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

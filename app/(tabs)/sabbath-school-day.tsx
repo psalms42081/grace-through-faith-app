@@ -15,6 +15,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { safeGoBack } from "@/lib/safe-back";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
@@ -159,9 +160,10 @@ export default function SabbathSchoolDayScreen() {
   ]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) +
-    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
+  const bottomPad = isTabContained
+    ? (Platform.OS === "web" ? 34 : insets.bottom) +
+      sabbathSchoolTabBarClearance(isTabContained, Platform.OS)
+    : readingScreenBottomPad(Platform.OS === "web" ? 34 : insets.bottom);
 
   const queryPath = quarterCode
     ? `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&quarterCode=${quarterCode}`

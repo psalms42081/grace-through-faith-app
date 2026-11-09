@@ -351,6 +351,23 @@ export function VerseSheet({
     verseMapGenerationGate,
   ]);
 
+  const openExplain = () => {
+    if (!first) return;
+    router.push({
+      pathname: "/verse-explain" as any,
+      params: {
+        bookId,
+        bookName,
+        chapter,
+        verse: String(first.verse),
+        ...(youVersionText
+          ? { translation: aiScriptureTranslation(translation) }
+          : { verseId: first.id, text: first.text, translation }),
+      },
+    });
+  };
+  const nextSectionHeading = chips.length > 0 ? "Words" : "Classic Commentators";
+
   const saveNote = async () => {
     if (!isAuthenticated || !userId) return;
     if (!noteText.trim() || !first) return;
@@ -460,16 +477,51 @@ export function VerseSheet({
           <SheetAction icon="share-outline" label="Share" onPress={onShare} />
         </View>
 
-        <Pressable
-          onPress={() => setOriginalOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Original words"
-          testID="reader-verse-original-words"
-          style={({ pressed }) => [s.originalRow, { opacity: pressed ? 0.65 : 1 }]}
-        >
-          <Text style={s.originalLabel}>Original words</Text>
-          <Ionicons name="chevron-forward" size={16} color={MUTED} />
-        </Pressable>
+        <View style={s.studyRow}>
+          <Pressable
+            onPress={openExplain}
+            accessibilityRole="button"
+            accessibilityLabel="Explain this verse"
+            testID="reader-verse-sheet-explain"
+            style={({ pressed }) => [s.studyBtn, { opacity: pressed ? 0.65 : 1 }]}
+          >
+            <Text style={s.studyBtnText} maxFontSizeMultiplier={1.4}>Explain this verse</Text>
+          </Pressable>
+          <Pressable
+            onPress={onOpenDeepDive}
+            accessibilityRole="button"
+            accessibilityLabel="Deep dive"
+            testID="reader-verse-sheet-deep-dive"
+            style={({ pressed }) => [s.studyBtn, { opacity: pressed ? 0.65 : 1 }]}
+          >
+            <Text style={s.studyBtnText} maxFontSizeMultiplier={1.4}>Deep dive</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setOriginalOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Original words"
+            testID="reader-verse-original-words"
+            style={({ pressed }) => [s.studyBtn, { opacity: pressed ? 0.65 : 1 }]}
+          >
+            <Text style={s.studyBtnText} maxFontSizeMultiplier={1.4}>Original words</Text>
+          </Pressable>
+        </View>
+
+        {!expanded ? (
+          <Pressable
+            onPress={() => setExpanded(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`More for this verse, ${nextSectionHeading}`}
+            testID="reader-verse-sheet-more"
+            style={({ pressed }) => [s.moreRow, { opacity: pressed ? 0.65 : 1 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.moreTitle} maxFontSizeMultiplier={1.4}>More for this verse</Text>
+              <Text style={s.morePeek} numberOfLines={1} maxFontSizeMultiplier={1.4}>{nextSectionHeading}</Text>
+            </View>
+            <Ionicons name="chevron-up" size={18} color={INK} />
+          </Pressable>
+        ) : null}
 
         {showNote ? (
           <View style={s.noteBox} testID="reader-verse-sheet-note">
@@ -647,21 +699,8 @@ export function VerseSheet({
               ) : null}
               {first ? (
                 <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: "/verse-explain" as any,
-                      params: {
-                        bookId,
-                        bookName,
-                        chapter,
-                        verse: String(first.verse),
-                        ...(youVersionText
-                          ? { translation: aiScriptureTranslation(translation) }
-                          : { verseId: first.id, text: first.text, translation }),
-                      },
-                    })
-                  }
-                  testID="reader-verse-sheet-explain"
+                  onPress={openExplain}
+                  testID="reader-verse-sheet-explain-expanded"
                   style={({ pressed }) => [s.linkRow, { opacity: pressed ? 0.65 : 1 }]}
                 >
                   <View style={{ flex: 1, gap: 6 }}>
@@ -818,6 +857,48 @@ const s = StyleSheet.create({
   actionLabelActive: {
     color: PathB.coral,
     fontFamily: "Inter_600SemiBold",
+  },
+  studyRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  studyBtn: {
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: PILL,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  studyBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: INK,
+  },
+  moreRow: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
+  },
+  moreTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: INK,
+  },
+  morePeek: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: MUTED,
+    marginTop: 2,
   },
   originalRow: {
     minHeight: 44,

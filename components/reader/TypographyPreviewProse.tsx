@@ -204,7 +204,7 @@ export function TypographyPreviewProse({
                         allowFontScaling={false}
                         pointerEvents={wordStudyMode ? "none" : "auto"}
                         onPress={wordStudyMode ? undefined : () => onVerseTap(v)}
-                        style={[s.verseNum, { fontSize: superSize, lineHeight: superSize * 1.2 }]}
+                        style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine }]}
                       >
                         {v.verse}
                         {"\u00a0\u00a0"}
@@ -214,6 +214,7 @@ export function TypographyPreviewProse({
                           verseId={v.id}
                           verseNum={v.verse}
                           text={v.text}
+                          lineHeight={bodyLine}
                           maps={maps}
                           wordStudyMode={wordStudyMode}
                           spokenRanges={
@@ -227,8 +228,8 @@ export function TypographyPreviewProse({
                         />
                       ) : wordStudyMode ? (
                         <>
-                          <VerseTextRuns text={firstWord} />
-                          <VerseTextRuns text={remainder} />
+                          <VerseTextRuns text={firstWord} lineHeight={bodyLine} />
+                          <VerseTextRuns text={remainder} lineHeight={bodyLine} />
                           {lines.slice(1).map((line, lineIndex) =>
                             line.length === 0 ? (
                               "\n"
@@ -236,10 +237,10 @@ export function TypographyPreviewProse({
                               <Text
                                 key={`${v.id}-ln${lineIndex + 1}`}
                                 pointerEvents="none"
-                                style={s.poetryContinue}
+                                style={[s.poetryContinue, { lineHeight: bodyLine }]}
                               >
                                 {"\n\u2003"}
-                                <VerseTextRuns text={line} />
+                                <VerseTextRuns text={line} lineHeight={bodyLine} />
                               </Text>
                             ),
                           )}
@@ -249,6 +250,7 @@ export function TypographyPreviewProse({
                           verseId={v.id}
                           verseNum={v.verse}
                           text={v.text}
+                          lineHeight={bodyLine}
                           ranges={wordRanges.filter((range) => range.verseId === v.id)}
                           spokenRanges={
                             wordsOfChrist ? wordsOfChristRanges(Number(bookId), chapterNum, v.verse) : []
@@ -258,7 +260,7 @@ export function TypographyPreviewProse({
                         />
                       )}
                       {isBookmarked ? (
-                        <Text pointerEvents="none" style={s.bookmarkMark}>
+                        <Text pointerEvents="none" style={[s.bookmarkMark, { lineHeight: bodyLine }]}>
                           {" "}◆
                         </Text>
                       ) : null}

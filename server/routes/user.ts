@@ -18,6 +18,7 @@ import { Router } from "express";
   import { validate, noteSchema, highlightSchema, bookmarkSchema, prayerSchema, readingHistorySchema } from "../middleware/validate";
   import {
     addCalendarDays,
+    consecutiveReadingStreak,
     getCalendarDate,
     getSundayWeekStartDateKey,
     normalizeTimeZone,
@@ -754,10 +755,26 @@ router.get("/api/reading-streaks/weekly", optionalAuth, async (req, res) => {
       .from(readingStreaks)
       .where(eq(readingStreaks.userId, userId));
 
+    const readDates = await db
+      .select({
+        localDate: sql<string>`to_char(
+          (${readingHistory.readAt} AT TIME ZONE 'UTC') AT TIME ZONE ${timeZone},
+          'YYYY-MM-DD'
+        )`,
+      })
+      .from(readingHistory)
+      .where(eq(readingHistory.userId, userId))
+      .groupBy(sql`1`);
+    const today = getCalendarDate(new Date(), timeZone).dateKey;
+    const currentStreak = consecutiveReadingStreak(
+      readDates.map((row) => row.localDate),
+      today,
+    );
+
     return res.json({
       daysRead,
       perfectWeeks,
-      currentStreak: streak?.currentStreak ?? 0,
+      currentStreak,
       longestStreak: streak?.longestStreak ?? 0,
       lastReadDate: streak?.lastReadDate ?? null,
     });

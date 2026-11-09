@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -60,7 +60,10 @@ export default function ChapterPickerScreen() {
   const segments = useSegments();
   const isTabContained = isBibleTabSegments(segments);
   const canPopStack = useCanPopNestedStack();
-  useHardwareBackToHomeWhenAtStackRoot(isTabContained, canPopStack);
+  const hardwareAtRoot = useCallback(() => {
+    goBibleReaderBack(router, false, isTabContained);
+  }, [isTabContained]);
+  useHardwareBackToHomeWhenAtStackRoot(isTabContained, canPopStack, hardwareAtRoot);
   const chapterRoute = (chapter: number) =>
     `${isTabContained ? bibleTabBookPath(bookId ?? "") : `/read/${bookId}`}/${chapter}`;
 

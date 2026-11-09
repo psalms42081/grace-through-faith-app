@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { D2, F } from "./tokens";
 import { ErrorState, Header, LoadingState } from "./PreviewPrimitives";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -122,7 +123,7 @@ export default function OdbDevotionalPreview() {
         action={share}
       />
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 35 }}
+        contentContainerStyle={{ paddingBottom: readingScreenBottomPad(insets.bottom) }}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.hero}>

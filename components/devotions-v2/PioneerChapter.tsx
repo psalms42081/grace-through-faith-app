@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { displayPioneerChapterTitle } from "@/shared/pioneer-title";
 import type { PioneerChapterPayload } from "@/shared/pioneer-api";
 import { D2, F } from "./tokens";
@@ -64,7 +65,7 @@ export default function PioneerChapter() {
         topInset={insets.top}
         onBack={() => router.back()}
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 35 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: readingScreenBottomPad(insets.bottom) }}>
         <View style={s.hero} testID="pioneer-chapter-hero">
           <Text style={s.kicker}>{chapter.author.toUpperCase()}</Text>
           {chapter.authorDates ? <Text style={s.dates}>{chapter.authorDates}</Text> : null}

@@ -728,7 +728,6 @@ export default function VerseReaderScreen() {
   const isTabReader = isBibleTabSegments(segments);
   const isScriptureOverlay = pathname === "/scripture";
   const canPopStack = useCanPopNestedStack();
-  useHardwareBackToHomeWhenAtStackRoot(isTabReader, canPopStack);
   const handleReaderBack = useCallback(() => {
     if (isScriptureOverlay) {
       router.back();
@@ -736,6 +735,10 @@ export default function VerseReaderScreen() {
     }
     goBibleReaderBack(router, canPopStack, isTabReader);
   }, [canPopStack, isScriptureOverlay, isTabReader]);
+  const hardwareAtRoot = useCallback(() => {
+    goBibleReaderBack(router, false, isTabReader);
+  }, [isTabReader]);
+  useHardwareBackToHomeWhenAtStackRoot(isTabReader || isScriptureOverlay, canPopStack, hardwareAtRoot);
   const { theme } = useTheme();
   const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
   const { userId, isAuthenticated } = useAuth();
@@ -2102,6 +2105,7 @@ export default function VerseReaderScreen() {
                         </Text>
                         <VerseSpokenText
                           text={v.text}
+                          lineHeight={32 * fontScale}
                           spokenRanges={spokenRangesForLine({
                             redLettersEnabled: wordsOfChrist,
                             readingTranslation: translation,
@@ -2112,16 +2116,17 @@ export default function VerseReaderScreen() {
                           })}
                         />
                         {isBookmarked && (
-                          <Text style={{ color: RV2_INK_MUTED, fontSize: 10 }}> ◆</Text>
+                          <Text style={{ color: RV2_INK_MUTED, fontSize: 10, lineHeight: 32 * fontScale }}> ◆</Text>
                         )}
                       </Text>
                     </Pressable>
                     {stackedSplit && splitVerseByNum.get(v.verse) ? (
                       <View style={styles.stackedCompanion} testID={`split-stacked-verse-${v.verse}`}>
                         <Text allowFontScaling={false} style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
-                          <Text style={styles.stackedCompanionLabel}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
+                          <Text style={[styles.stackedCompanionLabel, { lineHeight: 24 * fontScale }]}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
                           <VerseSpokenText
                             text={splitVerseByNum.get(v.verse)!.text}
+                            lineHeight={24 * fontScale}
                             spokenRanges={spokenRangesForLine({
                               redLettersEnabled: wordsOfChrist,
                               readingTranslation: translation,
@@ -2234,6 +2239,7 @@ export default function VerseReaderScreen() {
                             </Text>
                             <VerseSpokenText
                               text={v.text}
+                              lineHeight={32 * fontScale}
                               spokenRanges={spokenRangesForLine({
                                 redLettersEnabled: wordsOfChrist,
                                 readingTranslation: translation,

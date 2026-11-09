@@ -1,5 +1,5 @@
 /** Collapsed verse-sheet chrome height (handle + ref + actions + Original words), excluding tab-bar inset. */
-export const VERSE_SHEET_COLLAPSED_HEIGHT = 168;
+export const VERSE_SHEET_COLLAPSED_HEIGHT = 300;
 
 /** Highlight washes shown on the collapsed verse sheet. */
 export const VERSE_SHEET_HIGHLIGHTS = [

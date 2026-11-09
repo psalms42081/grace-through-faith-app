@@ -91,6 +91,7 @@ export function ReaderVerseWords({
   onUntaggedWord,
   spokenRanges = [],
   pulseToken = 0,
+  lineHeight,
 }: {
   verseId: string;
   verseNum: number;
@@ -105,6 +106,7 @@ export function ReaderVerseWords({
   spokenRanges?: WordRange[];
   /** Increments once when Word study is switched on, unless motion is reduced. */
   pulseToken?: number;
+  lineHeight?: number;
 }) {
   const tokens = useMemo(
     () =>
@@ -147,6 +149,7 @@ export function ReaderVerseWords({
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulseEachWord = wordStudyPulsesEachWord(Platform.OS);
+  const inherited = lineHeight != null ? { lineHeight } : null;
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => () => {
     if (tapTimer.current) clearTimeout(tapTimer.current);
@@ -228,7 +231,7 @@ export function ReaderVerseWords({
               allowFontScaling={false}
               pointerEvents={wordStudyMode ? "none" : "auto"}
               onPress={wordStudyMode ? undefined : onVerseTap}
-              style={[webInline, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
+              style={[webInline, inherited, spoken ? { color: WORDS_OF_CHRIST_INK } : null]}
             >
               {token.surface}
             </Text>
@@ -241,6 +244,7 @@ export function ReaderVerseWords({
         ) : (
           <VerseTextRuns
             text={token.surface}
+            lineHeight={lineHeight}
             style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
           />
         );
@@ -257,6 +261,7 @@ export function ReaderVerseWords({
             : `Verse ${verseNum}`;
         const plainStyle = [
           webInline,
+          inherited,
           tappedIndex === index ? tappedStyle : null,
           IS_WEB && (tagged || openOriginalWords) ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
           spoken ? { color: WORDS_OF_CHRIST_INK } : null,

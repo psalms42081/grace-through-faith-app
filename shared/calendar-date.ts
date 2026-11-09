@@ -61,6 +61,23 @@ export function getCalendarDate(
   };
 }
 
+/**
+ * Consecutive calendar days, ending today if it was read, otherwise ending
+ * yesterday. A day counts once, however many chapters were opened.
+ * A gap, or no read today or yesterday, is zero.
+ */
+export function consecutiveReadingStreak(dateKeys: Iterable<string>, today: string): number {
+  const days = new Set(dateKeys);
+  let cursor = days.has(today) ? today : addCalendarDays(today, -1);
+  if (!days.has(cursor)) return 0;
+  let count = 0;
+  while (days.has(cursor)) {
+    count += 1;
+    cursor = addCalendarDays(cursor, -1);
+  }
+  return count;
+}
+
 export function addCalendarDays(dateKey: string, days: number): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
   if (!match) {

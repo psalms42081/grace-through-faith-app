@@ -3,6 +3,15 @@
     "name": "Informed Ministries",
     "slug": "grace-through-faith",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/d9393f6d-a589-44e4-8359-04953488bb01"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/informed-ministries-icon.png",
     "scheme": "informedministries",
@@ -138,6 +147,7 @@
         }
       ],
       "expo-video",
+      "expo-updates",
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

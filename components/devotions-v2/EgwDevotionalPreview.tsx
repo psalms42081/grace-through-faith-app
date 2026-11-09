@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { readingSpace, readingType } from "@/lib/reading-font-scale";
 import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
 import { D2, F } from "./tokens";
@@ -65,7 +66,7 @@ export default function EgwDevotionalPreview() {
         topInset={insets.top}
         onBack={() => router.back()}
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 35 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: readingScreenBottomPad(insets.bottom) }}>
         <View style={s.hero}>
           <Text style={s.kicker}>ELLEN G. WHITE</Text>
           <Text style={s.date}>{d.date}</Text>

@@ -49,6 +49,7 @@ export function VerseWordSpans({
   spokenRanges = [],
   onTap,
   onCommitRange,
+  lineHeight,
 }: {
   verseId: string;
   verseNum: number;
@@ -57,8 +58,10 @@ export function VerseWordSpans({
   spokenRanges?: WordRange[];
   onTap: () => void;
   onCommitRange: (verseId: string, start: number, end: number) => void;
+  lineHeight?: number;
 }) {
   const pieces = splitVerseWordPieces(text);
+  const inherited = lineHeight != null ? { lineHeight } : null;
   const [draft, setDraft] = useState<WordRange | null>(null);
   const suppressClick = useRef(false);
   const onCommitRef = useRef(onCommitRange);
@@ -109,7 +112,7 @@ export function VerseWordSpans({
       {pieces.map((piece, pieceIndex) => {
         if (piece.kind === "gap") {
           return (
-            <Text key={`${verseId}-gap-${pieceIndex}`} style={webInline}>
+            <Text key={`${verseId}-gap-${pieceIndex}`} allowFontScaling={false} style={[webInline, inherited]}>
               {piece.text}
             </Text>
           );
@@ -126,6 +129,7 @@ export function VerseWordSpans({
             selectable={false}
             style={[
               webInline,
+              inherited,
               wash !== "transparent" ? { backgroundColor: wash } : null,
               spoken ? { color: WORDS_OF_CHRIST_INK } : null,
             ]}
@@ -174,6 +178,7 @@ export function VerseWordSpans({
           >
             <VerseTextRuns
               text={piece.text}
+              lineHeight={lineHeight}
               style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
             />
           </Text>

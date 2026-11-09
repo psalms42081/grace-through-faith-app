@@ -10,17 +10,29 @@ export function useCanPopNestedStack(): boolean {
 }
 
 /**
- * Android hardware back at a Bible-tab (or root Books) stack root goes to Home.
- * When the nested stack can pop, return false so React Navigation pops normally.
+ * Android hardware back for the focused screen only.
+ * A pushed screen pops. At that screen's stack root, `onAtRoot` runs
+ * (Books for the reader, Home for the Bible tab root).
+ * Unfocused screens return false so a later screen, or the root handler, can pop.
  */
-export function useHardwareBackToHomeWhenAtStackRoot(enabled: boolean, canPopStack: boolean): void {
+export function useHardwareBackToHomeWhenAtStackRoot(
+  enabled: boolean,
+  canPopStack: boolean,
+  onAtRoot?: () => void,
+): void {
+  const navigation = useNavigation();
   useEffect(() => {
     if (!enabled || Platform.OS !== "android") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (canPopStack) return false;
-      goHomeTab(router);
+      if (!navigation.isFocused()) return false;
+      if (canPopStack) {
+        router.back();
+        return true;
+      }
+      if (onAtRoot) onAtRoot();
+      else goHomeTab(router);
       return true;
     });
     return () => sub.remove();
-  }, [enabled, canPopStack]);
+  }, [enabled, canPopStack, navigation, onAtRoot]);
 }

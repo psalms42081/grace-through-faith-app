@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { Platform, View } from "react-native";
+import { BackHandler, Platform, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationBar } from "expo-navigation-bar";
 import * as SystemUI from "expo-system-ui";
@@ -144,6 +144,18 @@ const RETIRED_KIDS_MODE_KEYS = [
 
 function RootLayoutNav() {
   const { theme, isDark } = useTheme();
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     AsyncStorage.multiRemove(RETIRED_KIDS_MODE_KEYS).catch(() => {});

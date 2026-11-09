@@ -9,6 +9,7 @@ import { displayPioneerChapterTitle } from "@/shared/pioneer-title";
 import type { PioneerReadingPayload, PioneerWeekResponse } from "@/shared/pioneer-api";
 import { D2, F } from "./tokens";
 import { EmptyState, Header, LoadingState } from "./PreviewPrimitives";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { PioneerProse, PublicDomainLine } from "./PioneerProse";
 
 function readingFromWeek(data: PioneerWeekResponse | undefined): PioneerReadingPayload | null {
@@ -77,7 +78,7 @@ export default function PioneerReading() {
         topInset={insets.top}
         onBack={() => router.back()}
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 35 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: readingScreenBottomPad(insets.bottom) }}>
         <View style={s.hero} testID="pioneer-reading-hero">
           {portrait ? (
             <Image

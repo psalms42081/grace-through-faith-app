@@ -105,7 +105,8 @@ describe("external tester navigation feedback", () => {
     assert.match(readerSource, /useCanPopNestedStack\(\)/);
     assert.match(readerSource, /goBibleReaderBack\(router, canPopStack, isTabReader\)/);
     assert.match(readerSource, /testID="bible-reader-back"/);
-    assert.match(readerSource, /useHardwareBackToHomeWhenAtStackRoot\(isTabReader, canPopStack\)/);
+    assert.match(readerSource, /useHardwareBackToHomeWhenAtStackRoot\(isTabReader \|\| isScriptureOverlay, canPopStack, hardwareAtRoot\)/);
+    assert.match(readerSource, /goBibleReaderBack\(router, false, isTabReader\)/);
     assert.match(readerSource, /openBibleTabBooks\(router, canPopStack\)/);
     assert.match(readerSource, /useSegments/);
     assert.match(readerSource, /isTabReader/);

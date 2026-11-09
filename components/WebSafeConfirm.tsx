@@ -210,9 +210,12 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(31,26,18,0.45)",
     justifyContent: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 12,
   },
   sheet: {
+    width: "100%",
+    maxWidth: 480,
     backgroundColor: PathB.surfaceCard,
     borderRadius: 20,
     paddingBottom: 16,

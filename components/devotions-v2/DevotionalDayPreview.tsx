@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -328,7 +329,7 @@ export default function DevotionalDayPreview() {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 35 }}
+        contentContainerStyle={{ paddingBottom: readingScreenBottomPad(insets.bottom) }}
       >
         <View style={s.progress}>
           <View
