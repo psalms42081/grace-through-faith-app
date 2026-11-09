@@ -324,7 +324,7 @@ describe("Home hero verse illustrations", () => {
       hero.indexOf("reflectionDaypart.toUpperCase"),
       hero.indexOf("const body"),
     );
-    assert.match(reflectionHead, /style=\{s\.verseQuote\}/);
+    assert.doesNotMatch(reflectionHead, /style=\{s\.verseQuote\}/);
     assert.doesNotMatch(reflectionHead, /style=\{s\.verse\}/);
     assert.doesNotMatch(reflectionHead, /Reflection on/);
   });
@@ -374,18 +374,21 @@ describe("Home hero verse illustrations", () => {
     assert.match(bodyAssign, /Reflection on \{reflection\.reference\}/);
     assert.match(bodyAssign, /activeTab === "signpost"/);
     assert.match(bodyAssign, /activeTab === "reflection"/);
-    assert.doesNotMatch(bodyAssign, /activeTab === "verse"/);
-    assert.doesNotMatch(bodyAssign, /s\.verseQuote/);
+    assert.match(bodyAssign, /activeTab === "verse"/);
+    assert.match(bodyAssign, /s\.verseQuote/);
+    assert.match(bodyAssign, /s\.cite/);
+    assert.match(bodyAssign, /reflection\.thought/);
     assert.doesNotMatch(bodyAssign, /s\.verse\b/);
 
     const headAssign = hero.slice(hero.indexOf("const head ="), hero.indexOf("const body ="));
-    assert.match(headAssign, /s\.cite/);
-    assert.match(headAssign, /verse\.reference/);
+    assert.doesNotMatch(headAssign, /s\.cite/);
+    assert.doesNotMatch(headAssign, /verse\.reference/);
     assert.doesNotMatch(headAssign, /signpost\?\.description/);
     assert.doesNotMatch(headAssign, /Reflection on/);
-    assert.match(headAssign, /reflection\.thought/);
-    assert.match(headAssign, /s\.verseQuote/);
+    assert.doesNotMatch(headAssign, /reflection\.thought/);
+    assert.doesNotMatch(headAssign, /s\.verseQuote/);
     assert.match(headAssign, /s\.verse\}/);
+    assert.match(headAssign, /VERSE OF THE DAY/);
   });
 
   // Regression: the art column rendered empty on react-native-web because

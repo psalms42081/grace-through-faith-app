@@ -21,6 +21,8 @@ import Animated, {
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { NavigationBar } from "expo-navigation-bar";
 import { onSabbathTestTrigger } from "@/lib/sabbath-test-events";
 import Svg, { Path, Rect, Defs, RadialGradient, Stop } from "react-native-svg";
 
@@ -308,6 +310,8 @@ export default function SabbathOverlay({ isSabbath, isClosingPhase, onDismissWel
           },
         ]}
       >
+        <StatusBar style="light" />
+        {Platform.OS === "android" ? <NavigationBar style="light" /> : null}
         <Pressable
           onPress={handleDismiss}
           style={[styles.touchArea, { paddingTop: topPad, paddingBottom: bottomPad }]}

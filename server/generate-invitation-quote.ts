@@ -4,7 +4,7 @@ import path from "path";
 const VOICE_ID = "XrExE9yKIg1WjnnlVkGX"; // ellen_white / matilda
 
 const QUOTE_TEXT =
-  "The Word of God is living and powerful. You have come to the right place — open your heart, and let it speak.";
+  "For the word of God is quick, and powerful, and sharper than any twoedged sword, piercing even to the dividing asunder of soul and spirit, and of the joints and marrow, and is a discerner of the thoughts and intents of the heart.";
 
 const OUT_PATH = path.join(__dirname, "../assets/audio/invitation-quote.mp3");
 

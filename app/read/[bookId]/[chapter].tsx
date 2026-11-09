@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as NavigationBar from "expo-navigation-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
@@ -65,6 +64,7 @@ import {
 import {
   READER_FLOATING_CHROME_HEIGHT,
   floatingChromeHiddenAfterScroll,
+  nativeTabBarHeight,
   readerChromeBottom,
   readerScrollBottomPad as readingScrollPad,
   readerTabBarClearance,
@@ -854,12 +854,12 @@ export default function VerseReaderScreen() {
   const translationDisplay = translationLabel(translation, availableTranslations);
   const splitTranslationLabel = translationLabel(splitTranslation, availableTranslations);
   const splitLoadFailed = !!splitError || splitUnavailable;
-  const splitAcrostic = useMemo(
-    () => withAcrosticHeadings(splitLoadFailed ? [] : (splitData?.verses ?? []), splitData?.providerContent?.headings),
-    [splitLoadFailed, splitData?.verses, splitData?.providerContent?.headings],
+  // Compare shows headings from the reading version only; the comparison
+  // version's own section titles would land under the wrong verse.
+  const splitVerses = useMemo(
+    () => withAcrosticHeadings(splitLoadFailed ? [] : (splitData?.verses ?? []), undefined).verses,
+    [splitLoadFailed, splitData?.verses],
   );
-  const splitVerses = splitAcrostic.verses;
-  const splitHeadings = splitAcrostic.headingsByVerse;
   const splitVerseByNum = useMemo(
     () => new Map(splitVerses.map((v) => [v.verse, v])),
     [splitVerses],
@@ -1022,24 +1022,6 @@ export default function VerseReaderScreen() {
       queryClient.invalidateQueries({ queryKey: [`/api/highlights/${userId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/${userId}`] });
     }, [userId])
-  );
-
-  // Hide Android nav bar while reading (immersive mode); restore on leave.
-  // SDK 57 / edge-to-edge may leave these methods undefined — skip if so.
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS !== "android") return;
-      const callNavBar = (fn: unknown, ...args: string[]) => {
-        if (typeof fn !== "function") return;
-        try {
-          Promise.resolve((fn as (...a: string[]) => unknown)(...args)).catch(() => {});
-        } catch {}
-      };
-      callNavBar(NavigationBar.setVisibilityAsync, "hidden");
-      return () => {
-        callNavBar(NavigationBar.setVisibilityAsync, "visible");
-      };
-    }, [])
   );
 
   const { data, isLoading, error } = useQuery<PassageResponse>({
@@ -1374,12 +1356,12 @@ export default function VerseReaderScreen() {
 
   const tabBarClearance = readerTabBarClearance(
     isTabReader || Platform.OS === "web",
-    undefined,
+    isTabReader && Platform.OS !== "web" ? nativeTabBarHeight(insets.bottom) : undefined,
     Platform.OS,
   );
   const safeBottom = Platform.OS === "web" ? (tabBarClearance > 0 ? 0 : 34) : insets.bottom;
-  const bottomPad = safeBottom + tabBarClearance;
-  const chromeBottom = readerChromeBottom(tabBarClearance);
+  const bottomPad = tabBarClearance > 0 ? tabBarClearance : safeBottom;
+  const chromeBottom = readerChromeBottom(tabBarClearance, safeBottom);
   const readerScrollBottomPad = readingScrollPad({
     tabBarHeight: tabBarClearance,
     safeBottom,
@@ -1714,6 +1696,14 @@ export default function VerseReaderScreen() {
   const headerPillBg = RV2_PILL;
   const headerBorderColor = RV2_BORDER;
 
+  // Android applies a nested span's lineHeight to the whole paragraph, so the
+  // verse number must carry the verse's line height or every line collapses.
+  const verseNumInlineScaled = {
+    color: verseNumColor,
+    fontSize: Math.min(11 * fontScale, 18 * fontScale * 0.62),
+    lineHeight: 32 * fontScale,
+  };
+
   const compareBar = splitMode ? (
     <View style={styles.compareBar} testID="compare-bar">
       <Text style={styles.compareBarText} numberOfLines={1} maxFontSizeMultiplier={READING_CHROME_FONT_CAP}>
@@ -1727,7 +1717,7 @@ export default function VerseReaderScreen() {
         accessibilityLabel={`Second translation ${splitTranslationLabel}, change`}
         hitSlop={8}
         onPress={() => setShowSplitTranslationPicker(!showSplitTranslationPicker)}
-        style={styles.compareBarVersion}
+        style={[styles.compareBarVersion, { backgroundColor: headerPillBg }]}
       >
         <Text style={styles.compareBarVersionText} numberOfLines={1} maxFontSizeMultiplier={READING_CHROME_FONT_CAP}>
           {splitTranslationLabel}
@@ -2099,7 +2089,7 @@ export default function VerseReaderScreen() {
                       ]}
                     >
                       <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
-                        <Text allowFontScaling={false} style={[styles.verseNumInline, { color: verseNumColor, fontSize: Math.min(11 * fontScale, 18 * fontScale * 0.62), lineHeight: Math.min(11 * fontScale, 18 * fontScale * 0.62) * 1.2 }]}>
+                        <Text allowFontScaling={false} style={[styles.verseNumInline, verseNumInlineScaled]}>
                           {v.verse}{"\u00a0"}
                         </Text>
                         <VerseSpokenText
@@ -2117,19 +2107,6 @@ export default function VerseReaderScreen() {
                     </Pressable>
                     {stackedSplit && splitVerseByNum.get(v.verse) ? (
                       <View style={styles.stackedCompanion} testID={`split-stacked-verse-${v.verse}`}>
-                        {(splitHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
-                          <Text
-                            key={`${v.id}-split-heading-${headingIndex}`}
-                            style={[
-                              styles.providerHeading,
-                              heading.kind === "qa" && styles.providerHeadingQa,
-                              styles.stackedCompanionHeading,
-                            ]}
-                            accessibilityRole="header"
-                          >
-                            {heading.text}
-                          </Text>
-                        ))}
                         <Text allowFontScaling={false} style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
                           <Text style={styles.stackedCompanionLabel}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
                           <VerseSpokenText
@@ -2235,22 +2212,9 @@ export default function VerseReaderScreen() {
                     ) : (
                       splitVerses.map((v) => (
                         <View key={v.id}>
-                          {(splitHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
-                            <Text
-                              key={`${v.id}-heading-${headingIndex}`}
-                              style={[
-                                styles.providerHeading,
-                                heading.kind === "qa" && styles.providerHeadingQa,
-                                { color: textColor },
-                              ]}
-                              accessibilityRole="header"
-                            >
-                              {heading.text}
-                            </Text>
-                          ))}
                           <View style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
                           <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
-                            <Text allowFontScaling={false} style={[styles.verseNumInline, { color: verseNumColor, fontSize: Math.min(11 * fontScale, 18 * fontScale * 0.62), lineHeight: Math.min(11 * fontScale, 18 * fontScale * 0.62) * 1.2 }]}>
+                            <Text allowFontScaling={false} style={[styles.verseNumInline, verseNumInlineScaled]}>
                               {v.verse}{"\u00a0"}
                             </Text>
                             <VerseSpokenText
@@ -2856,6 +2820,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     maxWidth: "100%",
     gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
   compareBarVersionText: {
     flexShrink: 1,
@@ -2873,13 +2840,6 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingBottom: 10,
     marginTop: -4,
-  },
-  stackedCompanionHeading: {
-    marginTop: 8,
-    marginBottom: 2,
-    fontSize: 13,
-    lineHeight: 18,
-    color: RV2_INK_MUTED,
   },
   stackedCompanionText: {
     fontFamily: "Lora_400Regular",

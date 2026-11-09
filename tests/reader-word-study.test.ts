@@ -15,6 +15,7 @@ import {
   wordStudyHintCopy,
   wordStudyHintReturns,
 } from "../lib/word-study-hint";
+import { wordStudyPulsesEachWord } from "../lib/word-study-pulse";
 
 describe("formatStrongId", () => {
   it("strips zero-padding", () => {
@@ -263,6 +264,15 @@ describe("reader word-study chrome", () => {
     assert.doesNotMatch(words, /WORD_STUDY_UNTAPPABLE_INK/);
     assert.doesNotMatch(words, /0\.45/);
     assert.match(words, /WORD_STUDY_PULSE_MS = 600/);
+    assert.match(words, /wordStudyPulsesEachWord/);
+    assert.equal(wordStudyPulsesEachWord("android"), false);
+    assert.equal(wordStudyPulsesEachWord("ios"), false);
+    assert.equal(wordStudyPulsesEachWord("web"), true);
+    assert.match(words, /useNativeDriver: true/);
+    assert.match(words, /testID="word-study-pulse-wash"/);
+    const prose = readFileSync(new URL("../components/reader/TypographyPreviewProse.tsx", import.meta.url), "utf8");
+    assert.match(prose, /!IS_WEB && pulseToken > 0 \? <WordStudyPulseWash/);
+    assert.match(prose, /pulseToken=\{IS_WEB \? pulseToken : 0\}/);
     assert.match(words, /openOriginalWords = wordStudyMode && !tagged/);
     assert.match(words, /untaggedRef\.current\?\.\(\)/);
     assert.match(words, /WORD_TAP_TINT = "#F1EBDD"/);

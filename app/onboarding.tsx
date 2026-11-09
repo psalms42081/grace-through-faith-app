@@ -24,7 +24,8 @@ import Animated, {
 const ONBOARDING_KEY = "@grace-through-faith/onboarded";
 
 const QUOTE =
-  "The Word of God is living and powerful.\nYou have come to the right place —\nopen your heart, and let it speak.";
+  "For the word of God is quick, and powerful, and sharper than any twoedged sword, piercing even to the dividing asunder of soul and spirit, and of the joints and marrow, and is a discerner of the thoughts and intents of the heart.";
+const QUOTE_ATTRIBUTION = "Hebrews 4:12";
 
 const ease = Easing.out(Easing.ease);
 
@@ -138,7 +139,7 @@ export default function OnboardingScreen() {
             <Text style={s.quoteText}>{QUOTE}</Text>
           </Animated.View>
           <Animated.View style={attributionStyle}>
-            <Text style={s.attribution}>— Ellen G. White</Text>
+            <Text style={s.attribution}>— {QUOTE_ATTRIBUTION}</Text>
           </Animated.View>
         </View>
       </View>

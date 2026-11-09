@@ -126,6 +126,13 @@
       "expo-localization",
       "expo-sharing",
       "expo-status-bar",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "style": "dark"
+        }
+      ],
       "expo-video",
       "@react-native-community/datetimepicker"
     ],

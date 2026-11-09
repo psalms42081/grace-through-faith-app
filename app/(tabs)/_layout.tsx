@@ -5,8 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { House, BookOpen, CalendarDays, Compass, User } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PathB } from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { nativeTabBarHeight } from "@/lib/reader-floating-chrome";
 import { isSabbathSchoolTabPath } from "@/lib/sabbath-school-route-containment";
 
 function ClassicTabLayout() {
@@ -15,6 +17,7 @@ function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const isSabbathSchoolRoute = isSabbathSchoolTabPath(pathname);
   const homeTabColor = isSabbathSchoolRoute ? PathB.coral : undefined;
 
@@ -40,7 +43,9 @@ function ClassicTabLayout() {
           borderTopWidth: isWeb ? 1 : 0,
           borderTopColor: theme.border,
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          ...(isWeb
+            ? { height: 84 }
+            : { height: nativeTabBarHeight(insets.bottom), paddingBottom: insets.bottom }),
         },
         tabBarBackground: () =>
           isIOS ? (

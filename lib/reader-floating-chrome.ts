@@ -16,9 +16,23 @@ export function readerTabBarClearance(
   return os === "web" ? WEB_TAB_BAR_HEIGHT : NATIVE_TAB_BAR_HEIGHT;
 }
 
-/** Distance from the screen bottom to the chrome row. */
-export function readerChromeBottom(tabBarHeight: number): number {
-  return Math.max(0, tabBarHeight);
+/**
+ * Android/iOS tab bar content plus the system nav inset.
+ * The tab bar style uses this as its explicit height, so the floating
+ * chrome can sit on its top edge. Web keeps a fixed 84px bar.
+ */
+export function nativeTabBarHeight(safeBottom: number): number {
+  return NATIVE_TAB_BAR_HEIGHT + Math.max(0, safeBottom);
+}
+
+/**
+ * Distance from the screen bottom to the chrome row.
+ * A positive tab bar height already includes the safe-area inset.
+ * With no tab bar, lift the chrome by the safe-area inset alone.
+ */
+export function readerChromeBottom(tabBarHeight: number, safeBottom = 0): number {
+  if (tabBarHeight > 0) return tabBarHeight;
+  return Math.max(0, safeBottom);
 }
 
 export function readerScrollEndAir(fontScale: number): number {

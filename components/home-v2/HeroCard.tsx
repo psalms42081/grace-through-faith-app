@@ -166,14 +166,25 @@ export default function HeroCard({
       </View>
     ) : null;
 
-  // HeadBlock lives in the art row. Body is a full-width sibling below the row.
-  // Verse: eyebrow + quote + citation. Signpost: eyebrow + title. Reflection: eyebrow + thought.
+  // Heading sits beside the art. Verse and reflection copy are full width below,
+  // so a phone column does not squeeze the verse into the art row.
   const head =
     activeTab === "verse" ? (
+      <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
+    ) : activeTab === "signpost" ? (
       <>
-        <Text style={s.eyebrow}>VERSE OF THE DAY</Text>
+        <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
+        <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
+      </>
+    ) : (
+      <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
+    );
+
+  const body =
+    activeTab === "verse" ? (
+      <View style={s.body} testID="hero-body">
         {verseLoading ? (
-          <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 16, marginBottom: 8 }} />
+          <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 4, marginBottom: 8 }} />
         ) : verseUnavailable ? (
           <Text style={[s.verseQuote, { fontStyle: "italic", opacity: 0.75 }]}>
             {versionLabel
@@ -184,26 +195,14 @@ export default function HeroCard({
           <Text style={s.verseQuote}>{quotedVerseText(verse.text)}</Text>
         ) : null}
         <Text style={s.cite}>{verse.reference}{versionLabel ? ` · ${versionLabel}` : ""}</Text>
-      </>
-    ) : activeTab === "signpost" ? (
-      <>
-        <Text style={s.eyebrow}>{"TODAY\u2019S SIGNPOST"}</Text>
-        <Text style={s.verse}>{signpost?.title ?? "A signpost for today"}</Text>
-      </>
-    ) : (
-      <>
-        <Text style={s.eyebrow}>{`${reflectionDaypart.toUpperCase()} REFLECTION`}</Text>
-        <Text style={s.verseQuote}>{reflection.thought}</Text>
-      </>
-    );
-
-  const body =
-    activeTab === "signpost" && signpost?.description ? (
+      </View>
+    ) : activeTab === "signpost" && signpost?.description ? (
       <View style={s.body} testID="hero-body">
         <Text style={s.bodyText}>{signpost.description}</Text>
       </View>
     ) : activeTab === "reflection" ? (
       <View style={s.body} testID="hero-body">
+        <Text style={s.verseQuote}>{reflection.thought}</Text>
         <Text style={s.bodyText}>Reflection on {reflection.reference}</Text>
       </View>
     ) : null;

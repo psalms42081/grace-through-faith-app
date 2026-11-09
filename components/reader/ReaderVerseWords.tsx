@@ -5,6 +5,7 @@ import {
   alignMapsToSurface,
   type ReaderStrongMap,
 } from "@/lib/reader-word-study";
+import { wordStudyPulsesEachWord } from "@/lib/word-study-pulse";
 import { wordInRange, type WordRange } from "@/lib/verse-word-range";
 import { WORDS_OF_CHRIST_INK } from "@/lib/words-of-christ";
 import {
@@ -29,6 +30,49 @@ export const WORD_TAP_TINT_MS = 300;
 
 /** One faint wash when Word study is switched on. */
 export const WORD_STUDY_PULSE_MS = 600;
+
+function WordStudyPulseWashOnce() {
+  const opacity = useRef(new Animated.Value(0.12)).current;
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    const anim = Animated.timing(opacity, {
+      toValue: 0,
+      duration: WORD_STUDY_PULSE_MS,
+      useNativeDriver: true,
+    });
+    anim.start(({ finished }) => {
+      if (finished) setGone(true);
+    });
+    const backup = setTimeout(() => setGone(true), WORD_STUDY_PULSE_MS + 40);
+    return () => {
+      anim.stop();
+      clearTimeout(backup);
+    };
+  }, [opacity]);
+  if (gone) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      testID="word-study-pulse-wash"
+      style={[pulseWashStyle, { opacity }]}
+    />
+  );
+}
+
+export function WordStudyPulseWash({ token }: { token: number }) {
+  if (!token) return null;
+  return <WordStudyPulseWashOnce key={token} />;
+}
+
+const pulseWashStyle = {
+  position: "absolute" as const,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(31, 26, 18, 1)",
+  zIndex: 2,
+};
 
 const tappedStyle: TextStyle = {
   backgroundColor: WORD_TAP_TINT,
@@ -102,12 +146,13 @@ export function ReaderVerseWords({
   const webLongPress = webLongPressRef.current;
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulseEachWord = wordStudyPulsesEachWord(Platform.OS);
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => () => {
     if (tapTimer.current) clearTimeout(tapTimer.current);
   }, []);
   useEffect(() => {
-    if (!pulseToken) return;
+    if (!pulseEachWord || !pulseToken) return;
     pulse.setValue(1);
     const anim = Animated.timing(pulse, {
       toValue: 0,
@@ -116,7 +161,7 @@ export function ReaderVerseWords({
     });
     anim.start();
     return () => anim.stop();
-  }, [pulseToken, pulse]);
+  }, [pulseEachWord, pulseToken, pulse]);
   const pulseStyle = {
     backgroundColor: pulse.interpolate({
       inputRange: [0, 1],
@@ -191,44 +236,63 @@ export function ReaderVerseWords({
         }
 
         const openOriginalWords = wordStudyMode && !tagged;
+        const wordChildren = tagged ? (
+          token.surface
+        ) : (
+          <VerseTextRuns
+            text={token.surface}
+            style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
+          />
+        );
+        const onWordPress = () => {
+          if (IS_WEB && webLongPress.consumeSuppressedClick()) return;
+          if (pressOpensSheet) tapThenActivate();
+          else if (openOriginalWords) untaggedRef.current?.();
+          else onVerseTap();
+        };
+        const wordLabel = tagged
+          ? `Word study ${token.surface}`
+          : openOriginalWords
+            ? `Original words for verse ${verseNum}`
+            : `Verse ${verseNum}`;
+        const plainStyle = [
+          webInline,
+          tappedIndex === index ? tappedStyle : null,
+          IS_WEB && (tagged || openOriginalWords) ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
+          spoken ? { color: WORDS_OF_CHRIST_INK } : null,
+        ];
+        if (!pulseEachWord) {
+          return (
+            <Text
+              key={`${verseId}-w-${index}`}
+              allowFontScaling={false}
+              testID={testId}
+              nativeID={testId}
+              onPress={onWordPress}
+              {...webHandlers}
+              suppressHighlighting={pressOpensSheet}
+              selectable={false}
+              style={plainStyle}
+              accessibilityLabel={wordLabel}
+            >
+              {wordChildren}
+            </Text>
+          );
+        }
         return (
           <Animated.Text
             key={`${verseId}-w-${index}`}
             allowFontScaling={false}
             testID={testId}
             nativeID={testId}
-            onPress={() => {
-              if (IS_WEB && webLongPress.consumeSuppressedClick()) return;
-              if (pressOpensSheet) tapThenActivate();
-              else if (openOriginalWords) untaggedRef.current?.();
-              else onVerseTap();
-            }}
+            onPress={onWordPress}
             {...webHandlers}
             suppressHighlighting={pressOpensSheet}
             selectable={false}
-            style={[
-              webInline,
-              pulseStyle,
-              tappedIndex === index ? tappedStyle : null,
-              IS_WEB && (tagged || openOriginalWords) ? ({ cursor: "pointer" } as unknown as TextStyle) : null,
-              spoken ? { color: WORDS_OF_CHRIST_INK } : null,
-            ]}
-            accessibilityLabel={
-              tagged
-                ? `Word study ${token.surface}`
-                : openOriginalWords
-                  ? `Original words for verse ${verseNum}`
-                  : `Verse ${verseNum}`
-            }
+            style={[plainStyle, pulseStyle]}
+            accessibilityLabel={wordLabel}
           >
-            {tagged ? (
-              token.surface
-            ) : (
-              <VerseTextRuns
-                text={token.surface}
-                style={spoken ? { color: WORDS_OF_CHRIST_INK } : undefined}
-              />
-            )}
+            {wordChildren}
           </Animated.Text>
         );
       })}

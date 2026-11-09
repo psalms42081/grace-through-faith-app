@@ -14,7 +14,7 @@ import {
 } from "@/lib/verse-web-long-press";
 import { VerseTextRuns } from "@/components/reader/VerseTextRuns";
 import { VerseWordSpans, type VerseWordRangeHighlight } from "@/components/reader/VerseWordSpans";
-import { ReaderVerseWords } from "@/components/reader/ReaderVerseWords";
+import { ReaderVerseWords, WordStudyPulseWash } from "@/components/reader/ReaderVerseWords";
 import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { readingType } from "@/lib/reading-font-scale";
 import { verseSurfaceStyle } from "@/lib/verse-selection";
@@ -117,6 +117,7 @@ export function TypographyPreviewProse({
 
   return (
     <View style={s.prose} testID="reader-typography-prose">
+      {!IS_WEB && pulseToken > 0 ? <WordStudyPulseWash token={pulseToken} /> : null}
       {groups.map((group) => {
         const runs = splitParagraphGroupAtHeadings(group, headingsByVerse);
         return runs.map((run) => {
@@ -222,7 +223,7 @@ export function TypographyPreviewProse({
                           onVerseLongPress={() => onVerseLongPress(v)}
                           onWordActivate={(surface, mapping) => onWordActivate(v, surface, mapping)}
                           onUntaggedWord={onUntaggedWord ? () => onUntaggedWord(v) : undefined}
-                          pulseToken={pulseToken}
+                          pulseToken={IS_WEB ? pulseToken : 0}
                         />
                       ) : wordStudyMode ? (
                         <>

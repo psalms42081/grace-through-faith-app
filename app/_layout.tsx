@@ -8,6 +8,9 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { NavigationBar } from "expo-navigation-bar";
+import * as SystemUI from "expo-system-ui";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PathB } from "@/constants/colors";
 import { queryClient, asyncStoragePersister, QUERY_PERSIST_BUSTER } from "@/lib/query-client";
@@ -30,6 +33,10 @@ import Constants from "expo-constants";
 
 if (Platform.OS === "web") {
   registerWebServiceWorker();
+}
+
+if (Platform.OS === "android") {
+  SystemUI.setBackgroundColorAsync(PathB.surface).catch(() => {});
 }
 
 // Expo Go (SDK 53+) throws on a static import of expo-notifications (Android).
@@ -365,7 +372,10 @@ useEffect(() => {
                   <StudyDepthProvider>
                     <TutorialProvider>
                       <AudioProvider>
-                        <GestureHandlerRootView style={{ flex: 1 }}>
+                        <GestureHandlerRootView style={{ flex: 1, backgroundColor: PathB.surface }}>
+                          <StatusBar style="dark" />
+                          {/* NavigationBar "dark" is dark buttons on a light bar. */}
+                          {Platform.OS === "android" ? <NavigationBar style="dark" /> : null}
                           <KeyboardProvider>
                             <ToastProvider>
                               <WebSafeConfirmHost>

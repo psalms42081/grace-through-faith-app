@@ -211,10 +211,24 @@ describe("BBE acrostic letter markers", () => {
     assert.deepEqual(again.headingsByVerse.get(1), [{ text: "Aleph", kind: "qa" }]);
   });
 
-  it("Compare renders the letter headings for the companion translation", () => {
+  it("Compare strips the companion's acrostic markers but shows headings from the reading version only", () => {
     const reader = read("app/read/[bookId]/[chapter].tsx");
-    assert.match(reader, /withAcrosticHeadings\(splitLoadFailed/);
-    assert.match(reader, /splitHeadings\.get\(v\.verse\)/);
+    assert.match(reader, /withAcrosticHeadings\(splitLoadFailed \? \[\] : \(splitData\?\.verses \?\? \[\]\), undefined\)\.verses/);
+    assert.doesNotMatch(reader, /splitHeadings/);
+    assert.doesNotMatch(reader, /split-heading/);
+  });
+
+  it("Compare gives the verse number the verse's own line height so Android lines do not collapse", () => {
+    const reader = read("app/read/[bookId]/[chapter].tsx");
+    assert.match(reader, /const verseNumInlineScaled = \{[\s\S]*?lineHeight: 32 \* fontScale,/);
+    assert.equal((reader.match(/styles\.verseNumInline, verseNumInlineScaled/g) ?? []).length, 2);
+    assert.doesNotMatch(reader, /lineHeight: Math\.min\(11 \* fontScale, 18 \* fontScale \* 0\.62\) \* 1\.2/);
+  });
+
+  it("styles the Compare version chip as a pill like the header version chip", () => {
+    const reader = read("app/read/[bookId]/[chapter].tsx");
+    assert.match(reader, /style=\{\[styles\.compareBarVersion, \{ backgroundColor: headerPillBg \}\]\}/);
+    assert.match(reader, /compareBarVersion: \{[^}]*borderRadius: 20/s);
   });
 });
 
