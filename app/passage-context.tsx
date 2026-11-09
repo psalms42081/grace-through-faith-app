@@ -16,6 +16,7 @@ import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { pickBookOverviewCards } from "@/lib/book-overview";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 interface ContextCard {
   id: string;
@@ -127,6 +128,13 @@ export default function PassageContextScreen() {
                 {displayCards.map((card) => (
                   <ContextCardView key={card.id} card={card} theme={theme} />
                 ))}
+                <ReportAiAnswer
+                  feature={isBookOverview ? "Book overview" : "Passage study"}
+                  reference={heroTitle}
+                  responseText={displayCards}
+                  color={theme.textMuted}
+                  testID="passage-context-report"
+                />
               </>
             )}
           </>

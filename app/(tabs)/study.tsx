@@ -31,6 +31,7 @@ import { useTutorial } from "@/contexts/TutorialContext";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { WORD_STUDY_ATTRIBUTION } from "@/lib/word-study-attribution";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { isAiWordStudyMap } from "@/lib/reader-word-study";
 
 type Tab = "word" | "context" | "voices" | "application";
@@ -1048,6 +1049,14 @@ function DeepStudyIntro({
                   )}
                 </Pressable>
               ))}
+              <ReportAiAnswer
+                feature="Deep dive passage sections"
+                reference={reference}
+                version={translation}
+                responseText={sections.map((sec) => `vv. ${sec.verseStart}-${sec.verseEnd}: ${sec.label}`)}
+                color={theme.textMuted}
+                testID="deep-study-sections-report"
+              />
             </View>
           ) : null
         )}
@@ -3024,6 +3033,20 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                         </View>
                       );
                     })}
+                    {wordQuery.data?.some((wm) => isAiWordStudyMap(wm.map)) ? (
+                      <ReportAiAnswer
+                        feature="Deep dive word study"
+                        reference={`${selectedBook?.name ?? ""} ${selectedChapter ?? ""}:${selectedVerse ?? ""}`.trim()}
+                        version={translation}
+                        responseText={wordQuery.data.map((wm) => ({
+                          word: wm.map.translatedWord || wm.entry?.lemma,
+                          strongs: wm.entry?.id || wm.map.strongId,
+                          definition: wm.entry?.definition,
+                        }))}
+                        color={theme.textMuted}
+                        testID="deep-study-words-report"
+                      />
+                    ) : null}
                     <Text style={{ color: theme.textMuted, fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 8 }}>
                       {WORD_STUDY_ATTRIBUTION}
                     </Text>
@@ -3227,6 +3250,20 @@ function WordStudyTab({ theme, sharedBook, sharedChapter, onBookChange, onChapte
                         </View>
                       );
                     })}
+                    {wordQuery.data?.some((wm) => isAiWordStudyMap(wm.map)) ? (
+                      <ReportAiAnswer
+                        feature="Deep dive word study"
+                        reference={`${selectedBook.name} ${selectedChapter}:${selectedVerse ?? ""}`.trim()}
+                        version={translation}
+                        responseText={wordQuery.data.map((wm) => ({
+                          word: wm.map.translatedWord || wm.entry?.lemma,
+                          strongs: wm.entry?.id || wm.map.strongId,
+                          definition: wm.entry?.definition,
+                        }))}
+                        color={theme.textMuted}
+                        testID="deep-study-words-report"
+                      />
+                    ) : null}
                   </>
                 )}
 
@@ -3745,6 +3782,15 @@ function ContextTab({ theme, sharedBook, sharedChapter, onBookChange, onChapterC
               )}
             </View>
           ))}
+          {hasCards && (
+            <ReportAiAnswer
+              feature="Deep dive context"
+              reference={`${selectedBook.name} ${selectedChapter}`}
+              responseText={contextCards}
+              color={theme.textMuted}
+              testID="deep-study-context-report"
+            />
+          )}
 
           {generateMutation.isPending && (
             <View style={[styles.emptyBox, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
@@ -3908,6 +3954,19 @@ function CommentaryCard({ cr, theme }: { cr: CommentaryResult; theme: typeof Col
         <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginVertical: 12 }} />
           <ContextParagraphs text={rest} theme={theme} />
+        </View>
+      )}
+
+      {isAiGenerated && (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+          <ReportAiAnswer
+            feature={`Historic voices (${cr.commentator?.name ?? "AI summary"})`}
+            reference={cr.entry.verseStart ? `vv. ${cr.entry.verseStart}${cr.entry.verseEnd ? `–${cr.entry.verseEnd}` : ""}` : null}
+            responseText={cr.entry.content}
+            color={theme.textMuted}
+            style={{ marginTop: 0 }}
+            testID="deep-study-voice-report"
+          />
         </View>
       )}
 
@@ -4609,6 +4668,15 @@ function ApplicationTab({ theme, sharedBook, sharedChapter, onBookChange, onChap
 
           {template && (template.thenContext || (template.nowApplication && template.nowApplication.split(/\n\n+/).length > 1)) && (
             <RespondBackground template={template} theme={theme} />
+          )}
+          {template && (
+            <ReportAiAnswer
+              feature="Deep dive application"
+              reference={`${selectedBook.name} ${selectedChapter}`}
+              responseText={template}
+              color={theme.textMuted}
+              testID="deep-study-application-report"
+            />
           )}
         </>
       )}

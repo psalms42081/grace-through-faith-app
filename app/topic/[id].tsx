@@ -22,6 +22,7 @@ import { useTranslation } from "@/context/TranslationContext";
 import { getApiUrl } from "@/lib/query-client";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 const MEDIA_TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   sermon: "mic",
@@ -365,6 +366,18 @@ export default function TopicScreen() {
                   {dailyReflection.challenge}
                 </Text>
               </View>
+              <ReportAiAnswer
+                feature="Daily topic reflection"
+                reference={dailyReflection.verseReference || topic.title}
+                version={translation}
+                responseText={{
+                  reflection: dailyReflection.reflection,
+                  question: dailyReflection.question,
+                  challenge: dailyReflection.challenge,
+                }}
+                color={theme.textMuted}
+                testID="topic-reflection-report"
+              />
             </>
           ) : null}
         </View>

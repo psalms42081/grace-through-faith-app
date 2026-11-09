@@ -24,6 +24,8 @@ import Colors, { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { displayInitials } from "@/lib/user-initials";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
+import { bibleBookName } from "@/lib/scripture-reference";
 
 interface ChapterContext {
   locations: { name: string; modernName: string; latitude: number; longitude: number; significance: string; type: string }[];
@@ -312,6 +314,13 @@ export default function ContextPanel({
               ) : null}
             </View>
           )}
+          <ReportAiAnswer
+            feature="Chapter insights"
+            reference={`${bibleBookName(bookId) || `Book ${bookId}`} ${chapter}`}
+            responseText={data}
+            color={theme.textMuted}
+            testID="context-panel-report"
+          />
         </View>
       )}
     </View>

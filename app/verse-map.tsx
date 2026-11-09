@@ -24,6 +24,7 @@ import {
   refreshVerseMapAfterGeneration,
 } from "@/lib/verse-map-generation";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 interface StrongWord {
   map: { id: string; verseId: string; strongId: string; wordPosition: number; translatedWord: string };
@@ -516,6 +517,16 @@ export default function VerseMapScreen() {
                     );
                   })
                 )}
+                {crossRefs.length > 0 ? (
+                  <ReportAiAnswer
+                    feature="Verse map cross-references"
+                    reference={canonicalReference}
+                    version={translation}
+                    responseText={crossRefs.map((ref) => ({ reference: ref.reference, text: ref.text, connection: ref.connection }))}
+                    color={theme.textMuted}
+                    testID="verse-map-crossrefs-report"
+                  />
+                ) : null}
               </View>
             )}
 
@@ -545,6 +556,14 @@ export default function VerseMapScreen() {
                     <Text style={[styles.contextText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
                       {contextSnippet}
                     </Text>
+                    <ReportAiAnswer
+                      feature="Verse map historical context"
+                      reference={canonicalReference}
+                      version={translation}
+                      responseText={contextSnippet}
+                      color={theme.textMuted}
+                      testID="verse-map-context-report"
+                    />
                   </View>
                 ) : (
                   <View style={[styles.emptySection, { backgroundColor: theme.backgroundCard }]}>

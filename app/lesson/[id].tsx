@@ -25,6 +25,7 @@ import StudyDepthSelector from "@/components/StudyDepthSelector";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { PathB } from "@/constants/colors";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
@@ -153,6 +154,14 @@ function ExplainPassage({ reference, lessonTitle, theme }: { reference: string; 
               <Text style={[evStyles.explanationText, { color: theme.text, fontFamily: "Lora_400Regular" }]}>
                 {explanation}
               </Text>
+              <ReportAiAnswer
+                feature="Lesson passage explanation"
+                reference={reference}
+                version={explTranslation}
+                responseText={explanation}
+                color={theme.textMuted}
+                testID="lesson-explain-report"
+              />
             </>
           )}
         </View>

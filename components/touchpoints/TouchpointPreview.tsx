@@ -18,6 +18,7 @@ import { safeGoBack } from "@/lib/safe-back";
 import { useTranslation } from "@/context/TranslationContext";
 import { HV2, F } from "@/components/home-v2/theme";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import {
   TOUCHPOINT_STUDY_CLIENT_STALE_TIME_MS,
   type TouchpointGeneratedStudy,
@@ -212,6 +213,7 @@ export function TouchpointStudyPreview() {
       <View style={[s.closing, { borderTopColor: tint.line }]}><Text style={[s.eyebrow, { color: tint.accent }]}>Closing thought</Text><Text style={s.conclusion}>{study.conclusion}</Text></View>
       {study.prayerPrompt ? <View style={[s.prayer, { backgroundColor: tint.wash, borderColor: tint.line }]}><Text style={[s.reflectionLabel, { color: tint.accent }]}>Prayer</Text><Text style={s.prayerText}>{study.prayerPrompt}</Text></View> : null}
       {study.groupDiscussion?.length ? <View style={s.discussion}><Text style={s.sectionTitle}>If you are with others</Text>{study.groupDiscussion.map((item, i) => <View key={`${item}-${i}`} style={s.discussionRow}><Text style={[s.questionNumber, { color: tint.accent }]}>{String(i + 1).padStart(2, "0")}</Text><Text style={s.discussionText}>{item}</Text></View>)}</View> : null}
+      <ReportAiAnswer feature="Touchpoint Bible study" reference={study.title || title || topicId} version={studyTranslation} responseText={study} style={{ marginTop: 20 }} testID="touchpoint-study-report" />
     </ScrollView>
   </View>;
 }

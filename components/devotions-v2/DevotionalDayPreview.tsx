@@ -25,6 +25,7 @@ import { D2, F } from "./tokens";
 import { EmptyState, ErrorState, Header, LoadingState, PrimaryButton } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { getCalendarDate } from "@/shared/calendar-date";
 import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 import { readingSpace, readingType } from "@/lib/reading-font-scale";
@@ -144,6 +145,12 @@ function Reflection({
             </View>
             <Text style={s.responseLabel}>A reflection to carry</Text>
             <Text allowFontScaling={false} style={[s.responseText, readingType(14, 22, scale)]}>{exchange.response}</Text>
+            <ReportAiAnswer
+              feature="Devotional reflection"
+              reference={passage || title}
+              responseText={{ question: exchange.question, response: exchange.response, followUp: exchange.followUp }}
+              testID="devotional-reflection-report"
+            />
           </View>
         </View>
       ))}

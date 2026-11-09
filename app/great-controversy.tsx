@@ -22,6 +22,7 @@ import ScreenHeader from "@/components/ScreenHeader";
 import { apiRequest } from "@/lib/query-client";
 import { PathB } from "@/constants/colors";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
@@ -361,6 +362,13 @@ function NodeCard({
                         </View>
                       ) : null}
                       <SDAVerifiedBadge variant="compact" />
+                      <ReportAiAnswer
+                        feature="Great Controversy AI guide"
+                        reference={node.title}
+                        responseText={aiData}
+                        color={theme.textMuted}
+                        testID="great-controversy-report"
+                      />
                     </View>
                   )}
                 </View>

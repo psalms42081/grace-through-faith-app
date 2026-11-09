@@ -47,6 +47,16 @@ export const churchSubmissionLimiter = rateLimit({
   validate: { keyGeneratorIpFallback: false },
 });
 
+export const aiReportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Too many reports. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: safeKeyGenerator,
+  validate: { keyGeneratorIpFallback: false },
+});
+
 export const bibleGroupWriteLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,

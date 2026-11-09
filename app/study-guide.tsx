@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useShareInsight, ShareInsightButton } from "@/components/ShareCard";
 import { useTranslation } from "@/context/TranslationContext";
 import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 interface Message {
   role: "user" | "assistant";
@@ -647,17 +648,27 @@ export default function StudyGuideScreen() {
             </>
           )}
           {isAI ? (
-            item.content.split(/\n\n+/).filter(Boolean).map((para, idx) => (
-              <Text
-                key={idx}
-                style={[
-                  styles.messageText,
-                  { color: theme.text, fontFamily: "Inter_400Regular", marginTop: idx > 0 ? 10 : 0 },
-                ]}
-              >
-                {para.trim()}
-              </Text>
-            ))
+            <>
+              {item.content.split(/\n\n+/).filter(Boolean).map((para, idx) => (
+                <Text
+                  key={idx}
+                  style={[
+                    styles.messageText,
+                    { color: theme.text, fontFamily: "Inter_400Regular", marginTop: idx > 0 ? 10 : 0 },
+                  ]}
+                >
+                  {para.trim()}
+                </Text>
+              ))}
+              <ReportAiAnswer
+                feature="Guided study tutor"
+                reference={params.verseReference}
+                version={translation}
+                responseText={item.content}
+                color={theme.textMuted}
+                testID="study-guide-report"
+              />
+            </>
           ) : (
             <Text style={[styles.messageText, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
               {item.content}
@@ -890,9 +901,20 @@ export default function StudyGuideScreen() {
                   {params.verseReference}
                 </Text>
                 {studySummary ? (
-                  <Text style={[styles.summaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
-                    {studySummary}
-                  </Text>
+                  <>
+                    <Text style={[styles.summaryText, { color: theme.textSecondary, fontFamily: "Inter_400Regular" }]}>
+                      {studySummary}
+                    </Text>
+                    <ReportAiAnswer
+                      feature="Guided study summary"
+                      reference={params.verseReference}
+                      version={translation}
+                      responseText={studySummary}
+                      color={theme.textMuted}
+                      style={{ alignSelf: "center" }}
+                      testID="study-guide-summary-report"
+                    />
+                  </>
                 ) : null}
                 <View style={styles.completeActions}>
                   <ShareInsightButton

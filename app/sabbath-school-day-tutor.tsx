@@ -27,6 +27,7 @@ import {
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
 import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 type TutorMessage = {
   role: "user" | "assistant";
@@ -324,6 +325,19 @@ export default function SabbathSchoolDayTutorScreen() {
                   {paragraph.trim()}
                 </Text>
               ))}
+              {message.role === "assistant" && (
+                <ReportAiAnswer
+                  feature="Sabbath School study tutor"
+                  reference={
+                    context
+                      ? `${context.lessonTitle}${context.dayTitle ? ` — ${context.dayTitle}` : ` — day ${context.dayNumber}`}`
+                      : lessonId
+                  }
+                  responseText={message.content}
+                  color={theme.textMuted}
+                  testID="ss-tutor-report"
+                />
+              )}
             </View>
           ))}
 

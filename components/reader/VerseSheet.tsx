@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { apiRequest } from "@/lib/query-client";
 import { OriginalWordsSheet } from "@/components/reader/OriginalWordsSheet";
 import {
@@ -631,6 +632,13 @@ export function VerseSheet({
                     {row.connection ? <Text style={s.cardMeta}>{row.connection}</Text> : null}
                   </View>
                 ))}
+                <ReportAiAnswer
+                  feature="Cross-references"
+                  reference={reference}
+                  version={translation}
+                  responseText={crossRefs.map((row) => ({ reference: row.ref, text: row.text, connection: row.connection }))}
+                  testID="reader-verse-sheet-xrefs-report"
+                />
               </CollapsibleSection>
             ) : null}
 

@@ -38,6 +38,9 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+/** The live API host. Release bundles fall back to it when EXPO_PUBLIC_DOMAIN is unset. */
+export const PRODUCTION_API_HOST = "informedministries.app";
+
 export function getApiUrl(): string {
   // Web is same-origin with the Express API. Resolve at runtime so a Render
   // custom domain works without baking EXPO_PUBLIC_DOMAIN into the export.
@@ -46,7 +49,7 @@ export function getApiUrl(): string {
     if (typeof window !== "undefined" && window.location?.origin) {
       return `${window.location.origin.replace(/\/$/, "")}/`;
     }
-    return "https://informedministries.app/";
+    return `https://${PRODUCTION_API_HOST}/`;
   }
 
   const host = process.env.EXPO_PUBLIC_DOMAIN;
@@ -78,15 +81,13 @@ export function getApiUrl(): string {
     }
   }
 
-  if (host) {
+  if (__DEV__ && host) {
     return `http://${host}/`;
   }
 
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin + "/";
-  }
-
-  throw new Error("EXPO_PUBLIC_DOMAIN is not set and no window.location available");
+  // A release bundle (OTA update or store build) exported without a cloud domain, or with a
+  // local one left over from .env, must still reach the live API.
+  return `https://${PRODUCTION_API_HOST}/`;
 }
 
 async function throwIfResNotOk(res: Response) {

@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PathB } from "@/constants/colors";
 import { formatStrongId, isAiWordStudyMap, type ReaderStrongMap } from "@/lib/reader-word-study";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { expandStepMorph } from "@/lib/step-morph";
 import {
   lexiconFullDefinition,
@@ -184,6 +185,16 @@ export function WordStudySheet({
             ) : (
               usesLink
             )}
+            {target && mapping && isAiWordStudyMap(mapping.map) ? (
+              <ReportAiAnswer
+                feature="Word study"
+                reference={`${target.bookName} ${target.chapter}:${target.verse}`}
+                version="KJV"
+                responseText={{ word: englishPhrase, original, strongs: displayId, sentence: plainSentence, meaning: shortMeaning }}
+                style={{ marginTop: 0 }}
+                testID="reader-word-study-report"
+              />
+            ) : null}
             <Text style={s.footer}>{READER_WORD_STUDY_FOOTER}</Text>
           </ScrollView>
         </View>

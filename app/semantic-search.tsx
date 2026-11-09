@@ -22,6 +22,7 @@ import { apiRequest } from "@/lib/query-client";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 const RECENT_SEARCHES_KEY = "@grace_semantic_recent";
 
@@ -378,6 +379,15 @@ export default function SemanticSearchScreen() {
                   >
                     {item.relevance}
                   </Text>
+                  <ReportAiAnswer
+                    feature="Ask the Bible"
+                    reference={item.reference}
+                    version={item.translation || translation}
+                    responseText={{ question: query, relevance: item.relevance }}
+                    color={theme.textMuted}
+                    style={{ marginBottom: 8 }}
+                    testID="semantic-search-report"
+                  />
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Read ${item.reference} in the Bible`}

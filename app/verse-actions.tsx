@@ -20,6 +20,7 @@ import * as Clipboard from "expo-clipboard";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import {
   ChapterAttribution,
   type ChapterAttributionData,
@@ -325,6 +326,14 @@ export default function VerseActionsSheet() {
               </Pressable>
               );
             })}
+            <ReportAiAnswer
+              feature="Cross references"
+              reference={reference}
+              version={txLabel}
+              responseText={crossRefData.crossReferences.map((cr) => ({ reference: cr.ref, text: cr.text, connection: cr.connection }))}
+              color={mutedColor}
+              testID="verse-actions-crossrefs-report"
+            />
             </>
           ) : crossRefError ? (
             <View style={[styles.crossRefCard, { backgroundColor: cardBg, borderColor }]}>

@@ -22,6 +22,7 @@ import {
   type TouchpointGeneratedStudy,
 } from "@shared/touchpoint-study";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 const TEAL = "#2A8B8B";
 
@@ -188,6 +189,15 @@ export default function TouchPointStudyScreen() {
               ))}
             </View>
           )}
+          <ReportAiAnswer
+            feature="Touchpoint Bible study"
+            reference={title || study.title || topicId}
+            version={studyTranslation}
+            responseText={study}
+            color={theme.textMuted}
+            style={{ marginTop: 20 }}
+            testID="touchpoint-study-report"
+          />
         </ScrollView>
       )}
     </View>

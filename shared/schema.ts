@@ -1793,6 +1793,23 @@ export const feedback = pgTable("feedback", {
   createdAtIdx: index("feedback_created_at_idx").on(table.createdAt),
 }));
 
+/** "Report this answer" on AI-generated content (Google Play AI-generated content policy). */
+export const aiReports = pgTable("ai_reports", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  feature: varchar("feature", { length: 64 }).notNull(),
+  reference: varchar("reference", { length: 120 }),
+  version: varchar("version", { length: 32 }),
+  responseText: text("response_text").notNull(),
+  reason: varchar("reason", { length: 32 }).notNull(),
+  comment: text("comment"),
+}, (table) => ({
+  createdAtIdx: index("ai_reports_created_at_idx").on(table.createdAt),
+}));
+
 // ─── DEVICE TOKENS (Push Notifications) ──────────────────────────────────────
 
 export const deviceTokens = pgTable(

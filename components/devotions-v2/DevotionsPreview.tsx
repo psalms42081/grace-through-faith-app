@@ -82,6 +82,7 @@ import {
   type DevotionalCatalogPlan,
 } from "@/lib/devotional-catalog";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 type Plan = {
   id: string;
@@ -875,6 +876,14 @@ function PlanModal({
               ) : null}
               <Text style={s.sheetTitle}>{plan.title}</Text>
               <Text style={s.sheetBody}>{plan.description}</Text>
+              {plan.isAiGenerated ? (
+                <ReportAiAnswer
+                  feature="Reading plan description"
+                  reference={plan.title}
+                  responseText={plan.description}
+                  testID="devotions-plan-report"
+                />
+              ) : null}
               <Text style={s.outlineLabel}>DAY-BY-DAY OUTLINE</Text>
               {(plan.days || []).slice(0, 8).map((d) => (
                 <View key={d.id} style={s.dayLine}>
@@ -970,6 +979,14 @@ function SeriesModal({
               ) : null}
               <Text style={s.sheetTitle}>{plan.title}</Text>
               <Text style={s.sheetBody}>{plan.description}</Text>
+              {plan.isAiGenerated ? (
+                <ReportAiAnswer
+                  feature="Devotional series description"
+                  reference={plan.title}
+                  responseText={plan.description}
+                  testID="devotions-series-report"
+                />
+              ) : null}
               <Text style={s.outlineLabel}>SERIES OUTLINE</Text>
               {days.map((day) => (
                 <View key={day.id} style={s.dayLine}>

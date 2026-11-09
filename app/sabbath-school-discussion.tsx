@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import {
   sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
@@ -260,6 +261,17 @@ export default function SabbathSchoolDiscussionScreen() {
             </View>
 
             <SDAVerifiedBadge />
+            <ReportAiAnswer
+              feature="Sabbath School discussion guide"
+              reference={lessonTitle}
+              responseText={{
+                bigIdea: data.aiSummary,
+                discussionQuestions: data.keyQuestions,
+                lifeApplication: data.reflectionPrompts,
+              }}
+              color={theme.textMuted}
+              testID="ss-discussion-report"
+            />
           </>
         )}
       </ScrollView>

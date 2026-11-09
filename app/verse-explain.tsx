@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { BIBLE_PROJECT_YOUTUBE_IDS } from "@/data/curatedYoutubeVideos";
 import { useQuery } from "@tanstack/react-query";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { aiScriptureTranslation } from "@/shared/youversion";
 
 const GOLD = "#C9933A";
@@ -307,9 +308,19 @@ export default function VerseExplainScreen() {
                 An explanation could not be generated right now. The BibleProject videos below stay available.
               </Text>
             ) : (
-              <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
-                {aiExplanation}
-              </Text>
+              <>
+                <Text style={[styles.explanationText, { color: isDark ? "#AAA" : "#666" }]}>
+                  {aiExplanation}
+                </Text>
+                <ReportAiAnswer
+                  feature="Explain this verse"
+                  reference={reference}
+                  version={txLabel}
+                  responseText={aiExplanation}
+                  color={isDark ? "#AAA" : undefined}
+                  testID="verse-explain-report"
+                />
+              </>
             )}
           </View>
           )}

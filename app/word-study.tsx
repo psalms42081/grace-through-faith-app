@@ -19,6 +19,7 @@ import { apiRequest, queryClient } from "@/lib/query-client";
 import { useTranslation } from "@/context/TranslationContext";
 import { WORD_STUDY_ATTRIBUTION } from "@/lib/word-study-attribution";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import { isAiWordStudyMap } from "@/lib/reader-word-study";
 
 interface StrongEntry {
@@ -268,6 +269,20 @@ export default function WordStudyScreen() {
                   </Pressable>
                 ))}
               </View>
+              {wordMappings.some((wm) => isAiWordStudyMap(wm.map)) ? (
+                <ReportAiAnswer
+                  feature="Word study"
+                  reference={verseReference}
+                  version={translation}
+                  responseText={wordMappings.map((wm) => ({
+                    word: wm.map.translatedWord || wm.entry?.lemma || wm.map.originalWord,
+                    strongs: wm.map.strongId,
+                    original: wm.map.originalWord,
+                  }))}
+                  color={theme.textMuted}
+                  testID="word-study-report"
+                />
+              ) : null}
             </View>
           )}
         </View>
