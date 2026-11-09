@@ -52,7 +52,7 @@ import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { formatSheetReference } from "@/lib/verse-sheet";
 import { READER_VERSION_CHIP_MAX_WIDTH } from "@/lib/reader-header-layout";
-import { registerReaderHeaderActions, setReaderHeaderWidths } from "@/lib/reader-header-store";
+import { registerReaderHeaderActions } from "@/lib/reader-header-store";
 import { bibleBookName } from "@/lib/scripture-reference";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { withAcrosticHeadings } from "@/lib/group-verses-by-paragraph";
@@ -830,9 +830,6 @@ export default function VerseReaderScreen() {
   const isSyncingScroll = useRef(false);
   /** Reader column width; on web the app is a centred column narrower than the window. */
   const [readerWidth, setReaderWidth] = useState(0);
-  useEffect(() => {
-    setReaderHeaderWidths({ headerWidth: readerWidth });
-  }, [readerWidth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1795,7 +1792,6 @@ export default function VerseReaderScreen() {
             <View
               style={styles.headerRow}
               testID="reader-header-chips"
-              onLayout={(event) => setReaderHeaderWidths({ chipsWidth: Math.ceil(event.nativeEvent.layout.width) })}
             >
               <Pressable
                 testID="reader-word-study-toggle"
@@ -2606,8 +2602,8 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    flexShrink: 1,
-    maxWidth: "100%",
+    flexGrow: 0,
+    flexShrink: 0,
     gap: 6,
   },
   headerIconBtn: {
@@ -2620,8 +2616,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "transparent",
-    flexShrink: 1,
-    minWidth: 0,
+    flexShrink: 0,
   },
   headerToggleOn: {
     backgroundColor: READER_TOGGLE_ON_TINT,

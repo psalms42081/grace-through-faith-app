@@ -3,7 +3,9 @@
  *
  * The reader's header title and back button are declared in the route's layout options so they
  * exist from the first native header frame. The screen registers what those buttons should do
- * while it is focused, and publishes the measurements the title uses to cap its width.
+ * while it is focused. The title is not given a measured width: on Android the chips' onLayout
+ * reports the stretched toolbar slot, and a cap computed from it only lands when the header is
+ * rebuilt (a chapter change), which is what cut "Luke 2" down to "Luke...".
  */
 
 export type ReaderHeaderActions = {
@@ -11,38 +13,7 @@ export type ReaderHeaderActions = {
   goBack: () => void;
 };
 
-export type ReaderHeaderWidths = {
-  /** Width of the reader column (the header spans the same width). 0 until measured. */
-  headerWidth: number;
-  /** Measured width of the right-hand chips. 0 until measured. */
-  chipsWidth: number;
-};
-
-let widths: ReaderHeaderWidths = { headerWidth: 0, chipsWidth: 0 };
-const listeners = new Set<() => void>();
 const actionStack: ReaderHeaderActions[] = [];
-
-function emit() {
-  for (const listener of listeners) listener();
-}
-
-export function subscribeReaderHeader(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-export function getReaderHeaderWidths(): ReaderHeaderWidths {
-  return widths;
-}
-
-export function setReaderHeaderWidths(next: Partial<ReaderHeaderWidths>): void {
-  const merged = { ...widths, ...next };
-  if (merged.headerWidth === widths.headerWidth && merged.chipsWidth === widths.chipsWidth) return;
-  widths = merged;
-  emit();
-}
 
 /** The focused reader registers its handlers; the most recent registration wins. */
 export function registerReaderHeaderActions(actions: ReaderHeaderActions): () => void {

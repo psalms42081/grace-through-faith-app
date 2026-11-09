@@ -3,13 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "node:test";
 import { chapterListTitle, readerHeaderLabel } from "../lib/reader-header-layout";
-import {
-  currentReaderHeaderActions,
-  getReaderHeaderWidths,
-  registerReaderHeaderActions,
-  setReaderHeaderWidths,
-  subscribeReaderHeader,
-} from "../lib/reader-header-store";
+import { currentReaderHeaderActions, registerReaderHeaderActions } from "../lib/reader-header-store";
 import { appVersionLine, shortUpdateId } from "../lib/app-version-line";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -52,7 +46,8 @@ describe("reader header on the first native frame", () => {
     assert.match(header, /headerTitle: \(\{ children \}: \{ children: string \}\) =>/);
     assert.match(header, /<ReaderHeaderTitle label=\{label\}>\{children\}<\/ReaderHeaderTitle>/);
     assert.match(header, /typeof children === "string" && children\.trim\(\) \? children : label/);
-    assert.match(header, /flexShrink: 0/);
+    assert.match(header, /flexGrow: 1,\s+flexShrink: 1,\s+minWidth: 0/);
+    assert.doesNotMatch(header, /maxWidth/);
     assert.match(header, /testID="reader-header-title"/);
     assert.match(header, /testID="bible-reader-back"/);
     assert.match(header, /export function chapterListScreenOptions/);
@@ -67,7 +62,7 @@ describe("reader header on the first native frame", () => {
     assert.match(reader, /useLayoutEffect\(\(\) => \{\s*navigation\.setOptions\(\{ title: headerLabel \}\);/);
     assert.match(reader, /useFocusEffect\(\s*useCallback\(\s*\(\) =>\s*registerReaderHeaderActions\(/);
     assert.match(reader, /openChapterPicker: \(\) => setShowChapterPicker\(true\)/);
-    assert.match(reader, /setReaderHeaderWidths\(\{ headerWidth: readerWidth \}\)/);
+    assert.doesNotMatch(reader, /setReaderHeaderWidths/);
     assert.doesNotMatch(reader, /@react-navigation\//);
   });
 
@@ -82,7 +77,7 @@ describe("reader header on the first native frame", () => {
     assert.match(lazy, /<ActivityIndicator color=\{SWEEP_LIGHT\.text\} \/>/);
   });
 
-  it("the store hands the header the focused reader's actions and the latest widths", () => {
+  it("the store hands the header the focused reader's actions", () => {
     assert.equal(currentReaderHeaderActions(), undefined);
     const first = { openChapterPicker: () => {}, goBack: () => {} };
     const second = { openChapterPicker: () => {}, goBack: () => {} };
@@ -93,19 +88,6 @@ describe("reader header on the first native frame", () => {
     assert.equal(currentReaderHeaderActions(), first);
     releaseFirst();
     assert.equal(currentReaderHeaderActions(), undefined);
-
-    let notified = 0;
-    const unsubscribe = subscribeReaderHeader(() => {
-      notified += 1;
-    });
-    setReaderHeaderWidths({ chipsWidth: 180 });
-    assert.deepEqual(getReaderHeaderWidths(), { headerWidth: 0, chipsWidth: 180 });
-    setReaderHeaderWidths({ chipsWidth: 180 });
-    assert.equal(notified, 1, "an unchanged width does not re-render the header");
-    setReaderHeaderWidths({ headerWidth: 390 });
-    assert.equal(notified, 2);
-    unsubscribe();
-    setReaderHeaderWidths({ headerWidth: 0, chipsWidth: 0 });
   });
 });
 

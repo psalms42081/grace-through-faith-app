@@ -1,13 +1,9 @@
-import React, { useSyncExternalStore } from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions } from "react-native";
+import React from "react";
+import { Pressable, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { READING_CHROME_FONT_CAP } from "@/lib/reading-font-scale";
-import { chapterListTitle, readerHeaderLabel, readerHeaderTitleMaxWidth } from "@/lib/reader-header-layout";
-import {
-  currentReaderHeaderActions,
-  getReaderHeaderWidths,
-  subscribeReaderHeader,
-} from "@/lib/reader-header-store";
+import { chapterListTitle, readerHeaderLabel } from "@/lib/reader-header-layout";
+import { currentReaderHeaderActions } from "@/lib/reader-header-store";
 
 /** PathB.surface / PathB.ink / muted ink, matching the reader itself. */
 export const READER_HEADER_SURFACE = "#FBF7EE";
@@ -39,20 +35,13 @@ export function ReaderHeaderBack() {
  */
 export function ReaderHeaderTitle({ children, label }: { children?: React.ReactNode; label?: string }) {
   const text = typeof children === "string" && children.trim() ? children : label ?? "";
-  const { width: windowWidth } = useWindowDimensions();
-  const { headerWidth, chipsWidth } = useSyncExternalStore(
-    subscribeReaderHeader,
-    getReaderHeaderWidths,
-    getReaderHeaderWidths,
-  );
-  const maxWidth = readerHeaderTitleMaxWidth(headerWidth > 0 ? headerWidth : windowWidth, chipsWidth);
   return (
     <Pressable
       onPress={() => currentReaderHeaderActions()?.openChapterPicker()}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={text ? `${text}, open chapter selector` : "Open chapter selector"}
-      style={[styles.titleButton, maxWidth !== undefined && { maxWidth }]}
+      style={styles.titleButton}
       testID="reader-header-title"
     >
       <Text
@@ -110,12 +99,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    // Never shrink with the header slot: the cap comes from maxWidth, so the name stays visible
-    // even if the native header hands this view a zero-width slot on its first layout pass.
-    flexShrink: 0,
+    // Fill the left header slot (the back button's sibling, already beside the chips) and
+    // ellipsize only when the label itself is wider than the room left. The width is not
+    // measured: the chips' laid-out width is the stretched toolbar slot, and capping the
+    // title from it shrinks "Luke 2" to "Luke..." once a chapter change rebuilds the header.
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   titleText: {
     flexShrink: 1,
+    minWidth: 0,
     fontSize: 17,
     fontFamily: "Lora_600SemiBold",
     color: READER_HEADER_INK,

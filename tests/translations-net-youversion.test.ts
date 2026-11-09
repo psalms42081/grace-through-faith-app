@@ -14,13 +14,7 @@ import { quotedVerseText } from "../lib/quoted-verse";
 import { extractAcrosticHeadings } from "../shared/acrostic-markers";
 import { withAcrosticHeadings } from "../lib/group-verses-by-paragraph";
 import { creditPublisherLink, creditVersionTag } from "../shared/translation-notices";
-import {
-  READER_HEADER_CHIPS_ESTIMATE,
-  READER_HEADER_LEFT_ALLOWANCE,
-  READER_HEADER_TITLE_GAP,
-  READER_HEADER_TITLE_MIN_WIDTH,
-  readerHeaderTitleMaxWidth,
-} from "../lib/reader-header-layout";
+import { READER_VERSION_CHIP_MAX_WIDTH } from "../lib/reader-header-layout";
 
 const ROOT = path.resolve(__dirname, "..");
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
@@ -154,26 +148,20 @@ describe("NIV, AMP and NASB through YouVersion", () => {
 });
 
 describe("reader header", () => {
-  it("caps the title to the room the chips leave, and never below the minimum", () => {
-    assert.equal(readerHeaderTitleMaxWidth(0, 200), undefined);
-    assert.equal(
-      readerHeaderTitleMaxWidth(390, 0),
-      390 - READER_HEADER_LEFT_ALLOWANCE - READER_HEADER_CHIPS_ESTIMATE - READER_HEADER_TITLE_GAP,
-    );
-    assert.equal(readerHeaderTitleMaxWidth(390, 200), 390 - READER_HEADER_LEFT_ALLOWANCE - 200 - READER_HEADER_TITLE_GAP);
-    assert.equal(readerHeaderTitleMaxWidth(320, 400), READER_HEADER_TITLE_MIN_WIDTH);
-  });
-
-  it("the title truncates and the version chip ellipsizes", () => {
+  it("the title ellipsizes in the space beside the chips, and the chips do not shrink", () => {
     const reader = read("app/read/[bookId]/[chapter].tsx");
     const header = read("components/reader/ReaderStackHeader.tsx");
-    assert.match(header, /maxWidth !== undefined && \{ maxWidth \}/);
+    assert.match(header, /flexGrow: 1,\s+flexShrink: 1,\s+minWidth: 0/);
+    assert.doesNotMatch(header, /maxWidth/);
+    assert.doesNotMatch(header, /readerHeaderTitleMaxWidth|setReaderHeaderWidths|useWindowDimensions/);
     assert.match(header, /styles\.titleText\}[\s\S]*?numberOfLines=\{1\}\s+ellipsizeMode="tail"/);
     assert.match(reader, /const bookName = data\?\.book\?\.name \|\| bibleBookName\(routeBookId\)/);
     assert.match(reader, /navigation\.setOptions\(\{ title: headerLabel \}\)/);
-    assert.match(reader, /testID="reader-header-chips"\s+onLayout=/);
-    assert.match(reader, /setReaderHeaderWidths\(\{ chipsWidth:/);
+    assert.match(reader, /testID="reader-header-chips"/);
+    assert.doesNotMatch(reader, /setReaderHeaderWidths/);
+    assert.match(reader, /headerRow: \{[^}]*flexShrink: 0/s);
     assert.match(reader, /maxWidth: READER_VERSION_CHIP_MAX_WIDTH/);
+    assert.equal(READER_VERSION_CHIP_MAX_WIDTH, 72);
   });
 });
 
