@@ -153,12 +153,7 @@ async function acquireNativeEndpoint(): Promise<PushAcquireResult> {
   try {
     const mod = await import("expo-notifications");
     const existing = await mod.getPermissionsAsync();
-    let status = existing.status;
-    if (status !== "granted") {
-      const asked = await withTimeout(mod.requestPermissionsAsync(), PERMISSION_TIMEOUT_MS);
-      status = asked.status;
-    }
-    if (status !== "granted") return { ok: false, reason: "denied" };
+    if (existing.status !== "granted") return { ok: false, reason: "denied" };
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ||
       (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId ||

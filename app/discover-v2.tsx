@@ -129,7 +129,8 @@ export default function DiscoverV2Screen() {
   const { user } = useAuth();
   const params = useLocalSearchParams<{ topic?: string }>();
   const userId = user?.id ?? "";
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const pinnedTop = Platform.OS === "web" ? 0 : insets.top;
+  const contentTop = (Platform.OS === "web" ? 67 : 0) + 12;
   const scrollRef = useRef<ScrollView>(null);
   const gridY = useRef(0);
 
@@ -290,11 +291,11 @@ export default function DiscoverV2Screen() {
   }, []);
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingTop: pinnedTop }]}>
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: 140 }}
+        contentContainerStyle={{ paddingTop: contentTop, paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

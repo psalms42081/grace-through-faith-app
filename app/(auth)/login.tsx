@@ -15,6 +15,7 @@ import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { offerNotificationsAfterFirstSignIn } from "@/lib/notification-consent";
 import { useTranslation } from "react-i18next";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
@@ -43,6 +44,7 @@ export default function LoginScreen() {
     if (result.success) {
       if (router.canGoBack()) router.back();
       else router.replace("/home-v2");
+      void offerNotificationsAfterFirstSignIn();
     } else {
       setError(result.error || "Sign in failed");
     }

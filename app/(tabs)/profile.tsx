@@ -105,7 +105,8 @@ function ProfileScreenInner() {
   const { isPatron } = useProStatus();
   const { user, isGuest, isAuthenticated } = useAuth();
   const { showToast } = useToast();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const pinnedTop = Platform.OS === "web" ? 0 : insets.top;
+  const contentTop = (Platform.OS === "web" ? 67 : 0) + 12;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const uid = user?.id || "guest";
@@ -272,9 +273,10 @@ function ProfileScreenInner() {
 
   return (
     <>
+    <View style={[st.container, { backgroundColor: C.surface, paddingTop: pinnedTop }]}>
     <ScrollView
-      style={[st.container, { backgroundColor: C.surface }]}
-      contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: bottomPad + 120 }}
+      style={{ flex: 1, backgroundColor: C.surface }}
+      contentContainerStyle={{ paddingTop: contentTop, paddingBottom: bottomPad + 120 }}
       showsVerticalScrollIndicator={false}
     >
       <View style={st.headerSection}>
@@ -782,6 +784,7 @@ function ProfileScreenInner() {
         </View>
 
     </ScrollView>
+    </View>
 
     <Modal visible={streakSheetOpen} animationType="slide" transparent>
       <Pressable style={st.sheetOverlay} onPress={() => setStreakSheetOpen(false)}>

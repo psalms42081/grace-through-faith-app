@@ -14,6 +14,7 @@ import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { offerNotificationsAfterFirstSignIn } from "@/lib/notification-consent";
 import { useTranslation } from "react-i18next";
 import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
@@ -84,6 +85,7 @@ export default function RegisterScreen() {
     setLoading(false);
     if (result.success) {
       router.replace("/org-onboarding");
+      void offerNotificationsAfterFirstSignIn();
     } else {
       setError(result.error || "Registration failed");
     }

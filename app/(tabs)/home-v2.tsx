@@ -2,7 +2,7 @@
 // Replaces the Home presentation without touching the index.tsx monolith
 // (rollback: repoint the Home tab at "index" in app/(tabs)/_layout.tsx).
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { ScrollView, StyleSheet, Platform } from "react-native";
+import { ScrollView, StyleSheet, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -67,7 +67,8 @@ export default function HomeV2Screen() {
   const { translation } = useAppTranslation();
   const deviceTimeZone = useMemo(() => getDeviceTimeZone(), []);
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const pinnedTop = Platform.OS === "web" ? 0 : insets.top;
+  const contentTop = (Platform.OS === "web" ? 67 : 0) + 12;
 
   useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 60_000);
@@ -387,10 +388,11 @@ export default function HomeV2Screen() {
   ];
 
   return (
+    <View style={[s.container, { paddingTop: pinnedTop }]}>
     <ScrollView
       ref={scrollRef}
-      style={s.container}
-      contentContainerStyle={{ paddingTop: topPad + 12, paddingBottom: 140 }}
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingTop: contentTop, paddingBottom: 140 }}
       showsVerticalScrollIndicator={false}
     >
       <HomeHeader
@@ -453,6 +455,7 @@ export default function HomeV2Screen() {
       )}
 
     </ScrollView>
+    </View>
   );
 }
 

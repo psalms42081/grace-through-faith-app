@@ -80,7 +80,7 @@ export default function BookPickerScreen() {
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
-      <View style={[styles.stickyHeader, { backgroundColor: theme.background }]}>
+      <View style={[styles.stickyHeader, { backgroundColor: theme.background, paddingTop: insets.top + 12 }]}>
         {canPopStack ? (
           <Pressable
             onPress={() => goBibleBooksBack(router, canPopStack)}

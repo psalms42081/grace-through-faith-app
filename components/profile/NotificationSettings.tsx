@@ -29,6 +29,7 @@ import {
   type PushEndpoint,
   type WebPermissionStart,
 } from "@/lib/push-subscribe";
+import { explainAndRequestNotificationPermission } from "@/lib/notification-consent";
 
 type StoredSubscription = {
   endpoint: string;
@@ -196,6 +197,16 @@ export default function NotificationSettings() {
       return;
     }
     let acquired: PushEndpoint | null = null;
+    if (next.turningOn && Platform.OS !== "web") {
+      const decision = await explainAndRequestNotificationPermission();
+      if (decision !== "granted") {
+        if (decision === "blocked") markFailure("denied");
+        else if (decision === "unavailable") markFailure("failed");
+        setPlanChoice(null);
+        setPrayerChoice(null);
+        return;
+      }
+    }
     if (next.turningOn) {
       if (Platform.OS === "web") {
         if (!next.permission) {

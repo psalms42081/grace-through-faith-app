@@ -254,14 +254,7 @@ export async function registerPushToken(authToken: string, apiBaseUrl: string): 
     if (!mod) return;
 
     const { status: existingStatus } = await mod.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== "granted") {
-      const { status } = await mod.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== "granted") return;
+    if (existingStatus !== "granted") return;
 
     await ensureAndroidChannel();
 
