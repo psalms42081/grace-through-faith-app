@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Dimensions,
   PanResponder,
 } from "react-native";
-import { router, useLocalSearchParams, Stack, useFocusEffect, useNavigation, useSegments, usePathname } from "expo-router";
+import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -51,8 +51,14 @@ import {
 import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { formatSheetReference } from "@/lib/verse-sheet";
-import { READER_VERSION_CHIP_MAX_WIDTH } from "@/lib/reader-header-layout";
-import { readerHeaderNavigationOptions } from "@/components/reader/ReaderStackHeader";
+import {
+  READER_HEADER_AA_PADDING,
+  READER_HEADER_CHIP_FONT_CAP,
+  READER_HEADER_CHIP_GAP,
+  READER_HEADER_PILL_PADDING,
+  READER_HEADER_TOGGLE_PADDING,
+  READER_VERSION_CHIP_MAX_WIDTH,
+} from "@/lib/reader-header-layout";
 import { registerReaderHeaderActions } from "@/lib/reader-header-store";
 import { bibleBookName } from "@/lib/scripture-reference";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
@@ -725,7 +731,6 @@ const NAV_VERSE_WASH_FADE_MS = 400;
 
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam, verseEnd: verseEndParam, verses: versesParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string; verseEnd?: string; verses?: string }>();
-  const navigation = useNavigation();
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
   const segments = useSegments();
   const pathname = usePathname();
@@ -1104,18 +1109,10 @@ export default function VerseReaderScreen() {
   }, [bookmarksData]);
 
   const routeBookId = Array.isArray(bookId) ? bookId[0] : bookId;
-  const routeChapter = Array.isArray(chapter) ? chapter[0] ?? "" : chapter ?? "";
   const bookName = data?.book?.name || bibleBookName(routeBookId);
-  const headerLabel = `${bookName} ${routeChapter}`.trim();
-  // Re-apply the header on every chapter. The title element is keyed by book and chapter so
-  // Android builds a new header subview instead of keeping the previous one's width.
-  useLayoutEffect(() => {
-    navigation.setOptions(
-      readerHeaderNavigationOptions({ bookId: routeBookId, chapter: routeChapter }, headerLabel),
-    );
-  }, [navigation, headerLabel, routeBookId, routeChapter]);
-  // The header's back and title buttons are rendered by the layout; the focused reader owns
-  // what they do.
+  // The header (short book name, back button, colours) comes from the route's layout options,
+  // so it is built from the params on every chapter. The focused reader owns what the header
+  // buttons do.
   const headerActionsRef = useRef({ openChapterPicker: () => {}, goBack: () => {} });
   headerActionsRef.current = {
     openChapterPicker: () => setShowChapterPicker(true),
@@ -1813,7 +1810,7 @@ export default function VerseReaderScreen() {
               >
                 <Text
                   numberOfLines={1}
-                  maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+                  maxFontSizeMultiplier={READER_HEADER_CHIP_FONT_CAP}
                   style={[
                     styles.headerToggleText,
                     kjvWordStudy && wordStudyMode && styles.headerToggleTextOn,
@@ -1833,7 +1830,7 @@ export default function VerseReaderScreen() {
               >
                 <Text
                   numberOfLines={1}
-                  maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+                  maxFontSizeMultiplier={READER_HEADER_CHIP_FONT_CAP}
                   style={[styles.headerToggleText, splitMode && styles.headerToggleTextOn]}
                 >
                   Compare
@@ -1847,7 +1844,7 @@ export default function VerseReaderScreen() {
                 style={styles.headerIconBtn}
               >
                 <Text
-                  maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+                  maxFontSizeMultiplier={READER_HEADER_CHIP_FONT_CAP}
                   style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: RV2_INK, letterSpacing: -0.5 }}
                 >
                   AA
@@ -1868,7 +1865,7 @@ export default function VerseReaderScreen() {
                       style={[styles.translationBadgeText, { color: isDark ? "#AAAAAA" : RV2_INK_MUTED }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
-                      maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
+                      maxFontSizeMultiplier={READER_HEADER_CHIP_FONT_CAP}
                     >
                       {translationDisplay}
                     </Text>
@@ -2602,19 +2599,21 @@ export default function VerseReaderScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // Chip spacing is budgeted against the fixed header title on a 390px screen
+  // (tests/android-reader-header.test.ts measures it from the shipped fonts).
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     flexGrow: 0,
     flexShrink: 0,
-    gap: 6,
+    gap: READER_HEADER_CHIP_GAP,
   },
   headerIconBtn: {
-    padding: 4,
+    padding: READER_HEADER_AA_PADDING,
   },
   headerToggle: {
     minHeight: 26,
-    paddingHorizontal: 7,
+    paddingHorizontal: READER_HEADER_TOGGLE_PADDING,
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
@@ -2635,7 +2634,7 @@ const styles = StyleSheet.create({
     color: READER_TOGGLE_ON_INK,
   },
   headerPill: {
-    paddingHorizontal: 10,
+    paddingHorizontal: READER_HEADER_PILL_PADDING,
     paddingVertical: 6,
     borderRadius: 20,
   },

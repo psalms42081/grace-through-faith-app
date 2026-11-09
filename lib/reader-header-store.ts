@@ -3,9 +3,7 @@
  *
  * The reader's header title and back button are declared in the route's layout options so they
  * exist from the first native header frame. The screen registers what those buttons should do
- * while it is focused. The title is not given a measured width: on Android the chips' onLayout
- * reports the stretched toolbar slot, and a cap computed from it only lands when the header is
- * rebuilt (a chapter change), which is what cut "Luke 2" down to "Luke...".
+ * while it is focused. Nothing about the header's size comes from the screen.
  */
 
 export type ReaderHeaderActions = {

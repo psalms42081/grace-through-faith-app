@@ -1,12 +1,19 @@
 import React from "react";
-import { PixelRatio, Pressable, StyleSheet, Text, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { READING_CHROME_FONT_CAP } from "@/lib/reading-font-scale";
 import {
   chapterListTitle,
+  READER_HEADER_BACK_ICON,
+  READER_HEADER_BACK_PADDING,
+  READER_HEADER_CHEVRON_GAP,
+  READER_HEADER_CHEVRON_SIZE,
+  READER_HEADER_TITLE_FONT_CAP,
+  READER_HEADER_TITLE_FONT_SIZE,
+  READER_HEADER_TITLE_TEXT_WIDTH,
+  READER_HEADER_TITLE_WIDTH,
+  readerHeaderAccessibilityLabel,
   readerHeaderLabel,
-  readerHeaderTitleKey,
-  readerHeaderTitleWidth,
+  readerHeaderTitle,
 } from "@/lib/reader-header-layout";
 import { currentReaderHeaderActions } from "@/lib/reader-header-store";
 
@@ -28,51 +35,40 @@ export function ReaderHeaderBack() {
       accessibilityRole="button"
       accessibilityLabel="Go back"
     >
-      <Ionicons name="chevron-back" size={22} color={READER_HEADER_INK} />
+      <Ionicons name="chevron-back" size={READER_HEADER_BACK_ICON} color={READER_HEADER_INK} />
     </Pressable>
   );
 }
 
 /**
- * "Matthew 5 ⌄" — opens the chapter picker. `width` is computed from the label (character count
- * and font size) and clamped to the room beside the chips. The button does not flex inside the
- * native header subview, which on Android keeps whatever size it measured first.
+ * "Luke ⌄" — the book's short name in a fixed-width box, opening the book/chapter picker.
+ * The chapter is already in the large heading and the chapter pill. No dimension here flexes,
+ * so the box is the same on the first header frame and after every chapter change, and the
+ * chevron is always inside it.
  */
-export function ReaderHeaderTitle({ label }: { label: string }) {
-  const { width: screenWidth } = useWindowDimensions();
-  const fontScale = Math.min(PixelRatio.getFontScale(), READING_CHROME_FONT_CAP);
-  const width = readerHeaderTitleWidth(label, screenWidth, fontScale);
+export function ReaderHeaderTitle({ title, accessibilityLabel }: { title: string; accessibilityLabel: string }) {
   return (
     <Pressable
       onPress={() => currentReaderHeaderActions()?.openChapterPicker()}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={label ? `${label}, open chapter selector` : "Open chapter selector"}
-      style={[styles.titleButton, { width }]}
-      collapsable={false}
+      accessibilityLabel={accessibilityLabel}
+      style={styles.titleButton}
       testID="reader-header-title"
     >
-      <Text
-        style={styles.titleText}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        maxFontSizeMultiplier={READING_CHROME_FONT_CAP}
-      >
-        {label}
-      </Text>
-      <Ionicons name="chevron-down" size={14} color={READER_HEADER_INK_MUTED} />
+      <View style={styles.titleTextBox}>
+        <Text
+          style={styles.titleText}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          maxFontSizeMultiplier={READER_HEADER_TITLE_FONT_CAP}
+        >
+          {title}
+        </Text>
+      </View>
+      <Ionicons name="chevron-down" size={READER_HEADER_CHEVRON_SIZE} color={READER_HEADER_INK_MUTED} />
     </Pressable>
   );
-}
-
-/** Header pieces that must exist on the first frame and be recreated when the chapter changes. */
-export function readerHeaderNavigationOptions(params: object | undefined, label: string) {
-  const key = readerHeaderTitleKey(params);
-  return {
-    title: label,
-    headerLeft: () => <ReaderHeaderBack key={`back-${key}`} />,
-    headerTitle: () => <ReaderHeaderTitle key={key} label={label} />,
-  };
 }
 
 const headerChrome = {
@@ -84,16 +80,20 @@ const headerChrome = {
 };
 
 /**
- * Layout-level options for the reader route. Everything the first header frame needs — the title
- * text, the back button, the title button, colours — comes from the route params here, not from
- * the screen after it mounts.
+ * Layout-level options for the reader route. Everything the header needs — the short title,
+ * the accessible full name, the back button, colours — comes from the route params here, so it
+ * is right on the first frame and again for every chapter the route moves to.
  */
 export function readerScreenOptions({ route }: RouteOptionArgs) {
-  const label = readerHeaderLabel(route.params);
+  const title = readerHeaderTitle(route.params);
+  const accessibilityLabel = readerHeaderAccessibilityLabel(route.params);
   return {
     ...headerChrome,
+    // The full label is the route's (document) title; the visible header shows the short name.
+    title: readerHeaderLabel(route.params),
     headerBackVisible: false as const,
-    ...readerHeaderNavigationOptions(route.params, label),
+    headerLeft: () => <ReaderHeaderBack />,
+    headerTitle: () => <ReaderHeaderTitle title={title} accessibilityLabel={accessibilityLabel} />,
   };
 }
 
@@ -107,16 +107,19 @@ export function chapterListScreenOptions({ route }: RouteOptionArgs) {
 
 const styles = StyleSheet.create({
   iconButton: {
-    padding: 4,
+    padding: READER_HEADER_BACK_PADDING,
   },
   titleButton: {
+    width: READER_HEADER_TITLE_WIDTH,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+  },
+  titleTextBox: {
+    width: READER_HEADER_TITLE_TEXT_WIDTH,
+    marginRight: READER_HEADER_CHEVRON_GAP,
   },
   titleText: {
-    flex: 1,
-    fontSize: 17,
+    fontSize: READER_HEADER_TITLE_FONT_SIZE,
     fontFamily: "Lora_600SemiBold",
     color: READER_HEADER_INK,
   },
