@@ -81,9 +81,13 @@ describe("problem report surfaces", () => {
     assert.match(migration, /ON DELETE SET NULL/);
     const handler = readFileSync(path.join(root, "server", "routes", "problem-report.ts"), "utf8");
     assert.match(handler, /db\.insert\(feedback\)/);
-    assert.match(handler, /sendFeedbackEmail/);
+    assert.match(handler, /sendFeedbackEmail\(`\[Feedback\] Problem report — \$\{parsed\.value\.screen\}`, html, \{ replyTo: email \}\)/);
     const mail = readFileSync(path.join(root, "server", "services", "feedback-mail.ts"), "utf8");
-    assert.match(mail, /to: APP_CONTACT_EMAIL/);
+    assert.match(mail, /to: \[APP_CONTACT_EMAIL\]/);
+    assert.match(mail, /FEEDBACK_FROM = "Informed Ministries <noreply@informedministries\.app>"/);
+    assert.match(mail, /reply_to: replyTo/);
+    assert.match(mail, /RESEND_API_KEY/);
+    assert.doesNotMatch(mail, /nodemailer|FEEDBACK_EMAIL_|office365|smtpout/);
     assert.equal(APP_CONTACT_EMAIL, "hello@informedministries.app");
     const route = readFileSync(path.join(root, "server", "routes.ts"), "utf8");
     assert.match(route, /handleProblemReport\(req, res\)/);

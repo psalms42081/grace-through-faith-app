@@ -65,9 +65,7 @@ router.post("/api/ai-reports", optionalAuth, aiReportLimiter, async (req, res) =
     `;
     const subject = `[AI report] ${report.reason} — ${report.feature}${report.reference ? ` — ${report.reference}` : ""}`;
     // The report is saved either way; email is best-effort.
-    void sendFeedbackEmail(subject, html).catch((err: unknown) => {
-      console.error("[ai-report] email failed:", err instanceof Error ? err.message : err);
-    });
+    void sendFeedbackEmail(subject, html, { replyTo: email });
 
     res.json({ success: true, id: row?.id });
   } catch (err) {

@@ -160,7 +160,7 @@ describe("AI report server", () => {
     assert.match(route, /router\.post\("\/api\/ai-reports", optionalAuth, aiReportLimiter/);
     assert.match(route, /parseAiReport\(req\.body\)/);
     assert.match(route, /db\s*\.insert\(aiReports\)/);
-    assert.match(route, /sendFeedbackEmail\(subject, html\)/);
+    assert.match(route, /sendFeedbackEmail\(subject, html, \{ replyTo: email \}\)/);
     assert.match(route, /\[AI report\]/);
     assert.match(route, /escapeFeedbackHtml\(report\.responseText\)/);
 

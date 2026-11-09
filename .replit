@@ -148,7 +148,6 @@ isValidation = true
 
 [userenv.shared]
 JWT_SECRET = "yZ2FBZ2rNdnXhatJYysQ5D3TcVMun+Vlad9POu1a2STUEWCS+y4qP3hs9nXYwA+v"
-FEEDBACK_EMAIL_USER = "joseph@gracethroughfaith.app"
 
 [userenv.production]
 PORT = "8081"

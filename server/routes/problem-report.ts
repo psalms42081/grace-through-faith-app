@@ -55,7 +55,7 @@ export async function handleProblemReport(req: Request, res: Response): Promise<
       <p style="margin-top:20px;font-size:12px;color:#999;">Informed Ministries App — Automated Feedback Notification</p>
     </div>
   `;
-  await sendFeedbackEmail(`[Feedback] Problem report — ${parsed.value.screen}`, html);
+  await sendFeedbackEmail(`[Feedback] Problem report — ${parsed.value.screen}`, html, { replyTo: email });
   res.json({ success: true });
   return true;
 }

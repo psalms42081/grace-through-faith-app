@@ -363,7 +363,7 @@ if(bounds.length>1)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
             <p style="margin-top:20px;font-size:12px;color:#999;">Informed Ministries App — Automated Feedback Notification</p>
           </div>
         `;
-      await sendFeedbackEmail(`[Feedback] ${topicLabel} — from ${displayName}`, emailHtml);
+      await sendFeedbackEmail(`[Feedback] ${topicLabel} — from ${displayName}`, emailHtml, { replyTo: safeEmail });
 
       res.json({ success: true });
     } catch (err) {
