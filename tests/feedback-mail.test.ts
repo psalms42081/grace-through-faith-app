@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { APP_CONTACT_EMAIL } from "../constants/app";
-import { FEEDBACK_FROM, redactMailSecret, sendFeedbackEmail } from "../server/services/feedback-mail";
+import {
+  FEEDBACK_FROM,
+  formatSydneyTime,
+  newAccountEmail,
+  notifyNewAccount,
+  redactMailSecret,
+  sendFeedbackEmail,
+} from "../server/services/feedback-mail";
+import { readFileSync } from "node:fs";
 
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.RESEND_API_KEY;
@@ -78,5 +86,57 @@ describe("feedback email via Resend", () => {
     assert.equal(await sendFeedbackEmail("Subject", "<p>Hi</p>", { replyTo: "not an email" }), false);
     assert.equal(called, false);
     assert.equal(redactMailSecret("failed with re_live_secret"), "failed with [redacted]");
+  });
+
+  it("notifies hello@ of a new account in Sydney time without waiting on the send", async () => {
+    const summer = formatSydneyTime("2026-01-15T00:00:00.000Z");
+    const winter = formatSydneyTime("2026-07-15T00:00:00.000Z");
+    assert.match(summer, /15 Jan 2026/);
+    assert.match(summer, /11:00 am/);
+    assert.match(summer, /AEDT/);
+    assert.match(winter, /15 July 2026|15 Jul 2026/);
+    assert.match(winter, /10:00 am/);
+    assert.match(winter, /AEST/);
+
+    const notice = newAccountEmail({
+      displayName: " Ada\nLovelace ",
+      email: "ada@example.com",
+      method: "Email and password",
+      createdAt: "2026-01-15T00:00:00.000Z",
+    });
+    assert.equal(notice.subject, "[New account] Ada Lovelace");
+    assert.match(notice.html, /Ada Lovelace/);
+    assert.match(notice.html, /ada@example.com/);
+    assert.match(notice.html, /Email and password/);
+    assert.match(notice.html, /Sydney/);
+    assert.match(notice.html, /AEDT/);
+
+    process.env.RESEND_API_KEY = "re_testkey";
+    const calls: { init: RequestInit }[] = [];
+    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ init: init ?? {} });
+      return new Response(JSON.stringify({ id: "email_2" }), { status: 200 });
+    }) as typeof fetch;
+    assert.equal(
+      await notifyNewAccount({
+        displayName: "Ada",
+        email: "ada@example.com",
+        method: "Email and password",
+        createdAt: "2026-01-15T00:00:00.000Z",
+      }),
+      true,
+    );
+    const body = JSON.parse(String(calls[0].init.body)) as { subject: string; reply_to: string; to: string[] };
+    assert.equal(body.subject, "[New account] Ada");
+    assert.equal(body.reply_to, "ada@example.com");
+    assert.deepEqual(body.to, [APP_CONTACT_EMAIL]);
+
+    const auth = readFileSync(new URL("../server/routes/auth.ts", import.meta.url), "utf8");
+    const savedAt = auth.indexOf(".returning()");
+    const mailedAt = auth.indexOf("void notifyNewAccount(");
+    const respondedAt = auth.indexOf("return res.json({", savedAt);
+    assert.ok(savedAt >= 0 && mailedAt > savedAt && respondedAt > mailedAt);
+    assert.match(auth, /method: "Email and password"/);
+    assert.match(auth, /createdAt: newUser\.createdAt/);
   });
 });

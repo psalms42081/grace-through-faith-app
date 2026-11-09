@@ -100,3 +100,52 @@ export async function sendFeedbackEmail(
     return false;
   }
 }
+
+/** Calendar time in Sydney, including AEST or AEDT. */
+export function formatSydneyTime(value: Date | string | null | undefined): string {
+  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Sydney",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  }).format(date);
+}
+
+export type NewAccountNotice = {
+  displayName: string;
+  email: string;
+  method: string;
+  createdAt: Date | string | null | undefined;
+};
+
+/** Subject and body for the new-account notice. The display name is one line. */
+export function newAccountEmail(account: NewAccountNotice): { subject: string; html: string } {
+  const name = account.displayName.replace(/[\r\n]+/g, " ").trim() || "New member";
+  const when = formatSydneyTime(account.createdAt);
+  const cell = (value: string) => escapeFeedbackHtml(value || "Not provided");
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+      <h2 style="color:#C9933A;margin-bottom:16px;">New account</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+        <tr><td style="padding:8px;font-weight:bold;color:#666;width:160px;">Display name:</td><td style="padding:8px;">${cell(name)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;color:#666;">Email:</td><td style="padding:8px;">${cell(account.email)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;color:#666;">Sign-up method:</td><td style="padding:8px;">${cell(account.method)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;color:#666;">Created:</td><td style="padding:8px;">${cell(when)} (Sydney)</td></tr>
+      </table>
+      <p style="margin-top:20px;font-size:12px;color:#999;">Informed Ministries App — New account notification</p>
+    </div>
+  `;
+  return { subject: `[New account] ${name}`, html };
+}
+
+/** Best-effort notice. sendFeedbackEmail never throws, so sign-up is unaffected. */
+export function notifyNewAccount(account: NewAccountNotice): Promise<boolean> {
+  const { subject, html } = newAccountEmail(account);
+  return sendFeedbackEmail(subject, html, { replyTo: account.email });
+}

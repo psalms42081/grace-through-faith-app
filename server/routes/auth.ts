@@ -25,6 +25,7 @@ import { JWT_SECRET, requireAuth, getAuthUserId, getDeviceId, touchUserActivity 
 import { validate, authRegisterSchema, authLoginSchema } from "../middleware/validate";
 import { authLimiter } from "../middleware/rate-limit";
 import { deleteUserAccount } from "../services/delete-user-account";
+import { notifyNewAccount } from "../services/feedback-mail";
 
 const router = Router();
 
@@ -72,6 +73,14 @@ router.post("/api/auth/register", authLimiter, validate(authRegisterSchema), asy
       profileType: cleanProfileType,
       isPro: true,
     }).returning();
+
+    // After the row is saved. Not awaited: a mail failure or a slow Resend call cannot block sign-up.
+    void notifyNewAccount({
+      displayName: newUser.displayName || displayName.trim(),
+      email: newUser.email || cleanEmail,
+      method: "Email and password",
+      createdAt: newUser.createdAt,
+    });
 
     const token = jwt.sign({ userId: newUser.id }, JWT_SECRET, { expiresIn: "90d" });
 
