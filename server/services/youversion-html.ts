@@ -76,6 +76,14 @@ function footnoteText(anchor: Element): string {
   return cleanText(holder.textContent);
 }
 
+/** `qa` is an acrostic letter; `r` is the parallel-passage reference under a section heading. */
+function headingWithKind(cls: string, text: string): ProviderHeading {
+  const first = cls.split(/\s+/)[0] ?? "";
+  if (/^qa\d*$/i.test(first)) return { text, kind: "qa" };
+  if (/^r$/i.test(first)) return { text, kind: "r" };
+  return { text };
+}
+
 function isHeadingBlock(cls: string): boolean {
   const classes = cls.split(/\s+/);
   return classes.includes("yv-h") || /^(?:s\d*|ms\d*|mt\d*|d|r|qa\d*|sp|cl)$/i.test(classes[0] ?? "");
@@ -110,7 +118,7 @@ export function parseYouVersionChapterHtml(
     if (!wrappers.length) {
       if (isHeadingBlock(cls)) {
         const heading = readingText(block);
-        if (heading) pendingHeadings.push(/^qa/i.test(cls) ? { text: heading, kind: "qa" } : { text: heading });
+        if (heading) pendingHeadings.push(headingWithKind(cls, heading));
       }
       continue;
     }

@@ -307,6 +307,57 @@ describe("YouVersion chapter HTML", () => {
     assert.doesNotMatch(reader, /> ◆</);
     assert.doesNotMatch(prose, /\{" "\}◆/);
   });
+
+  it("keeps merged verses aligned in Compare, whichever side merges", async () => {
+    const { alignCompanionVerses, companionNeedsNumbers } = await import("../lib/compare-alignment");
+    const kriol = [{ verse: 1, verseEnd: 2 }, { verse: 3 }, { verse: 4 }];
+    const kjv = [{ verse: 1 }, { verse: 2 }, { verse: 3 }, { verse: 4 }];
+    const underKriol = alignCompanionVerses(kriol, kjv);
+    assert.deepEqual([...underKriol.entries()].map(([verse, items]) => [verse, items.map((item) => item.verse)]), [
+      [1, [1, 2]],
+      [3, [3]],
+      [4, [4]],
+    ]);
+    assert.equal(companionNeedsNumbers(kriol[0], underKriol.get(1)!), true);
+    assert.equal(companionNeedsNumbers(kriol[1], underKriol.get(3)!), false);
+    const underKjv = alignCompanionVerses(kjv, kriol);
+    assert.deepEqual([...underKjv.entries()].map(([verse, items]) => [verse, items.map((item) => item.verse)]), [
+      [2, [1]],
+      [3, [3]],
+      [4, [4]],
+    ]);
+    assert.equal(companionNeedsNumbers(kjv[1], underKjv.get(2)!), true);
+    const reader = read("app/read/[bookId]/[chapter].tsx");
+    assert.match(reader, /alignCompanionVerses\(verses, splitVerses\)/);
+    assert.match(reader, /\{numbered \? ` \$\{verseNumberLabel\(companion\)\}` : ""\}/);
+  });
+
+  it("shows parallel-passage references as a muted line under the heading", async () => {
+    const { headingKind, headingsByVerse } = await import("../lib/group-verses-by-paragraph");
+    const tcs = [
+      '<div class="s yv-h">Jesus Krais famli</div>',
+      '<div class="r yv-h">(Luk 3.23-38)</div>',
+      '<div class="p"><span class="yv-v" v="1"></span><span class="yv-vlbl">1</span>Dis buk i tok.</div>',
+    ].join("");
+    const parsed = parseYouVersionChapterHtml(tcs, { code: "YV1400", bookId: 40, chapter: 1 });
+    assert.deepEqual(parsed.providerContent.headings, [
+      { text: "Jesus Krais famli", beforeVerse: 1 },
+      { text: "(Luk 3.23-38)", kind: "r", beforeVerse: 1 },
+    ]);
+    // Older servers send the line without a kind; the brackets still mark it.
+    assert.equal(headingKind({ text: "(Luk 3.23-38)" }), "r");
+    assert.equal(headingKind({ text: "(Mark 1:1-8; Luke 3:1-18)" }), "r");
+    assert.equal(headingKind({ text: "The Beatitudes" }), undefined);
+    assert.equal(headingKind({ text: "Aleph", kind: "qa" }), "qa");
+    assert.deepEqual(headingsByVerse([{ text: "(Luk 3.23-38)", beforeVerse: 1 }]).get(1), [{ text: "(Luk 3.23-38)", kind: "r" }]);
+    for (const file of ["app/read/[bookId]/[chapter].tsx", "components/reader/TypographyPreviewProse.tsx"]) {
+      const source = read(file);
+      assert.match(source, /heading\.kind === "r"/, file);
+      assert.match(source, /testID="reader-parallel-reference"/, file);
+    }
+    assert.match(read("app/read/[bookId]/[chapter].tsx"), /providerHeadingReference: \{[\s\S]*?fontFamily: "Inter_400Regular"[\s\S]*?color: RV2_INK_MUTED/);
+    assert.match(read("components/reader/TypographyPreviewProse.tsx"), /headingReference: \{[\s\S]*?fontFamily: "Inter_400Regular"/);
+  });
 });
 
 describe("translation picker catalog", () => {

@@ -25,10 +25,20 @@ export function groupVersesByParagraphStarts<T extends { verse: number }>(
   return groups;
 }
 
-/** Reader heading; `qa` is the USFM acrostic letter (Psalm 119, Lamentations). */
-export type ReaderHeading = { text: string; kind?: "qa" };
+/**
+ * Reader heading kind. `qa` is the USFM acrostic letter (Psalm 119, Lamentations);
+ * `r` is the parallel-passage reference printed under a section heading, e.g. "(Luk 3.23-38)".
+ */
+export type ReaderHeadingKind = "qa" | "r";
+export type ReaderHeading = { text: string; kind?: ReaderHeadingKind };
 
-export type ProviderHeadingLike = { text: string; beforeVerse?: number; kind?: "qa" };
+export type ProviderHeadingLike = { text: string; beforeVerse?: number; kind?: ReaderHeadingKind };
+
+/** A heading that is only a bracketed reference is a parallel-passage line, whatever the server said. */
+export function headingKind(heading: { text: string; kind?: ReaderHeadingKind }): ReaderHeadingKind | undefined {
+  if (heading.kind) return heading.kind;
+  return /^\([^()]*\d[^()]*\)$/.test(heading.text.trim()) ? "r" : undefined;
+}
 
 export function headingsByVerse(headings: ProviderHeadingLike[] | undefined): Map<number, ReaderHeading[]> {
   const byVerse = new Map<number, ReaderHeading[]>();
@@ -36,7 +46,7 @@ export function headingsByVerse(headings: ProviderHeadingLike[] | undefined): Ma
     if (heading.beforeVerse && heading.text) {
       byVerse.set(heading.beforeVerse, [
         ...(byVerse.get(heading.beforeVerse) ?? []),
-        { text: heading.text, kind: heading.kind },
+        { text: heading.text, kind: headingKind(heading) },
       ]);
     }
   }

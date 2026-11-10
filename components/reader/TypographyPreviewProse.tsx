@@ -129,19 +129,34 @@ export function TypographyPreviewProse({
             <View key={`p-${lead.id}`} style={[s.paragraphBlock, { marginBottom: paragraphGap }]}>
               {run.headings.map((heading, headingIndex) =>
                 heading.text ? (
-                  <Text
-                    key={`${lead.id}-heading-${headingIndex}`}
-                    allowFontScaling={false}
-                    style={[
-                      s.heading,
-                      heading.kind === "qa" && s.headingQa,
-                      readingType(heading.kind === "qa" ? 14 : 16, heading.kind === "qa" ? 20 : 23, fontScale),
-                      { marginTop: 4 * fontScale, marginBottom: 8 * fontScale },
-                    ]}
-                    accessibilityRole="header"
-                  >
-                    {heading.text}
-                  </Text>
+                  heading.kind === "r" ? (
+                    <Text
+                      key={`${lead.id}-heading-${headingIndex}`}
+                      allowFontScaling={false}
+                      style={[
+                        s.headingReference,
+                        readingType(12, 17, fontScale),
+                        { marginTop: -4 * fontScale, marginBottom: 8 * fontScale },
+                      ]}
+                      testID="reader-parallel-reference"
+                    >
+                      {heading.text}
+                    </Text>
+                  ) : (
+                    <Text
+                      key={`${lead.id}-heading-${headingIndex}`}
+                      allowFontScaling={false}
+                      style={[
+                        s.heading,
+                        heading.kind === "qa" && s.headingQa,
+                        readingType(heading.kind === "qa" ? 14 : 16, heading.kind === "qa" ? 20 : 23, fontScale),
+                        { marginTop: 4 * fontScale, marginBottom: 8 * fontScale },
+                      ]}
+                      accessibilityRole="header"
+                    >
+                      {heading.text}
+                    </Text>
+                  )
                 ) : null,
               )}
               <Text
@@ -298,6 +313,12 @@ const s = StyleSheet.create({
   headingQa: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  headingReference: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: "Inter_400Regular",
+    color: "#6E675B",
   },
   body: {
     fontFamily: "Lora_400Regular",

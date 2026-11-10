@@ -62,6 +62,7 @@ import {
 } from "@/shared/partial-bible";
 import { formatSheetReference } from "@/lib/verse-sheet";
 import { verseNumberLabel } from "@/lib/verse-label";
+import { alignCompanionVerses, companionNeedsNumbers } from "@/lib/compare-alignment";
 import {
   READER_HEADER_AA_PADDING,
   READER_HEADER_CHIP_FONT_CAP,
@@ -206,7 +207,7 @@ interface PassageResponse {
   verses: Verse[];
   /** API.Bible-only source structure; local KJV responses do not include this. */
   providerContent?: {
-    headings?: { text: string; beforeVerse?: number; kind?: "qa" }[];
+    headings?: { text: string; beforeVerse?: number; kind?: "qa" | "r" }[];
     paragraphs?: { verseStart: number; verseEnd: number }[];
   };
   /** YouVersion only: the copyright line the version requires, and its footnotes. */
@@ -922,10 +923,6 @@ export default function VerseReaderScreen() {
     () => withAcrosticHeadings(splitLoadFailed || splitNotice ? [] : (splitData?.verses ?? []), undefined).verses,
     [splitLoadFailed, splitNotice, splitData?.verses],
   );
-  const splitVerseByNum = useMemo(
-    () => new Map(splitVerses.map((v) => [v.verse, v])),
-    [splitVerses],
-  );
 
   const handlePrimaryScroll = useCallback((event: any) => {
     if (isSyncingScroll.current) return;
@@ -1225,6 +1222,11 @@ export default function VerseReaderScreen() {
     [data?.verses, data?.providerContent?.headings],
   );
   const verses = primaryAcrostic.verses;
+  // Merged verses on either side ("1–2") keep their companions under one block.
+  const splitVerseByNum = useMemo(
+    () => alignCompanionVerses(verses, splitVerses),
+    [verses, splitVerses],
+  );
   const [paintedCount, setPaintedCount] = useState(24);
   useEffect(() => {
     const jump = Number(verseParam);
@@ -2197,17 +2199,27 @@ export default function VerseReaderScreen() {
                   return (
                     <View key={v.id}>
                       {(providerHeadings.get(v.verse) ?? []).map((heading, headingIndex) => (
-                        <Text
-                          key={`${v.id}-heading-${headingIndex}`}
-                          style={[
-                            styles.providerHeading,
-                            heading.kind === "qa" && styles.providerHeadingQa,
-                            { color: textColor },
-                          ]}
-                          accessibilityRole="header"
-                        >
-                          {heading.text}
-                        </Text>
+                        heading.kind === "r" ? (
+                          <Text
+                            key={`${v.id}-heading-${headingIndex}`}
+                            style={styles.providerHeadingReference}
+                            testID="reader-parallel-reference"
+                          >
+                            {heading.text}
+                          </Text>
+                        ) : (
+                          <Text
+                            key={`${v.id}-heading-${headingIndex}`}
+                            style={[
+                              styles.providerHeading,
+                              heading.kind === "qa" && styles.providerHeadingQa,
+                              { color: textColor },
+                            ]}
+                            accessibilityRole="header"
+                          >
+                            {heading.text}
+                          </Text>
+                        )
                       ))}
                     <Pressable
                       onPress={() => handleVerseTap(v)}
@@ -2247,21 +2259,34 @@ export default function VerseReaderScreen() {
                     </Pressable>
                     {stackedSplit && splitVerseByNum.get(v.verse) ? (
                       <View style={styles.stackedCompanion} testID={`split-stacked-verse-${v.verse}`}>
-                        <Text allowFontScaling={false} style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}>
-                          <Text style={[styles.stackedCompanionLabel, { lineHeight: 24 * fontScale }]}>{splitTranslationLabel}{"\u00a0\u00a0"}</Text>
-                          <VerseSpokenText
-                            text={splitVerseByNum.get(v.verse)!.text}
-                            lineHeight={24 * fontScale}
-                            spokenRanges={spokenRangesForLine({
-                              redLettersEnabled: wordsOfChrist,
-                              readingTranslation: translation,
-                              lineTranslation: splitTranslation,
-                              bookId: Number(bookId),
-                              chapter: chapterNum,
-                              verse: v.verse,
-                            })}
-                          />
-                        </Text>
+                        {splitVerseByNum.get(v.verse)!.map((companion) => {
+                          const numbered = companionNeedsNumbers(v, splitVerseByNum.get(v.verse)!);
+                          return (
+                            <Text
+                              key={companion.id}
+                              allowFontScaling={false}
+                              style={[styles.stackedCompanionText, { fontSize: 15 * fontScale, lineHeight: 24 * fontScale }]}
+                            >
+                              <Text style={[styles.stackedCompanionLabel, { lineHeight: 24 * fontScale }]}>
+                                {splitTranslationLabel}
+                                {numbered ? ` ${verseNumberLabel(companion)}` : ""}
+                                {"\u00a0\u00a0"}
+                              </Text>
+                              <VerseSpokenText
+                                text={companion.text}
+                                lineHeight={24 * fontScale}
+                                spokenRanges={spokenRangesForLine({
+                                  redLettersEnabled: wordsOfChrist,
+                                  readingTranslation: translation,
+                                  lineTranslation: splitTranslation,
+                                  bookId: Number(bookId),
+                                  chapter: chapterNum,
+                                  verse: companion.verse,
+                                })}
+                              />
+                            </Text>
+                          );
+                        })}
                       </View>
                     ) : null}
                     </View>
@@ -3254,6 +3279,14 @@ const styles = StyleSheet.create({
   providerHeadingQa: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  providerHeadingReference: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: "Inter_400Regular",
+    color: RV2_INK_MUTED,
+    marginTop: -4,
+    marginBottom: 8,
   },
   quietRowText: {
     flex: 1,

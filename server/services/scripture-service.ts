@@ -719,7 +719,7 @@ export interface ProviderHeading {
   /** The first verse following this heading, when the provider supplies one. */
   beforeVerse?: number;
   /** USFM qa acrostic letter headings (Psalm 119, Lamentations). */
-  kind?: "qa";
+  kind?: "qa" | "r";
 }
 
 export interface ProviderParagraph {
@@ -838,7 +838,11 @@ export function parseApiBibleChapter(
     // and prose continuations) stay on the preceding verse — never headings.
     if (isHeading && !hasVerseNum) {
       pendingHeadings.push(
-        /^qa\d*$/i.test(cls) ? { text: trimmed, kind: "qa" } : { text: trimmed }
+        /^qa\d*$/i.test(cls)
+          ? { text: trimmed, kind: "qa" }
+          : /^r$/i.test(cls)
+            ? { text: trimmed, kind: "r" }
+            : { text: trimmed }
       );
       continue;
     }

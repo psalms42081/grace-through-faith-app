@@ -319,6 +319,7 @@ describe("reader word-study chrome", () => {
     assert.match(reader, /onLayout=\{\(event\) => setReaderWidth\(event\.nativeEvent\.layout\.width\)\}/);
     assert.match(reader, /\{splitMode && isSideBySide && \(/);
     assert.match(reader, /stackedSplit && splitVerseByNum\.get\(v\.verse\)/);
+    assert.match(reader, /splitVerseByNum\.get\(v\.verse\)!\.map\(\(companion\)/);
     assert.doesNotMatch(reader, /styles\.splitPaneStacked/);
   });
 
