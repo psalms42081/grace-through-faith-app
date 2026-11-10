@@ -4,6 +4,7 @@ import { apiRequest, setAuthTokenGetter, setDeviceIdGetter, setContentLanguageGe
 import { resolveContentLang } from "@/lib/content-language";
 import i18n from "@/lib/i18n";
 import { queryClient } from "@/lib/query-client";
+import { refreshUserScopedQueries } from "@/lib/user-scoped-queries";
 import { fetch } from "expo/fetch";
 import { registerPushToken } from "@/lib/notifications";
 
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [deviceId, setDeviceId] = useState<string>("guest");
   const tokenRef = useRef<string | null>(null);
   const deviceIdRef = useRef<string>("guest");
+  const skipSessionRefresh = useRef(true);
 
   useEffect(() => {
     tokenRef.current = token;
@@ -80,6 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     restoreSession();
   }, []);
+
+  // First settle is the restored session. Later changes are sign-in or sign-out.
+  useEffect(() => {
+    if (isLoading) return;
+    if (skipSessionRefresh.current) {
+      skipSessionRefresh.current = false;
+      return;
+    }
+    void refreshUserScopedQueries(queryClient);
+  }, [isLoading, user?.id]);
 
   const restoreSession = async () => {
     try {
@@ -152,12 +164,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.error) return { success: false, error: data.error };
 
       tokenRef.current = data.token;
-      setToken(data.token);
-      setUser(data.user);
       setAuthTokenGetter(() => data.token);
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
       await migrateGuestData(data.token);
-      queryClient.clear();
+      setToken(data.token);
+      setUser(data.user);
       return { success: true };
     } catch (err: any) {
       const msg = err.message || "Login failed";
@@ -182,12 +193,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.error) return { success: false, error: data.error };
 
       tokenRef.current = data.token;
-      setToken(data.token);
-      setUser(data.user);
       setAuthTokenGetter(() => data.token);
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
       await migrateGuestData(data.token);
-      queryClient.clear();
+      setToken(data.token);
+      setUser(data.user);
       return { success: true };
     } catch (err: any) {
       const msg = err.message || "Registration failed";
@@ -218,11 +228,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.token && data.user) {
         tokenRef.current = data.token;
-        setToken(data.token);
-        setUser(data.user);
         setAuthTokenGetter(() => data.token!);
         await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        queryClient.clear();
+        setToken(data.token);
+        setUser(data.user);
       }
       return { success: true };
     } catch (err: any) {
@@ -242,12 +251,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     tokenRef.current = null;
-    setToken(null);
-    setUser(null);
     setAuthTokenGetter(() => null);
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
     await AsyncStorage.removeItem("@grace-through-faith/onboarded");
-    queryClient.clear();
+    setToken(null);
+    setUser(null);
   }, []);
 
   const refreshUser = useCallback(async () => {

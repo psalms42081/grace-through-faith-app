@@ -88,7 +88,7 @@ export default function ProfileGroupsSection() {
   );
   const [joinCode, setJoinCode] = useState("");
 
-  const { data, isLoading } = useQuery<GroupsResponse>({
+  const { data, isLoading, isError, refetch } = useQuery<GroupsResponse>({
     queryKey: ["/api/bible-groups"],
     queryFn: async () => {
       const res = await apiRequest("GET", withDeviceTimeZone("/api/bible-groups"));
@@ -191,7 +191,22 @@ export default function ProfileGroupsSection() {
   return (
     <View style={[st.orgCard, { marginTop: 12 }]} testID="profile-my-groups">
       <Text style={[st.subhead, { color: C.ink }]}>My Groups</Text>
-      {isLoading ? (
+      {isError ? (
+        <View testID="profile-groups-retry">
+          <Text style={[st.empty, { color: C.inkMuted }]}>
+            Couldn't load your groups.
+          </Text>
+          <Pressable
+            style={st.retryBtn}
+            onPress={() => { void refetch(); }}
+            accessibilityRole="button"
+            accessibilityLabel="Try again"
+          >
+            <Ionicons name="refresh" size={18} color={C.coralInk} />
+            <Text style={st.retryText}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : isLoading ? (
         <ActivityIndicator color={C.coral} style={{ marginVertical: 12 }} />
       ) : groups.length === 0 ? (
         <Text style={[st.empty, { color: C.inkMuted }]} testID="profile-groups-empty">
@@ -373,6 +388,21 @@ const st = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     lineHeight: 20,
     marginBottom: 14,
+  },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.coral,
+  },
+  retryText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: C.coralInk,
   },
   groupRow: {
     flexDirection: "row",

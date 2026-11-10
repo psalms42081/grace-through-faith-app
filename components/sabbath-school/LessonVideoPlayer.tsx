@@ -39,9 +39,11 @@ function proxiedLessonMediaUrl(sourceUrl: string): string {
 function LessonVideoThumb({
   thumbnail,
   artist,
+  style,
 }: {
   thumbnail?: string;
   artist: string;
+  style?: object;
 }) {
   const [failed, setFailed] = useState(false);
   const uri = thumbnail ? proxiedLessonMediaUrl(thumbnail) : "";
@@ -52,7 +54,7 @@ function LessonVideoThumb({
 
   if (showPlaceholder) {
     return (
-      <View style={[s.videoThumb, s.videoThumbPlaceholder]}>
+      <View style={[s.videoThumb, s.videoThumbPlaceholder, style]}>
         <Text style={s.videoThumbArtist} numberOfLines={2}>
           {artist || "Lesson video"}
         </Text>
@@ -63,7 +65,7 @@ function LessonVideoThumb({
   return (
     <Image
       source={{ uri }}
-      style={s.videoThumb}
+      style={[s.videoThumb, style]}
       resizeMode="cover"
       onError={() => setFailed(true)}
     />
@@ -75,22 +77,29 @@ function SabbathSchoolInlineVideo({
   style,
   onReady,
   onError,
+  playWhenReady = false,
 }: {
   uri: string;
   style: object;
   onReady: () => void;
   onError: () => void;
+  playWhenReady?: boolean;
 }) {
-  // Paused until the user taps the player's own play control.
+  // Paused until the user taps play. playWhenReady is set only from that tap.
   const player = useVideoPlayer(uri);
   const onReadyRef = React.useRef(onReady);
   const onErrorRef = React.useRef(onError);
+  const playWhenReadyRef = React.useRef(playWhenReady);
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
+  playWhenReadyRef.current = playWhenReady;
 
   useEffect(() => {
     const sub = player.addListener("statusChange", ({ status, error }) => {
-      if (status === "readyToPlay") onReadyRef.current();
+      if (status === "readyToPlay") {
+        onReadyRef.current();
+        if (playWhenReadyRef.current) player.play();
+      }
       if (status === "error" || error) onErrorRef.current();
     });
     return () => sub.remove();
@@ -109,9 +118,11 @@ function SabbathSchoolInlineVideo({
 export default function LessonVideoPlayer({
   clips,
   showChooser = true,
+  layout = "row",
 }: {
   clips: SabbathSchoolVideoClip[];
   showChooser?: boolean;
+  layout?: "row" | "page";
 }) {
   const [activeVideo, setActiveVideo] = useState<{
     src: string;
@@ -120,6 +131,8 @@ export default function LessonVideoPlayer({
   } | null>(null);
   const [videoError, setVideoError] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [playRequested, setPlayRequested] = useState(false);
 
   const closePlayer = useCallback(() => {
     setActiveVideo(null);
@@ -143,7 +156,10 @@ export default function LessonVideoPlayer({
 
   const surfaceActive = useVideoSurfaceActive();
   useEffect(() => {
-    if (!surfaceActive) closePlayer();
+    if (!surfaceActive) {
+      setPlayRequested(false);
+      closePlayer();
+    }
   }, [surfaceActive, closePlayer]);
 
   useEffect(() => {
@@ -157,6 +173,130 @@ export default function LessonVideoPlayer({
     : "";
 
   if (clips.length === 0) return null;
+
+  if (layout === "page") {
+    const selectedAt = Math.min(selectedIndex, clips.length - 1);
+    const selected = clips[selectedAt];
+    const playingThis = activeVideo?.src === selected.src;
+    return (
+      <View style={s.pageStack}>
+        <View
+          style={s.featureCard}
+          accessibilityState={{ selected: true }}
+          testID="lesson-video-feature"
+        >
+          {playingThis ? (
+            <View style={s.featureMedia}>
+              {videoError ? (
+                <View style={s.inlineVideoError}>
+                  <Ionicons name="videocam-off-outline" size={28} color="#FFFFFF" />
+                  <Text style={s.inlineVideoErrorText}>
+                    This lesson video could not start in the app.
+                  </Text>
+                  <Pressable
+                    onPress={() => Linking.openURL(activePlaybackUrl).catch(() => {})}
+                    style={s.inlineVideoErrorButton}
+                  >
+                    <Text style={s.inlineVideoErrorButtonText}>Open in browser</Text>
+                  </Pressable>
+                </View>
+              ) : Platform.OS === "web" ? (
+                React.createElement("video", {
+                  key: selected.src,
+                  src: activePlaybackUrl,
+                  controls: true,
+                  autoPlay: false,
+                  playsInline: true,
+                  style: {
+                    width: "100%",
+                    aspectRatio: "16 / 9",
+                    backgroundColor: "#000000",
+                    display: "block",
+                  },
+                  onError: () => setVideoError(true),
+                  onLoadedMetadata: () => setVideoReady(true),
+                  onCanPlay: (event: { currentTarget?: { play?: () => Promise<void> } }) => {
+                    setVideoReady(true);
+                    if (playRequested) void event.currentTarget?.play?.();
+                  },
+                })
+              ) : (
+                <SabbathSchoolInlineVideo
+                  key={selected.src}
+                  uri={activePlaybackUrl}
+                  style={s.inlineVideo}
+                  playWhenReady={playRequested}
+                  onReady={() => setVideoReady(true)}
+                  onError={() => setVideoError(true)}
+                />
+              )}
+              {!videoReady && !videoError && (
+                <View pointerEvents="none" style={s.inlineVideoLoading}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              )}
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => {
+                setPlayRequested(true);
+                startClip(selected);
+              }}
+              style={s.featureMedia}
+              accessibilityRole="button"
+              accessibilityLabel={`Play ${selected.title || "video"}`}
+              testID="lesson-video-play"
+            >
+              <LessonVideoThumb
+                thumbnail={selected.thumbnail}
+                artist={selected.artist}
+                style={s.featureThumb}
+              />
+              <View pointerEvents="none" style={s.featurePlay}>
+                <Ionicons name="play-circle" size={64} color="#FFFFFF" />
+              </View>
+            </Pressable>
+          )}
+          <View style={s.featureMeta}>
+            <Text style={s.selectedMark}>Selected</Text>
+            <Text style={s.featureTitle}>{selected.title || "Lesson Clip"}</Text>
+            <Text style={s.featureSource}>{selected.artist}</Text>
+          </View>
+        </View>
+        {clips.length > 1 ? (
+          <View style={s.listBlock}>
+            <Text style={s.listHeading}>This week's videos</Text>
+            {clips.map((clip, index) => {
+              if (index === selectedAt) return null;
+              return (
+                <Pressable
+                  key={`${clip.src}-${index}`}
+                  onPress={() => {
+                    setPlayRequested(false);
+                    closePlayer();
+                    setSelectedIndex(index);
+                  }}
+                  style={({ pressed }) => [s.listRow, { opacity: pressed ? 0.85 : 1 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${clip.title || "Lesson Clip"}, ${clip.artist}`}
+                >
+                  <LessonVideoThumb
+                    thumbnail={clip.thumbnail}
+                    artist={clip.artist}
+                    style={s.listThumb}
+                  />
+                  <View style={s.listCopy}>
+                    <Text style={s.listTitle}>{clip.title || "Lesson Clip"}</Text>
+                    <Text style={s.listSource}>{clip.artist}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
+    );
+  }
 
   const chooser = showChooser && clips.length > 0;
 
@@ -226,13 +366,17 @@ export default function LessonVideoPlayer({
               },
               onError: () => setVideoError(true),
               onLoadedMetadata: () => setVideoReady(true),
-              onCanPlay: () => setVideoReady(true),
+              onCanPlay: (event: { currentTarget?: { play?: () => Promise<void> } }) => {
+                setVideoReady(true);
+                if (playRequested) void event.currentTarget?.play?.();
+              },
             })
           ) : (
             <SabbathSchoolInlineVideo
               key={activeVideo.src}
               uri={activePlaybackUrl}
               style={s.inlineVideo}
+              playWhenReady={playRequested}
               onReady={() => setVideoReady(true)}
               onError={() => setVideoError(true)}
             />
@@ -265,6 +409,69 @@ export default function LessonVideoPlayer({
 }
 
 const s = StyleSheet.create({
+  pageStack: { gap: 18 },
+  featureCard: {
+    backgroundColor: SS2.card,
+    borderRadius: 16,
+    overflow: "hidden",
+    ...HV2.rowShadow,
+  },
+  featureMedia: { position: "relative", width: "100%" },
+  featureThumb: { width: "100%", aspectRatio: 16 / 9 },
+  featurePlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+  featureMeta: { paddingHorizontal: 14, paddingVertical: 12, gap: 4 },
+  selectedMark: {
+    fontFamily: F.interSemi,
+    fontSize: 12,
+    color: SS2.coral,
+  },
+  featureTitle: {
+    fontFamily: F.loraSemi,
+    fontSize: 18,
+    lineHeight: 24,
+    color: SS2.ink,
+  },
+  featureSource: {
+    fontFamily: F.inter,
+    fontSize: 14,
+    lineHeight: 20,
+    color: SS2.inkMuted,
+  },
+  listBlock: { gap: 8 },
+  listHeading: {
+    fontFamily: F.interSemi,
+    fontSize: 16,
+    lineHeight: 22,
+    color: SS2.ink,
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    backgroundColor: SS2.card,
+    borderRadius: 12,
+    padding: 10,
+    ...HV2.rowShadow,
+  },
+  listThumb: { width: 120, aspectRatio: 16 / 9, borderRadius: 8 },
+  listCopy: { flex: 1, minWidth: 0, gap: 4, paddingTop: 2 },
+  listTitle: {
+    fontFamily: F.interMed,
+    fontSize: 15,
+    lineHeight: 21,
+    color: SS2.ink,
+  },
+  listSource: {
+    fontFamily: F.inter,
+    fontSize: 13,
+    lineHeight: 18,
+    color: SS2.inkMuted,
+  },
   videoLayerStack: { position: "relative" },
   videoRow: { gap: 10, paddingRight: 8 },
   videoCard: {

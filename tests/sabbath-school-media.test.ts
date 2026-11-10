@@ -97,6 +97,18 @@ describe("Sabbath School web media proxy", () => {
     assert.match(playerSource, /useVideoSurfaceActive/);
     assert.match(playerSource, /autoPlay: false/);
     assert.match(watchScreenSource, /LessonVideoPlayer/);
+    assert.match(watchScreenSource, /layout="page"/);
+    const pageStart = playerSource.indexOf('if (layout === "page")');
+    const pageEnd = playerSource.indexOf("const chooser = showChooser");
+    const pageLayout = playerSource.slice(pageStart, pageEnd);
+    assert.ok(pageStart > 0 && pageEnd > pageStart);
+    assert.match(pageLayout, /This week's videos/);
+    assert.match(pageLayout, /s\.listThumb/);
+    assert.match(playerSource, /listThumb: \{ width: 120/);
+    assert.match(pageLayout, /Selected/);
+    assert.match(pageLayout, /playWhenReady/);
+    assert.doesNotMatch(pageLayout, /horizontal/);
+    assert.doesNotMatch(pageLayout, /autoPlay:\s*true/);
     assert.equal(
       firstPlayableSabbathSchoolClip(
         flattenSabbathSchoolLessonClips([

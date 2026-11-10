@@ -151,7 +151,12 @@ function ProfileScreenInner() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: myChurchData, isLoading: myChurchLoading } = useQuery<{
+  const {
+    data: myChurchData,
+    isLoading: myChurchLoading,
+    isError: myChurchError,
+    refetch: refetchMyChurch,
+  } = useQuery<{
     church: {
       id: string;
       name: string;
@@ -403,7 +408,22 @@ function ProfileScreenInner() {
           <Text style={[st.sectionTitle, { color: C.ink, fontFamily: "Lora_700Bold" }]}>
             My Church & Groups
           </Text>
-          {myChurchLoading ? (
+          {myChurchError ? (
+            <View style={st.orgCard} testID="profile-church-retry">
+              <Text style={[st.orgEmptyText, { color: C.inkMuted }]}>
+                Couldn't load your church.
+              </Text>
+              <Pressable
+                style={st.orgJoinBtn}
+                onPress={() => { void refetchMyChurch(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Try again"
+              >
+                <Ionicons name="refresh" size={18} color={C.coralInk} />
+                <Text style={st.orgJoinBtnText}>Try again</Text>
+              </Pressable>
+            </View>
+          ) : myChurchLoading ? (
             <ActivityIndicator color={C.coral} style={{ marginVertical: 16 }} />
           ) : claimedChurch ? (
             <View
