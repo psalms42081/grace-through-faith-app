@@ -27,18 +27,48 @@ import { confirmWebSafe } from "@/components/WebSafeConfirm";
 
 const FONT_CAP = 1.6;
 
-export function useBlockedUserIds(): Set<string> {
+export type BlockedMember = { userId: string; displayName: string };
+
+export type BlockedUsersResponse = {
+  blockedUserIds: string[];
+  blocked: BlockedMember[];
+};
+
+export function useBlockedUsers() {
   const { isAuthenticated } = useAuth();
-  const query = useQuery({
-    queryKey: ["/api/ugc/blocks"],
+  return useQuery({
+    queryKey: ["/api/ugc/blocks", "named"],
     enabled: isAuthenticated,
-    queryFn: async () => {
+    queryFn: async (): Promise<BlockedUsersResponse> => {
       const res = await apiRequest("GET", "/api/ugc/blocks");
-      const data = (await res.json()) as { blockedUserIds?: string[] };
-      return Array.isArray(data.blockedUserIds) ? data.blockedUserIds : [];
+      const data = (await res.json()) as {
+        blockedUserIds?: unknown;
+        blocked?: unknown;
+      };
+      const blocked = Array.isArray(data.blocked)
+        ? data.blocked.flatMap((row) => {
+            if (!row || typeof row !== "object") return [];
+            const person = row as { userId?: unknown; displayName?: unknown };
+            if (typeof person.userId !== "string") return [];
+            return [{
+              userId: person.userId,
+              displayName: typeof person.displayName === "string" && person.displayName
+                ? person.displayName
+                : "Member",
+            }];
+          })
+        : [];
+      const blockedUserIds = Array.isArray(data.blockedUserIds)
+        ? data.blockedUserIds.filter((id): id is string => typeof id === "string")
+        : blocked.map((person) => person.userId);
+      return { blockedUserIds, blocked };
     },
   });
-  return new Set(query.data ?? []);
+}
+
+export function useBlockedUserIds(): Set<string> {
+  const query = useBlockedUsers();
+  return new Set(query.data?.blockedUserIds ?? []);
 }
 
 type Props = {

@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
+import { CommunityNote } from "@/components/CommunityNote";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -531,7 +532,7 @@ export default function BibleGroupHomeScreen() {
           <Text style={s.sectionLabel}>Members</Text>
           {data.members.map((member) => (
             <View key={member.userId} style={s.memberRow}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 140 }}>
                 <Text style={s.memberName}>{member.displayName}</Text>
                 <Text style={s.memberRole}>{member.role === "host" ? "Host" : "Member"}</Text>
               </View>
@@ -577,17 +578,46 @@ export default function BibleGroupHomeScreen() {
               <View key={post.id} style={s.post}>
                 <Text style={s.postAuthor}>{post.displayName}</Text>
                 <Text style={s.postBody}>{post.body}</Text>
-                <ReportOrBlock
-                  surface="bible-group-post"
-                  contentId={post.id}
-                  targetUserId={post.userId}
-                  authorName={post.displayName}
-                  snapshot={post.body}
-                  color={C.inkMuted}
-                />
+                <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 14 }}>
+                  <ReportOrBlock
+                    surface="bible-group-post"
+                    contentId={post.id}
+                    targetUserId={post.userId}
+                    authorName={post.displayName}
+                    snapshot={post.body}
+                    color={C.inkMuted}
+                  />
+                  {isHost ? (
+                    <Pressable
+                      onPress={() => {
+                        void confirmWebSafe({
+                          title: "Remove post",
+                          message: "Remove this post for everyone in the group?",
+                          confirmLabel: "Remove",
+                          destructive: true,
+                        }).then(async (ok) => {
+                          if (!ok) return;
+                          try {
+                            await apiRequest("DELETE", `/api/bible-groups/${id}/posts/${post.id}`);
+                            await qc.invalidateQueries({ queryKey: ["/api/bible-groups", id] });
+                          } catch {
+                            showToast("Could not remove this post. Please try again.", "error");
+                          }
+                        });
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove post"
+                      testID={`bible-group-remove-post-${post.id}`}
+                    >
+                      <Text style={s.removeText}>Remove</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
             ))
           )}
+          <CommunityNote color={C.inkMuted} />
           <TextInput
             style={s.composer}
             value={draft}
@@ -737,7 +767,9 @@ const s = StyleSheet.create({
   },
   memberRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
+    gap: 8,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,

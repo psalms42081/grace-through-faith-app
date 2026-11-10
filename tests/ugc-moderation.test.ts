@@ -57,5 +57,16 @@ describe("ugc report and block", () => {
     assert.match(route, /\/api\/ugc\/blocks/);
     assert.match(source("../server/routes/community.ts"), /withoutBlockedUsers/);
     assert.match(source("../server/routes/bible-groups.ts"), /withoutBlockedUsers/);
+    assert.match(source("../app/settings.tsx"), /settings-blocked-users/);
+    assert.match(source("../app/blocked-users.tsx"), /You haven't blocked anyone/);
+    assert.match(source("../components/CommunityNote.tsx"), /Keep it kind\. Posts can be reported and removed\./);
+    assert.match(source("../app/group/[id].tsx"), /CommunityNote/);
+    assert.match(prayers, /CommunityNote/);
+    assert.match(bibleGroup, /CommunityNote/);
+    assert.match(source("../server/routes/community.ts"), /Only leaders can remove posts/);
+    assert.match(source("../server/routes/community.ts"), /Only leaders can remove replies/);
+    assert.match(source("../server/routes/community.ts"), /Only leaders can remove prayers/);
+    assert.match(source("../server/routes/bible-groups.ts"), /Only the host can remove posts/);
+    assert.match(group, /canModerate=\{isLeader\}/);
   });
 });

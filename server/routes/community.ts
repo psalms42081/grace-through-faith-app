@@ -588,6 +588,78 @@ router.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res)
   }
 });
 
+async function requirePrayerGroupLeader(groupId: string, userId: string) {
+  const [requester] = await db.select().from(prayerGroupMembers)
+    .where(and(eq(prayerGroupMembers.groupId, groupId), eq(prayerGroupMembers.userId, userId)));
+  if (!requester || requester.role !== "leader") return null;
+  return requester;
+}
+
+router.delete("/api/groups/:id/discussions/:discussionId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const groupId = String(req.params.id);
+    const discussionId = String(req.params.discussionId);
+    if (!await requirePrayerGroupLeader(groupId, userId)) {
+      return res.status(403).json({ error: "Only leaders can remove posts" });
+    }
+    const [discussion] = await db.select({ id: groupDiscussions.id }).from(groupDiscussions)
+      .where(and(eq(groupDiscussions.id, discussionId), eq(groupDiscussions.groupId, groupId)));
+    if (!discussion) return res.status(404).json({ error: "Post not found" });
+    await db.delete(groupDiscussionReplies).where(eq(groupDiscussionReplies.discussionId, discussionId));
+    await db.delete(groupDiscussions).where(eq(groupDiscussions.id, discussionId));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Remove discussion error:", err);
+    return res.status(500).json({ error: "Failed to remove the post" });
+  }
+});
+
+router.delete("/api/groups/:id/discussions/:discussionId/replies/:replyId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const groupId = String(req.params.id);
+    const discussionId = String(req.params.discussionId);
+    const replyId = String(req.params.replyId);
+    if (!await requirePrayerGroupLeader(groupId, userId)) {
+      return res.status(403).json({ error: "Only leaders can remove replies" });
+    }
+    const [discussion] = await db.select({ id: groupDiscussions.id }).from(groupDiscussions)
+      .where(and(eq(groupDiscussions.id, discussionId), eq(groupDiscussions.groupId, groupId)));
+    if (!discussion) return res.status(404).json({ error: "Post not found" });
+    const deleted = await db.delete(groupDiscussionReplies)
+      .where(and(eq(groupDiscussionReplies.id, replyId), eq(groupDiscussionReplies.discussionId, discussionId)))
+      .returning({ id: groupDiscussionReplies.id });
+    if (deleted.length === 0) return res.status(404).json({ error: "Reply not found" });
+    await db.update(groupDiscussions).set({
+      replyCount: sql`GREATEST(${groupDiscussions.replyCount} - 1, 0)`,
+    }).where(eq(groupDiscussions.id, discussionId));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Remove reply error:", err);
+    return res.status(500).json({ error: "Failed to remove the reply" });
+  }
+});
+
+router.delete("/api/groups/:id/prayers/:prayerId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUserId!;
+    const groupId = String(req.params.id);
+    const prayerId = String(req.params.prayerId);
+    if (!await requirePrayerGroupLeader(groupId, userId)) {
+      return res.status(403).json({ error: "Only leaders can remove prayers" });
+    }
+    const deleted = await db.delete(prayerRequests)
+      .where(and(eq(prayerRequests.id, prayerId), eq(prayerRequests.groupId, groupId)))
+      .returning({ id: prayerRequests.id });
+    if (deleted.length === 0) return res.status(404).json({ error: "Prayer not found" });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Remove prayer error:", err);
+    return res.status(500).json({ error: "Failed to remove the prayer" });
+  }
+});
+
 router.post("/api/groups/:id/discussions/:discussionId/reply", requireAuth, async (req, res) => {
   try {
     const userId = req.authUserId!;

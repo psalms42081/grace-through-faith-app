@@ -26,6 +26,9 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import EmptyState from "@/components/ui/EmptyState";
 import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
+import { CommunityNote } from "@/components/CommunityNote";
+import { confirmWebSafe } from "@/components/WebSafeConfirm";
+import { useToast } from "@/contexts/ToastContext";
 import { PathB } from "@/constants/colors";
 
 interface FamilyPrayer {
@@ -52,6 +55,8 @@ function GlowCard({
   onSupport,
   onToggleAnswered,
   supportPending,
+  canModerate,
+  onRemove,
 }: {
   prayer: FamilyPrayer;
   theme: any;
@@ -59,6 +64,8 @@ function GlowCard({
   onSupport: (id: string) => void;
   onToggleAnswered: (id: string, answered: boolean) => void;
   supportPending: boolean;
+  canModerate?: boolean;
+  onRemove?: (id: string) => void;
 }) {
   const glowOpacity = useSharedValue(0);
   const glowScale = useSharedValue(1);
@@ -146,14 +153,27 @@ function GlowCard({
         </View>
       )}
 
-      <ReportOrBlock
-        surface="group-prayer"
-        contentId={prayer.id}
-        targetUserId={prayer.userId}
-        authorName={prayer.authorName}
-        snapshot={[prayer.title, prayer.content].filter(Boolean).join("\n")}
-        color={theme.textMuted}
-      />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 14 }}>
+        <ReportOrBlock
+          surface="group-prayer"
+          contentId={prayer.id}
+          targetUserId={prayer.userId}
+          authorName={prayer.authorName}
+          snapshot={[prayer.title, prayer.content].filter(Boolean).join("\n")}
+          color={theme.textMuted}
+        />
+        {canModerate ? (
+          <Pressable
+            onPress={() => onRemove?.(prayer.id)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Remove prayer"
+            testID={`prayer-remove-${prayer.id}`}
+          >
+            <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_500Medium" }}>Remove</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       <View style={styles.cardActions}>
         <Pressable
@@ -207,12 +227,13 @@ function getTimeSince(dateStr: string): string {
   return `${Math.floor(days / 7)}w ago`;
 }
 
-export default function PrayerWall({ groupId }: { groupId: string }) {
+export default function PrayerWall({ groupId, canModerate = false }: { groupId: string; canModerate?: boolean }) {
   const { theme, isDark } = useTheme();
   const { isPro } = useProStatus();
   const { userId, user } = useAuth();
   const blockedUserIds = useBlockedUserIds();
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const displayName = user?.displayName || "Group Member";
 
   const queryKeyStr = `/api/groups/${groupId}/prayers`;
@@ -282,6 +303,23 @@ export default function PrayerWall({ groupId }: { groupId: string }) {
     });
   }, [authorName, postMutation, prayerContent, prayerTitle]);
 
+  const handleRemove = useCallback((id: string) => {
+    void confirmWebSafe({
+      title: "Remove prayer",
+      message: "Remove this prayer for everyone in the group?",
+      confirmLabel: "Remove",
+      destructive: true,
+    }).then(async (ok) => {
+      if (!ok) return;
+      try {
+        await apiRequest("DELETE", `/api/groups/${groupId}/prayers/${id}`);
+        await qc.invalidateQueries({ queryKey: [`/api/groups/${groupId}/prayers`] });
+      } catch {
+        showToast("Could not remove this prayer. Please try again.", "error");
+      }
+    });
+  }, [groupId, qc, showToast]);
+
   const handleToggleAnswered = useCallback((id: string, answered: boolean) => {
     if (answered) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -295,6 +333,7 @@ export default function PrayerWall({ groupId }: { groupId: string }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>
+      <CommunityNote color={theme.textMuted} />
       <View style={styles.titleRow}>
         <Ionicons name="heart" size={18} color={PathB.ink} />
         <Text style={[styles.title, { color: theme.text }]}>Group Prayer Wall</Text>
@@ -375,6 +414,8 @@ export default function PrayerWall({ groupId }: { groupId: string }) {
           onSupport={(id) => supportMutation.mutate(id)}
           onToggleAnswered={handleToggleAnswered}
           supportPending={supportMutation.isPending}
+          canModerate={canModerate}
+          onRemove={handleRemove}
         />
       ))}
 
@@ -395,6 +436,8 @@ export default function PrayerWall({ groupId }: { groupId: string }) {
               onSupport={(id) => supportMutation.mutate(id)}
               onToggleAnswered={handleToggleAnswered}
               supportPending={supportMutation.isPending}
+              canModerate={canModerate}
+              onRemove={handleRemove}
             />
           ))}
         </View>

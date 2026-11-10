@@ -367,6 +367,11 @@ export default function SettingsScreen() {
           showChevron: true,
           rightText: isAuthenticated ? (user?.displayName || undefined) : "Sign in",
         })}
+        {isAuthenticated && renderRow("ban-outline", "Blocked users", {
+          onPress: () => router.push("/blocked-users" as any),
+          showChevron: true,
+          testID: "settings-blocked-users",
+        })}
         {renderRow("notifications-outline", "Notification Settings", {
           onPress: handleNotificationSettings,
           showChevron: true,
@@ -716,7 +721,9 @@ const s = StyleSheet.create({
   },
   rowLabel: {
     flex: 1,
+    flexShrink: 1,
     fontSize: 15,
+    lineHeight: 20,
     marginLeft: 14,
   },
   rowRightText: {

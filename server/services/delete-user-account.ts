@@ -9,6 +9,8 @@ import {
   groupAnnouncements,
   groupDiscussionReplies,
   groupDiscussions,
+  ugcReports,
+  userBlocks,
   hierarchyBroadcastReceipt,
   hierarchyMembership,
   heygenVideos,
@@ -126,6 +128,24 @@ export async function deleteUserAccount(userId: string): Promise<void> {
   );
   await deleteWhere(() =>
     db.delete(groupAnnouncements).where(eq(groupAnnouncements.userId, userId)),
+  );
+  await deleteWhere(() =>
+    db.delete(userBlocks).where(eq(userBlocks.blockerUserId, userId)),
+  );
+  await deleteWhere(() =>
+    db.delete(userBlocks).where(eq(userBlocks.blockedUserId, userId)),
+  );
+  await deleteWhere(() =>
+    db
+      .update(ugcReports)
+      .set({ reporterUserId: null })
+      .where(eq(ugcReports.reporterUserId, userId)),
+  );
+  await deleteWhere(() =>
+    db
+      .update(ugcReports)
+      .set({ targetUserId: null })
+      .where(eq(ugcReports.targetUserId, userId)),
   );
   await deleteWhere(() =>
     pool.query(

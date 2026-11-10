@@ -21,7 +21,13 @@ describe("legal markdown source", () => {
     const terms = stripDraftingNotes(termsMd);
     const privacy = stripDraftingNotes(privacyMd);
     assert.match(terms, /Version 1\.0 — effective 9 November 2026/);
-    assert.match(privacy, /Version 1\.1 — effective 10 November 2026/);
+    assert.match(privacy, /Version 1\.2 — effective 10 November 2026/);
+    assert.doesNotMatch(privacy, /third-party provider/);
+    assert.match(privacy, /Home church and profile type/);
+    assert.match(privacy, /Member, Student, Church Leader, or Just Exploring/);
+    assert.match(privacy, /snapshot of the reported content/);
+    assert.match(privacy, /Reports about you keep the content snapshot/);
+    assert.match(privacy, /new user's name and email/);
     assert.doesNotMatch(privacy, /photos unless you choose to share one within a group/);
     assert.match(privacy, /The App has no photo upload/);
     assert.match(privacy, /YouVersion/);
@@ -70,7 +76,7 @@ describe("legal markdown source", () => {
     assert.match(LEGAL_TERMS.title, /Terms of Use/);
     assert.match(LEGAL_PRIVACY.title, /Privacy Policy/);
     assert.equal(LEGAL_TERMS.banner, "Version 1.0 — effective 9 November 2026");
-    assert.equal(LEGAL_PRIVACY.banner, "Version 1.1 — effective 10 November 2026");
+    assert.equal(LEGAL_PRIVACY.banner, "Version 1.2 — effective 10 November 2026");
     const parsedTerms = parseLegalMarkdown(termsMd);
     assert.deepEqual(LEGAL_TERMS, parsedTerms);
     assert.doesNotMatch(JSON.stringify(LEGAL_TERMS), /Drafting notes for review/);
@@ -82,7 +88,7 @@ function LEGAL_GENERATED_IS_IN_FORCE() {
   const generated = readFileSync(new URL("../lib/legal/generated.ts", import.meta.url), "utf8");
   return (
     generated.includes("Version 1.0 — effective 9 November 2026") &&
-    generated.includes("Version 1.1 — effective 10 November 2026") &&
+    generated.includes("Version 1.2 — effective 10 November 2026") &&
     !/Draft for legal review|not yet in force|Version 0\.1/.test(generated)
   );
 }
@@ -136,7 +142,9 @@ describe("legal surfaces", () => {
     assert.match(server, /app\.get\("\/delete-account"/);
     assert.match(server, /templates", "terms.html"/);
     assert.match(termsHtml, /Version 1\.0 — effective 9 November 2026/);
-    assert.match(privacyHtml, /Version 1\.1 — effective 10 November 2026/);
+    assert.match(privacyHtml, /Version 1\.2 — effective 10 November 2026/);
+    assert.doesNotMatch(privacyHtml, /third-party provider/);
+    assert.match(privacyHtml, /snapshot of the reported content/);
     assert.doesNotMatch(privacyHtml, /photos unless you choose to share one within a group/);
     assert.match(privacyHtml, /YouVersion/);
     assert.match(privacyHtml, /Nominatim/);
@@ -167,6 +175,8 @@ describe("legal surfaces", () => {
     assert.match(deleteAccountHtml, /Profile/);
     assert.match(deleteAccountHtml, /Settings/);
     assert.match(deleteAccountHtml, /group discussion posts and replies/);
+    assert.match(deleteAccountHtml, /home church choice and profile type/);
+    assert.match(deleteAccountHtml, /Reports about you keep the content snapshot/);
     assert.match(deleteAccountHtml, /Can't sign in\?/);
     assert.match(deleteAccountHtml, /mailto:hello@informedministries\.app/);
     assert.match(

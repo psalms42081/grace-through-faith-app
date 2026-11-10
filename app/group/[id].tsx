@@ -25,8 +25,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import PrayerWall from "@/components/PrayerWall";
 import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
+import { CommunityNote } from "@/components/CommunityNote";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { displayInitials } from "@/lib/user-initials";
 
 interface GroupMember {
@@ -349,6 +351,7 @@ export default function GroupDetailScreen() {
 
   const renderDiscussionTab = () => (
     <View style={s.tabContent}>
+      <CommunityNote color={theme.textMuted} />
       <View style={[s.postInputRow, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE", borderColor: theme.border }]}>
         <TextInput
           style={[s.postInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
@@ -390,6 +393,7 @@ export default function GroupDetailScreen() {
             onToggle={() => setExpandedDiscussion(expandedDiscussion === disc.id ? null : disc.id)}
             onReply={(content: string) => replyMutation.mutate({ discussionId: disc.id, content })}
             replyPending={replyMutation.isPending}
+            canModerate={isLeader}
           />
         ))
       )}
@@ -724,7 +728,7 @@ export default function GroupDetailScreen() {
         {activeTab === "discussion" && renderDiscussionTab()}
         {activeTab === "prayer" && (
           <View style={s.tabContent}>
-            <PrayerWall groupId={id} />
+            <PrayerWall groupId={id} canModerate={isLeader} />
           </View>
         )}
         {activeTab === "devotional" && renderDevotionalTab()}
@@ -932,7 +936,17 @@ export default function GroupDetailScreen() {
               <Pressable
                 style={[s.memberSheetAction, { borderColor: "#FF3B3020" }]}
                 onPress={() => {
-                  removeMemberMutation.mutate({ targetUserId: manageMember.userId });
+                  const target = manageMember;
+                  void confirmWebSafe({
+                    title: "Remove member",
+                    message: `Remove ${target.displayName || "this member"} from the group?`,
+                    confirmLabel: "Remove",
+                    destructive: true,
+                  }).then((ok) => {
+                    if (!ok) return;
+                    removeMemberMutation.mutate({ targetUserId: target.userId });
+                    setManageMember(null);
+                  });
                 }}
               >
                 <Ionicons name="person-remove" size={20} color="#FF3B30" />
@@ -966,6 +980,7 @@ function DiscussionCard({
   onToggle,
   onReply,
   replyPending,
+  canModerate,
 }: {
   disc: Discussion;
   groupId: string;
@@ -975,9 +990,39 @@ function DiscussionCard({
   onToggle: () => void;
   onReply: (content: string) => void;
   replyPending: boolean;
+  canModerate: boolean;
 }) {
   const [replyText, setReplyText] = useState("");
   const blockedUserIds = useBlockedUserIds();
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const removeContent = (kind: "post" | "reply", replyId?: string) => {
+    void confirmWebSafe({
+      title: kind === "post" ? "Remove post" : "Remove reply",
+      message: kind === "post"
+        ? "Remove this post for everyone in the group?"
+        : "Remove this reply for everyone in the group?",
+      confirmLabel: "Remove",
+      destructive: true,
+    }).then(async (ok) => {
+      if (!ok) return;
+      const path = kind === "post"
+        ? `/api/groups/${groupId}/discussions/${disc.id}`
+        : `/api/groups/${groupId}/discussions/${disc.id}/replies/${replyId}`;
+      try {
+        await apiRequest("DELETE", path);
+        await queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/discussions`] });
+        await queryClient.invalidateQueries({
+          queryKey: [`/api/groups/${groupId}/discussions/${disc.id}/replies`],
+        });
+      } catch {
+        showToast(
+          kind === "post" ? "Could not remove this post. Please try again." : "Could not remove this reply. Please try again.",
+          "error",
+        );
+      }
+    });
+  };
   const { data: replies } = useQuery<DiscussionReply[]>({
     queryKey: [`/api/groups/${groupId}/discussions/${disc.id}/replies`],
     enabled: isExpanded,
@@ -1013,14 +1058,27 @@ function DiscussionCard({
       <Text style={[s.discContent, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
         {disc.content}
       </Text>
-      <ReportOrBlock
-        surface="group-discussion"
-        contentId={disc.id}
-        targetUserId={disc.userId}
-        authorName={disc.authorName}
-        snapshot={disc.content}
-        color={theme.textMuted}
-      />
+      <View style={s.moderationRow}>
+        <ReportOrBlock
+          surface="group-discussion"
+          contentId={disc.id}
+          targetUserId={disc.userId}
+          authorName={disc.authorName}
+          snapshot={disc.content}
+          color={theme.textMuted}
+        />
+        {canModerate ? (
+          <Pressable
+            onPress={() => removeContent("post")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Remove post"
+            testID={`group-remove-post-${disc.id}`}
+          >
+            <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_500Medium" }}>Remove</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <Pressable onPress={onToggle} style={s.replyToggle}>
         <Ionicons name="chatbubble-outline" size={14} color={theme.textMuted} />
         <Text style={[s.replyCount, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
@@ -1043,16 +1101,30 @@ function DiscussionCard({
               <Text style={[s.replyTime, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 {formatTimeAgo(r.createdAt)}
               </Text>
-              <ReportOrBlock
-                surface="group-reply"
-                contentId={r.id}
-                targetUserId={r.userId}
-                authorName={r.authorName}
-                snapshot={r.content}
-                color={theme.textMuted}
-              />
+              <View style={s.moderationRow}>
+                <ReportOrBlock
+                  surface="group-reply"
+                  contentId={r.id}
+                  targetUserId={r.userId}
+                  authorName={r.authorName}
+                  snapshot={r.content}
+                  color={theme.textMuted}
+                />
+                {canModerate ? (
+                  <Pressable
+                    onPress={() => removeContent("reply", r.id)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove reply"
+                    testID={`group-remove-reply-${r.id}`}
+                  >
+                    <Text style={{ color: "#FF3B30", fontSize: 13, fontFamily: "Inter_500Medium" }}>Remove</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           ))}
+          <CommunityNote color={theme.textMuted} />
           <View style={[s.replyInputRow, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE" }]}>
             <TextInput
               style={[s.replyInput, { color: theme.text, fontFamily: "Inter_400Regular" }]}
@@ -1129,8 +1201,10 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   sectionTitle: { fontSize: 16, marginBottom: 10 },
+  moderationRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 14 },
   memberRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 10,
     paddingVertical: 8,

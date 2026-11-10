@@ -6,13 +6,30 @@ import { db } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { aiReportLimiter } from "../middleware/rate-limit";
 import { escapeFeedbackHtml, sendFeedbackEmail } from "../services/feedback-mail";
-import { blockedUserIdSet } from "../services/user-blocks";
 
 const router = Router();
 
 router.get("/api/ugc/blocks", requireAuth, async (req, res) => {
-  const blocked = await blockedUserIdSet(req.authUserId);
-  res.json({ blockedUserIds: [...blocked] });
+  try {
+    const rows = await db
+      .select({
+        userId: userBlocks.blockedUserId,
+        displayName: users.displayName,
+      })
+      .from(userBlocks)
+      .innerJoin(users, eq(users.id, userBlocks.blockedUserId))
+      .where(eq(userBlocks.blockerUserId, req.authUserId!))
+      .orderBy(userBlocks.createdAt);
+    res.json({
+      blockedUserIds: rows.map((row) => row.userId),
+      blocked: rows.map((row) => ({
+        userId: row.userId,
+        displayName: row.displayName || "Member",
+      })),
+    });
+  } catch {
+    res.json({ blockedUserIds: [], blocked: [] });
+  }
 });
 
 router.post("/api/ugc/blocks", requireAuth, aiReportLimiter, async (req, res) => {

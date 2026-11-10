@@ -594,6 +594,37 @@ router.post(
   },
 );
 
+router.delete(
+  "/api/bible-groups/:id/posts/:postId",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const userId = req.authUserId!;
+      const groupId = String(req.params.id);
+      const postId = String(req.params.postId);
+      const group = await loadActiveGroup(groupId);
+      const member = group ? await membershipOf(group.id, userId) : null;
+      if (!group || !member) {
+        return res.status(404).json({ error: "Group not found" });
+      }
+      if (member.role !== "host") {
+        return res.status(403).json({ error: "Only the host can remove posts" });
+      }
+      const deleted = await db
+        .delete(bibleSmallGroupPosts)
+        .where(and(eq(bibleSmallGroupPosts.id, postId), eq(bibleSmallGroupPosts.groupId, group.id)))
+        .returning({ id: bibleSmallGroupPosts.id });
+      if (deleted.length === 0) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("Remove bible group post error:", err);
+      return res.status(500).json({ error: "Failed to remove the post" });
+    }
+  },
+);
+
 router.post(
   "/api/bible-groups/:id/invite-code",
   requireAuth,
