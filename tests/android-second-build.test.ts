@@ -56,8 +56,15 @@ describe("second Android build sources", () => {
     const player = readFileSync(new URL("../app/sermon-player.tsx", import.meta.url), "utf8");
     assert.match(player, /baseUrl: embedOrigin/);
     assert.match(player, /iframe_api/);
+    assert.match(player, /player failed to load within 8 seconds/);
     assert.match(player, /setTimeout\(markFailed, 8000\)/);
+    assert.match(player, /autoplay:0/);
+    assert.match(player, /autoplay=0/);
+    assert.match(player, /useVideoSurfaceActive/);
+    assert.match(player, /mediaPlaybackRequiresUserAction/);
+    assert.match(player, /accessibilityLabel="Play video"/);
     assert.match(player, /Open in YouTube/);
+    assert.doesNotMatch(player, /allow="[^"]*autoplay/);
     assert.doesNotMatch(player, /Platform\.OS !== "android"/);
   });
 });

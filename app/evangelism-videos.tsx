@@ -30,6 +30,7 @@ function sanitizeVideoUrl(url: string): string {
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/hooks/useTheme";
 import { getApiUrl } from "@/lib/query-client";
+import { useVideoSurfaceActive } from "@/lib/video-surface";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -157,6 +158,7 @@ function FullscreenPlayer({
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const videoUrl = resolveVideoUrl(video.avatarVideoUrl);
+  const surfaceActive = useVideoSurfaceActive();
 
   const handleShare = useCallback(async () => {
     try {
@@ -189,7 +191,7 @@ function FullscreenPlayer({
         </View>
 
         <View style={st.playerVideoArea}>
-          {videoUrl ? (
+          {videoUrl && surfaceActive ? (
             Platform.OS === "web" ? (
               <div
                 style={{
@@ -201,17 +203,17 @@ function FullscreenPlayer({
                   backgroundColor: "#000",
                 }}
                 dangerouslySetInnerHTML={{
-                  __html: `<video src="${sanitizeVideoUrl(videoUrl)}" controls autoplay playsinline style="width:100%;height:100%;object-fit:contain;background:#000;" />`,
+                  __html: `<video src="${sanitizeVideoUrl(videoUrl)}" controls playsinline style="width:100%;height:100%;object-fit:contain;background:#000;" />`,
                 }}
               />
             ) : (
               <WebView
                 source={{
-                  html: `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw}video{width:100%;height:100%;object-fit:contain;background:#000}</style></head><body><video src="${sanitizeVideoUrl(videoUrl)}" controls autoplay playsinline></video></body></html>`,
+                  html: `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw}video{width:100%;height:100%;object-fit:contain;background:#000}</style></head><body><video src="${sanitizeVideoUrl(videoUrl)}" controls playsinline></video></body></html>`,
                 }}
                 style={st.playerVideo}
                 allowsInlineMediaPlayback
-                mediaPlaybackRequiresUserAction={false}
+                mediaPlaybackRequiresUserAction
                 javaScriptEnabled
                 scrollEnabled={false}
               />

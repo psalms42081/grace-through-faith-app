@@ -92,7 +92,10 @@ describe("Sabbath School web media proxy", () => {
     assert.match(playerSource, /onError=\{\(\) => setFailed\(true\)\}/);
     assert.match(playerSource, /\{artist \|\| "Lesson video"\}/);
     assert.match(playerSource, /backgroundColor: "#2F4A47"/);
-    assert.match(watchScreenSource, /autoPlayFirst/);
+    assert.doesNotMatch(watchScreenSource, /autoPlayFirst/);
+    assert.doesNotMatch(playerSource, /autoPlayFirst|p\.play\(\)|autoPlay: true/);
+    assert.match(playerSource, /useVideoSurfaceActive/);
+    assert.match(playerSource, /autoPlay: false/);
     assert.match(watchScreenSource, /LessonVideoPlayer/);
     assert.equal(
       firstPlayableSabbathSchoolClip(

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -15,9 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { HV2, F } from "@/components/home-v2/theme";
 import { sabbathSchoolMediaUrl } from "@/lib/sabbath-school-media";
 import { getApiUrl } from "@/lib/query-client";
+import { useVideoSurfaceActive } from "@/lib/video-surface";
 import {
   canInlinePlaySabbathSchoolVideo,
-  firstPlayableSabbathSchoolClip,
   type SabbathSchoolVideoClip,
 } from "@/lib/sabbath-school-video-clips";
 
@@ -81,9 +81,8 @@ function SabbathSchoolInlineVideo({
   onReady: () => void;
   onError: () => void;
 }) {
-  const player = useVideoPlayer(uri, (p) => {
-    p.play();
-  });
+  // Paused until the user taps the player's own play control.
+  const player = useVideoPlayer(uri);
   const onReadyRef = React.useRef(onReady);
   const onErrorRef = React.useRef(onError);
   onReadyRef.current = onReady;
@@ -109,11 +108,9 @@ function SabbathSchoolInlineVideo({
 
 export default function LessonVideoPlayer({
   clips,
-  autoPlayFirst = false,
   showChooser = true,
 }: {
   clips: SabbathSchoolVideoClip[];
-  autoPlayFirst?: boolean;
   showChooser?: boolean;
 }) {
   const [activeVideo, setActiveVideo] = useState<{
@@ -144,16 +141,10 @@ export default function LessonVideoPlayer({
     });
   }, []);
 
-  const autoPlayedKey = useRef("");
+  const surfaceActive = useVideoSurfaceActive();
   useEffect(() => {
-    if (!autoPlayFirst || clips.length === 0) return;
-    const key = clips.map((clip) => clip.src).join("|");
-    if (autoPlayedKey.current === key) return;
-    const first = firstPlayableSabbathSchoolClip(clips);
-    if (!first) return;
-    autoPlayedKey.current = key;
-    startClip(first);
-  }, [autoPlayFirst, clips, startClip]);
+    if (!surfaceActive) closePlayer();
+  }, [surfaceActive, closePlayer]);
 
   useEffect(() => {
     if (!activeVideo || videoError || videoReady) return;
@@ -225,7 +216,7 @@ export default function LessonVideoPlayer({
               key: activeVideo.src,
               src: activePlaybackUrl,
               controls: true,
-              autoPlay: true,
+              autoPlay: false,
               playsInline: true,
               style: {
                 width: "100%",

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams, Stack } from "expo-router";
+import { useVideoSurfaceActive } from "@/lib/video-surface";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
@@ -28,18 +29,21 @@ export default function SermonPlayerScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [loading, setLoading] = useState(true);
   const [playerFailed, setPlayerFailed] = useState(false);
+  const [engaged, setEngaged] = useState(false);
+  const surfaceActive = useVideoSurfaceActive();
+  const showPlayer = engaged && surfaceActive;
   const readyRef = useRef(false);
   const embedOrigin = "https://informedministries.app";
   const appOrigin = Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : embedOrigin;
   const originParam = `&origin=${encodeURIComponent(appOrigin)}`;
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1${originParam}`;
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=0${originParam}`;
   const validVideoId = typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId);
   const nativeHtml = useMemo(() => `<!DOCTYPE html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:#000;height:100%}#player{position:absolute;inset:0;width:100%;height:100%}</style></head><body><div id="player"></div><script src="https://www.youtube.com/iframe_api"></script><script>
     function post(msg){if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(msg)}
     function onYouTubeIframeAPIReady(){
       new YT.Player("player",{
         videoId:${JSON.stringify(validVideoId ? videoId : "")},
-        playerVars:{playsinline:1,rel:0,modestbranding:1,origin:${JSON.stringify(embedOrigin)}},
+        playerVars:{autoplay:0,playsinline:1,rel:0,modestbranding:1,origin:${JSON.stringify(embedOrigin)}},
         events:{onReady:function(){post("ready")},onError:function(){post("error")}}
       });
     }
@@ -58,11 +62,13 @@ export default function SermonPlayerScreen() {
       setPlayerFailed(true);
       return;
     }
+    if (!showPlayer) return;
     setLoading(true);
     setPlayerFailed(false);
+    // player failed to load within 8 seconds. onReady means the player loaded, not that it started.
     const timer = setTimeout(markFailed, 8000);
     return () => clearTimeout(timer);
-  }, [validVideoId, videoId, markFailed]);
+  }, [validVideoId, videoId, markFailed, showPlayer]);
 
   useEffect(() => {
     if (!validVideoId) return;
@@ -108,6 +114,25 @@ export default function SermonPlayerScreen() {
 
   const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
+  const renderPoster = () => (
+    <Pressable
+      onPress={() => {
+        setPlayerFailed(false);
+        setLoading(true);
+        setEngaged(true);
+      }}
+      style={st.playerContainer}
+      accessibilityRole="button"
+      accessibilityLabel="Play video"
+      testID="watch-play"
+    >
+      <Image source={{ uri: thumbnailUrl }} style={st.thumbnail} resizeMode="cover" />
+      <View style={st.playOverlay}>
+        <Ionicons name="play-circle" size={64} color="#FFFFFF" />
+      </View>
+    </Pressable>
+  );
+
   const renderPlayer = () => {
     if (playerFailed) {
       return (
@@ -124,6 +149,7 @@ export default function SermonPlayerScreen() {
         </View>
       );
     }
+    if (!showPlayer) return renderPoster();
     if (Platform.OS === "web") {
       return (
         <View style={st.playerContainer}>
@@ -134,7 +160,7 @@ export default function SermonPlayerScreen() {
               height: "100%",
               border: "none",
             } as any}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             referrerPolicy="origin"
             onLoad={() => setLoading(false)}
@@ -156,7 +182,7 @@ export default function SermonPlayerScreen() {
           style={st.webview}
           allowsFullscreenVideo
           allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
+          mediaPlaybackRequiresUserAction
           javaScriptEnabled
           domStorageEnabled
           originWhitelist={["*"]}

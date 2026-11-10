@@ -159,7 +159,7 @@ export default function SabbathSchoolVideoScreen() {
               </Pressable>
             </View>
           ) : (
-            <LessonVideoPlayer clips={clips} autoPlayFirst showChooser={clips.length > 1} />
+            <LessonVideoPlayer clips={clips} showChooser={clips.length > 1} />
           )}
         </ScrollView>
       )}
