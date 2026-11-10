@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { HV2, F } from "@/components/home-v2/theme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import {
   buildSabbathSchoolTabRoute,
   sabbathSchoolTabBarClearance,
@@ -67,8 +68,9 @@ export default function SabbathSchoolQuarterV2Screen() {
     (Platform.OS === "web" ? 34 : insets.bottom) +
     sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
 
+  const { selectedTrack } = useSabbathSchoolTrack();
   const { data, isLoading } = useQuery<{ quarterly: QuarterlyInfo; lessons: LessonInfo[] }>({
-    queryKey: [`/api/sabbath-school/quarter/${quarterCode}`],
+    queryKey: [`/api/sabbath-school/quarter/${quarterCode}?curriculum=${selectedTrack}`],
     enabled: !!quarterCode,
   });
   const quarterTheme = getSabbathSchoolQuarterTheme(data?.quarterly?.colorPrimary);

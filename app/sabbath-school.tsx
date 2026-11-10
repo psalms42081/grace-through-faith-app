@@ -9,7 +9,6 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
-  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -19,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
+import { TrackSegmentedControl } from "@/components/sabbath-school/TrackSwitch";
 import { useTranslation } from "react-i18next";
 import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { HV2, F } from "@/components/home-v2/theme";
@@ -108,7 +108,6 @@ export default function SabbathSchoolV2Screen() {
   const { userId } = useAuth();
   const { t } = useTranslation();
   const [showArchive, setShowArchive] = useState(false);
-  const [showTrackPicker, setShowTrackPicker] = useState(false);
   const [clock, setClock] = useState(() => new Date());
   const isTabContained =
     useSabbathSchoolTabContainment("sabbath-school");
@@ -228,18 +227,17 @@ export default function SabbathSchoolV2Screen() {
           <Ionicons name="chevron-back" size={24} color={SS2.ink} />
         </Pressable>
         <Text style={s.topTitle}>{t("sabbathSchool.title", { defaultValue: "Sabbath School" })}</Text>
-        <Pressable
-          onPress={() => setShowTrackPicker(true)}
-          style={({ pressed }) => [s.trackChip, { opacity: pressed ? 0.7 : 1 }]}
-          accessibilityRole="button"
-          accessibilityLabel={`Sabbath School track, ${chipLabel}`}
-          testID="ss-track-chip"
-        >
-          <Text style={s.trackChipText} numberOfLines={1}>
-            {chipLabel} ▾
-          </Text>
-        </Pressable>
+        <View style={s.backBtn} />
       </View>
+      {availableTracks.length > 1 ? (
+        <View style={s.trackRow}>
+          <TrackSegmentedControl
+            tracks={availableTracks}
+            selected={selectedTrack}
+            onSelect={(id) => void setTrack(id)}
+          />
+        </View>
+      ) : null}
 
       {isLoading ? (
         <View style={s.center}>
@@ -266,7 +264,7 @@ export default function SabbathSchoolV2Screen() {
               style={s.heroInner}
             >
               <Text style={s.heroEyebrow} numberOfLines={1}>
-                {quarterly.title.toUpperCase()} · {chipLabel.toUpperCase()} QUARTERLY
+                {quarterly.title.toUpperCase()} · {chipLabel} quarterly
               </Text>
               <View style={s.heroBadge}>
                 <Text style={s.heroBadgeText}>
@@ -442,56 +440,6 @@ export default function SabbathSchoolV2Screen() {
         </ScrollView>
       )}
 
-      <Modal
-        visible={showTrackPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTrackPicker(false)}
-      >
-        <Pressable
-          style={s.trackOverlay}
-          onPress={() => setShowTrackPicker(false)}
-          testID="ss-track-picker"
-        >
-          <Pressable style={s.trackSheet} onPress={(event) => event.stopPropagation()}>
-            <Text style={s.trackSheetTitle}>Lesson track</Text>
-            {availableTracks.length === 0 ? (
-              <Text style={[s.trackOptionLabel, { paddingHorizontal: 12, paddingVertical: 8 }]}>
-                Loading tracks…
-              </Text>
-            ) : (
-              availableTracks.map((track) => {
-              const selected = track.id === selectedTrack;
-              return (
-                <Pressable
-                  key={track.id}
-                  onPress={() => {
-                    setShowTrackPicker(false);
-                    void setTrack(track.id);
-                  }}
-                  style={({ pressed }) => [
-                    s.trackOption,
-                    selected && s.trackOptionSelected,
-                    { opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  testID={`ss-track-option-${track.id}`}
-                >
-                  <Text
-                    style={[s.trackOptionLabel, selected && s.trackOptionLabelSelected]}
-                    numberOfLines={2}
-                  >
-                    {track.pickerLabel}
-                  </Text>
-                  {selected ? (
-                    <Ionicons name="checkmark-circle" size={18} color={SS2.teal} />
-                  ) : null}
-                </Pressable>
-              );
-            })
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -501,56 +449,7 @@ const s = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingBottom: 8 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   topTitle: { flex: 1, textAlign: "center", fontFamily: F.interSemi, fontSize: 16, color: SS2.ink },
-  trackChip: {
-    minHeight: 32,
-    maxWidth: 132,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: SS2.tealTint,
-    borderWidth: 1,
-    borderColor: SS2.tealBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 4,
-  },
-  trackChipText: { fontFamily: F.interSemi, fontSize: 12, color: SS2.teal },
-  trackOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(31,26,18,0.45)",
-    justifyContent: "flex-start",
-    paddingTop: 88,
-    paddingHorizontal: 20,
-    alignItems: "flex-end",
-  },
-  trackSheet: {
-    width: 260,
-    backgroundColor: SS2.card,
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    ...HV2.cardShadow,
-  },
-  trackSheetTitle: {
-    fontFamily: F.interSemi,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    color: SS2.inkMuted,
-    textTransform: "uppercase",
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-    paddingTop: 4,
-  },
-  trackOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  trackOptionSelected: { backgroundColor: SS2.tealTint },
-  trackOptionLabel: { flex: 1, fontFamily: F.interMed, fontSize: 14, color: SS2.ink, lineHeight: 19 },
-  trackOptionLabelSelected: { fontFamily: F.interSemi, color: SS2.teal },
+  trackRow: { paddingHorizontal: 20, paddingBottom: 12 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
   centerText: { fontFamily: F.inter, fontSize: 14, color: SS2.inkMuted, textAlign: "center", lineHeight: 22 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },

@@ -59,7 +59,7 @@ export default function HomeV2Screen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { userId, user, isAuthenticated } = useAuth();
-  const { selectedTrack } = useSabbathSchoolTrack();
+  const { selectedTrack, availableTracks, setTrack } = useSabbathSchoolTrack();
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
   const [showShareCard, setShowShareCard] = useState(false);
   const [clock, setClock] = useState(() => new Date());
@@ -432,6 +432,9 @@ export default function HomeV2Screen() {
         onOpenOverview={goToOverview}
         onWatch={goToWatch}
         showWatch={hasLessonVideo}
+        tracks={availableTracks}
+        selectedTrack={selectedTrack}
+        onSelectTrack={(id) => void setTrack(id)}
       />
 
       {myGroups.length > 0 && (

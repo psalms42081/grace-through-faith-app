@@ -6,6 +6,8 @@ import {
   getSabbathSchoolQuarterTheme,
   SABBATH_SCHOOL_PENDING_SURFACE,
 } from "@/lib/sabbath-school-quarter-theme";
+import { TrackSwitchPill } from "@/components/sabbath-school/TrackSwitch";
+import type { SabbathSchoolTrackId, SabbathSchoolTrackMeta } from "@/lib/sabbath-school-tracks";
 
 interface Props {
   quarterTitle?: string | null;
@@ -18,12 +20,17 @@ interface Props {
   onOpenOverview: () => void;
   onWatch: () => void;
   showWatch?: boolean;
+  /** Tracks with content; the pill renders when there are two or more. */
+  tracks?: readonly SabbathSchoolTrackMeta[];
+  selectedTrack?: SabbathSchoolTrackId;
+  onSelectTrack?: (track: SabbathSchoolTrackId) => void;
 }
 
 // The ONE gradient on this screen (§1.3). All other cards are flat white.
 export default function SSGradientCard({
   quarterTitle, quarterColor, lessonTitle, lessonNumber, progressDays, dayLabel,
   onContinue, onOpenOverview, onWatch, showWatch = false,
+  tracks = [], selectedTrack = "adult", onSelectTrack,
 }: Props) {
   const progress = Math.min(Math.max(progressDays / 7, 0), 1);
   const quarterTheme = getSabbathSchoolQuarterTheme(
@@ -44,10 +51,17 @@ export default function SSGradientCard({
           </Text>
           {lessonNumber != null && (
             <View style={s.badge}>
-              <Text style={s.badgeText}>Lesson {lessonNumber} of 13</Text>
+              <Text style={s.badgeText} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+                Lesson {lessonNumber} of 13
+              </Text>
             </View>
           )}
         </View>
+        {onSelectTrack ? (
+          <View style={s.trackRow}>
+            <TrackSwitchPill tracks={tracks} selected={selectedTrack} onSelect={onSelectTrack} />
+          </View>
+        ) : null}
         <Pressable
           onPress={onOpenOverview}
           accessibilityRole="button"
@@ -97,18 +111,22 @@ const s = StyleSheet.create({
   topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   eyebrow: {
     flex: 1,
+    flexShrink: 1,
     fontFamily: F.interBold,
     fontSize: 11.5,
     letterSpacing: 1.6,
     color: "#FFFFFF",
   },
   badge: {
+    flexShrink: 0,
     backgroundColor: "rgba(255,255,255,0.20)",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   badgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
+  // Own row under the eyebrow so the pill stays tappable at 390px / large text.
+  trackRow: { marginTop: 10, alignSelf: "flex-start" },
   title: { fontFamily: F.loraSemi, fontSize: 21, lineHeight: 28, color: "#FFFFFF", marginTop: 12 },
   track: {
     marginTop: 16,

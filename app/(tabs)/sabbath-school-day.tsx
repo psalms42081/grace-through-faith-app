@@ -23,6 +23,7 @@ import { sabbathSchoolAudioUrl } from "@/lib/sabbath-school-media";
 import { useTheme } from "@/hooks/useTheme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
 import { addPlaybackStatusListener } from "@/lib/audio-playback";
@@ -132,6 +133,7 @@ export default function SabbathSchoolDayScreen() {
   const lessonNumber = parseInt(params.lessonNumber || "1");
   const dayNumber = parseInt(params.dayNumber || "1");
   const quarterCode = params.quarterCode || "";
+  const { selectedTrack } = useSabbathSchoolTrack();
   const { recordLastRead } = useSabbathSchoolLastRead(userId);
   const isTabContained = useSabbathSchoolTabContainment(
     "sabbath-school-day",
@@ -165,9 +167,11 @@ export default function SabbathSchoolDayScreen() {
       sabbathSchoolTabBarClearance(isTabContained, Platform.OS)
     : readingScreenBottomPad(Platform.OS === "web" ? 34 : insets.bottom);
 
+  // `curriculum` lets the server open the chosen track when a deep link or
+  // notification arrives without a quarter code.
   const queryPath = quarterCode
-    ? `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&quarterCode=${quarterCode}`
-    : `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}`;
+    ? `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&quarterCode=${quarterCode}&curriculum=${selectedTrack}`
+    : `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&curriculum=${selectedTrack}`;
 
   const { data, isLoading } = useQuery<LessonResponse>({
     queryKey: [queryPath],

@@ -84,6 +84,101 @@ export function sabbathSchoolTrackChipLabel(id: SabbathSchoolTrackId): string {
   return SABBATH_SCHOOL_TRACKS[id].shortLabel;
 }
 
+/** The track to switch to when the user taps a single toggle (cycles through available tracks). */
+export function nextSabbathSchoolTrack(
+  selected: SabbathSchoolTrackId,
+  available: readonly SabbathSchoolTrackId[],
+): SabbathSchoolTrackId {
+  if (available.length < 2) return selected;
+  const index = available.indexOf(selected);
+  return available[(index + 1) % available.length] ?? available[0];
+}
+
+/** `2026-04` from `2026-04`, `2026-04-cq`, `2026-04-cc`; null for anything else. */
+export function quarterBaseCode(quarterCode: string): string | null {
+  const match = /^(\d{4}-(?:0[1-4]))(?:-|$)/.exec(quarterCode.trim());
+  return match ? match[1] : null;
+}
+
+/** Adventech quarterly id for a base quarter on a given track: `2026-04` + `-cq` → `2026-04-cq`. */
+export function quarterCodeForTrack(
+  baseCode: string,
+  track: SabbathSchoolTrackId,
+): string {
+  return `${baseCode}${SABBATH_SCHOOL_TRACKS[track].adventechSuffix}`;
+}
+
+/** Track implied by an Adventech quarterly id; bare `YYYY-QQ` is the adult quarterly. */
+export function trackForQuarterCode(quarterCode: string): SabbathSchoolTrackId | null {
+  const base = quarterBaseCode(quarterCode);
+  if (!base) return null;
+  const suffix = quarterCode.trim().slice(base.length);
+  return (
+    SABBATH_SCHOOL_TRACK_IDS.find(
+      (id) => SABBATH_SCHOOL_TRACKS[id].adventechSuffix === suffix,
+    ) ?? null
+  );
+}
+
+/**
+ * Earliest base quarter worth requesting per track. Adventech publishes
+ * InVerse markdown (`-cq`) from 2025-01; older requests only 404.
+ */
+export const SABBATH_SCHOOL_BACKFILL_FLOOR: Partial<Record<SabbathSchoolTrackId, string>> = {
+  inverse: "2025-01",
+};
+
+export function previousQuarterBaseCode(baseCode: string): string {
+  const [yearStr, qStr] = baseCode.split("-");
+  let year = parseInt(yearStr, 10);
+  let q = parseInt(qStr, 10) - 1;
+  if (q < 1) {
+    q = 4;
+    year--;
+  }
+  return `${year}-${String(q).padStart(2, "0")}`;
+}
+
+export function nextQuarterBaseCode(baseCode: string): string {
+  const [yearStr, qStr] = baseCode.split("-");
+  let year = parseInt(yearStr, 10);
+  let q = parseInt(qStr, 10) + 1;
+  if (q > 4) {
+    q = 1;
+    year++;
+  }
+  return `${year}-${String(q).padStart(2, "0")}`;
+}
+
+/**
+ * Quarterly ids around the current quarter that each synced track still
+ * needs: the next quarter plus `pastCount` previous ones, skipping quarters
+ * already stored with lessons and quarters before the track's floor.
+ */
+export function adjacentQuarterCodesToSync(
+  currentBaseCode: string,
+  existingCodes: ReadonlySet<string>,
+  pastCount: number,
+  tracks: readonly SabbathSchoolTrackId[] = SYNCED_SABBATH_SCHOOL_TRACKS,
+): Array<{ code: string; type: SabbathSchoolTrackId }> {
+  const out: Array<{ code: string; type: SabbathSchoolTrackId }> = [];
+  for (const type of tracks) {
+    const floor = SABBATH_SCHOOL_BACKFILL_FLOOR[type];
+    const consider = (base: string) => {
+      if (floor != null && base < floor) return;
+      const code = quarterCodeForTrack(base, type);
+      if (!existingCodes.has(code)) out.push({ code, type });
+    };
+    consider(nextQuarterBaseCode(currentBaseCode));
+    let prev = previousQuarterBaseCode(currentBaseCode);
+    for (let i = 0; i < pastCount; i++) {
+      consider(prev);
+      prev = previousQuarterBaseCode(prev);
+    }
+  }
+  return out;
+}
+
 export function tracksFromAvailableIds(
   availableIds: readonly string[],
 ): SabbathSchoolTrackMeta[] {

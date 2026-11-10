@@ -29,11 +29,48 @@ import {
 import { createDayTutorRouter } from "./sabbath-school-tutor";
 import {
   parseSabbathSchoolTrackId,
+  quarterBaseCode,
+  quarterCodeForTrack,
   tracksFromAvailableIds,
   type SabbathSchoolTrackId,
 } from "../../lib/sabbath-school-tracks";
 
 const router = Router();
+
+function requestedCurriculum(req: Request): SabbathSchoolTrackId | null {
+  return req.query.curriculum ? parseSabbathSchoolTrackId(req.query.curriculum) : null;
+}
+
+async function findQuarterlyByCode(quarterCode: string) {
+  const [q] = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
+    .limit(1);
+  return q ?? null;
+}
+
+/**
+ * Resolve the quarterly a caller means. An exact quarter code wins (group
+ * links and archive rows name the edition they want). Otherwise the same
+ * quarter on the caller's track, then the track's current quarterly, so a
+ * deep link or notification without a code opens the user's chosen track.
+ */
+async function resolveQuarterlyForRequest(
+  quarterCode: string | undefined,
+  curriculum: SabbathSchoolTrackId | null,
+) {
+  if (quarterCode) {
+    const exact = await findQuarterlyByCode(quarterCode);
+    if (exact) return exact;
+    const base = quarterBaseCode(quarterCode);
+    if (base && curriculum) {
+      const sibling = await findQuarterlyByCode(quarterCodeForTrack(base, curriculum));
+      if (sibling) return sibling;
+    }
+  }
+  return getMostRecentQuarterly(curriculum ?? "adult");
+}
 
 function adventechMediaProxy(kind: "video" | "audio") {
   const prefix = kind === "video" ? "/video/" : "/audio/";
@@ -289,16 +326,12 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const lessonNumber = parseInt(req.params.lessonNumber);
-    const quarterCode = req.query.quarterCode as string | undefined;
+    const quarterCode =
+      typeof req.query.quarterCode === "string" && req.query.quarterCode.trim()
+        ? req.query.quarterCode.trim()
+        : undefined;
 
-    let quarterly: any = null;
-    if (quarterCode) {
-      const [q] = await db.select().from(sabbathSchoolQuarterlies).where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode)).limit(1);
-      quarterly = q || null;
-    }
-    if (!quarterly) {
-      quarterly = await getMostRecentQuarterly();
-    }
+    const quarterly = await resolveQuarterlyForRequest(quarterCode, requestedCurriculum(req));
 
     if (!quarterly) {
       return res.status(404).json({ error: "Quarterly not found" });
@@ -385,12 +418,15 @@ router.get("/api/sabbath-school/quarter/:quarterCode", async (req, res) => {
   try {
     const userId = extractUserId(req);
     const { quarterCode } = req.params;
+    const curriculum = requestedCurriculum(req);
 
-    const [quarterly] = await db
-      .select()
-      .from(sabbathSchoolQuarterlies)
-      .where(eq(sabbathSchoolQuarterlies.quarterCode, quarterCode))
-      .limit(1);
+    // Exact code first; when that edition isn't stored, the same quarter on
+    // the caller's track (e.g. `2026-04-cc` + `curriculum=inverse` → `2026-04-cq`).
+    let quarterly = await findQuarterlyByCode(quarterCode);
+    if (!quarterly && curriculum) {
+      const base = quarterBaseCode(quarterCode);
+      if (base) quarterly = await findQuarterlyByCode(quarterCodeForTrack(base, curriculum));
+    }
 
     if (!quarterly) {
       return res.status(404).json({ error: "Quarter not found" });

@@ -15,6 +15,8 @@ import {
 } from "./sabbath-school-audio-metadata";
 import { sabbathSchoolDateAtUtcMidnight } from "./sabbath-school-date";
 import {
+  adjacentQuarterCodesToSync,
+  quarterCodeForTrack,
   SABBATH_SCHOOL_TRACKS,
   SYNCED_SABBATH_SCHOOL_TRACKS,
   type SabbathSchoolTrackId,
@@ -41,18 +43,6 @@ function getQuarterCodesForAllCurriculums(): Array<{ code: string; type: Curricu
     code: `${base}${SABBATH_SCHOOL_TRACKS[type].adventechSuffix}`,
     type,
   }));
-}
-
-function getPreviousQuarterCode(code: string): string {
-  const [yearStr, qStr] = code.split("-");
-  let year = parseInt(yearStr);
-  let q = parseInt(qStr);
-  q--;
-  if (q < 1) {
-    q = 4;
-    year--;
-  }
-  return `${year}-${String(q).padStart(2, "0")}`;
 }
 
 function parseDateStr(dateStr: string): Date | null {
@@ -689,18 +679,6 @@ export async function syncCurrentQuarter(lang: string = "en"): Promise<void> {
   );
 }
 
-function getNextQuarterCode(code: string): string {
-  const [yearStr, qStr] = code.split("-");
-  let year = parseInt(yearStr);
-  let q = parseInt(qStr);
-  q++;
-  if (q > 4) {
-    q = 1;
-    year++;
-  }
-  return `${year}-${String(q).padStart(2, "0")}`;
-}
-
 async function syncAdjacentQuarters(lang: string = "en", pastCount: number = 8): Promise<void> {
   const currentCode = getCurrentQuarterCode();
 
@@ -714,20 +692,13 @@ async function syncAdjacentQuarters(lang: string = "en", pastCount: number = 8):
     );
   const existingCodes = new Set(existingQuarters.map(q => q.quarterCode));
 
-  const codesToSync: string[] = [];
-
-  const next = getNextQuarterCode(currentCode);
-  if (!existingCodes.has(next)) codesToSync.push(next);
-
-  let prev = getPreviousQuarterCode(currentCode);
-  for (let i = 0; i < pastCount; i++) {
-    if (!existingCodes.has(prev)) codesToSync.push(prev);
-    prev = getPreviousQuarterCode(prev);
-  }
+  // Every synced track (Adult and InVerse) gets next-quarter prefetch and
+  // history backfill, each down to its own floor.
+  const codesToSync = adjacentQuarterCodesToSync(currentCode, existingCodes, pastCount);
 
   let synced = 0;
-  for (const code of codesToSync) {
-    const result = await syncQuarter(code, lang, false);
+  for (const { code, type } of codesToSync) {
+    const result = await syncQuarter(code, lang, false, type);
     if (result) synced++;
   }
 
@@ -802,8 +773,9 @@ export async function getCurrentLessonNumber(
   return closest?.lessonNumber || 1;
 }
 
-export async function shouldSync(): Promise<boolean> {
-  const quarterCode = getCurrentQuarterCode();
+/** Each synced track has its own staleness check, so a failed InVerse sync is retried on its own. */
+async function trackNeedsSync(type: CurriculumType): Promise<boolean> {
+  const quarterCode = quarterCodeForTrack(getCurrentQuarterCode(), type);
 
   const currentQ = await db
     .select()
@@ -837,6 +809,7 @@ export async function shouldSync(): Promise<boolean> {
   const anyQ = await db
     .select()
     .from(sabbathSchoolQuarterlies)
+    .where(eq(sabbathSchoolQuarterlies.curriculumType, type))
     .orderBy(desc(sabbathSchoolQuarterlies.lastSyncedAt))
     .limit(1);
 
@@ -849,8 +822,20 @@ export async function shouldSync(): Promise<boolean> {
   return hoursSinceSync >= 24;
 }
 
-export async function getMostRecentQuarterly() {
-  const quarterCode = getCurrentQuarterCode();
+export async function shouldSync(): Promise<boolean> {
+  const results = await Promise.all(
+    SYNCED_SABBATH_SCHOOL_TRACKS.map((type) => trackNeedsSync(type)),
+  );
+  return results.some(Boolean);
+}
+
+/**
+ * The quarterly a reader should open for a track when no quarter code is
+ * given: the current quarter on that track, else the latest quarterly on
+ * that track, else the latest quarterly of any track.
+ */
+export async function getMostRecentQuarterly(curriculum: CurriculumType = "adult") {
+  const quarterCode = quarterCodeForTrack(getCurrentQuarterCode(), curriculum);
   const currentQ = await db
     .select()
     .from(sabbathSchoolQuarterlies)
@@ -858,6 +843,15 @@ export async function getMostRecentQuarterly() {
     .limit(1);
 
   if (currentQ.length > 0) return currentQ[0];
+
+  const latestOnTrack = await db
+    .select()
+    .from(sabbathSchoolQuarterlies)
+    .where(eq(sabbathSchoolQuarterlies.curriculumType, curriculum))
+    .orderBy(desc(sabbathSchoolQuarterlies.quarterCode))
+    .limit(1);
+
+  if (latestOnTrack.length > 0) return latestOnTrack[0];
 
   const fallback = await db
     .select()
