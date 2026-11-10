@@ -1,8 +1,20 @@
-type Ranged = { verse: number; verseEnd?: number | null };
+type Ranged = {
+  verse: number;
+  verseEnd?: number | null;
+  /** Reading-translation verse this companion line belongs under, when the numbers differ. */
+  alignVerse?: number | null;
+  alignVerseEnd?: number | null;
+};
 
 function rangeOf(item: Ranged): [number, number] {
   const end = item.verseEnd != null && item.verseEnd > item.verse ? item.verseEnd : item.verse;
   return [item.verse, end];
+}
+
+function alignmentRange(item: Ranged): [number, number] {
+  if (item.alignVerse == null) return rangeOf(item);
+  const end = item.alignVerseEnd != null && item.alignVerseEnd > item.alignVerse ? item.alignVerseEnd : item.alignVerse;
+  return [item.alignVerse, end];
 }
 
 /**
@@ -19,10 +31,10 @@ export function alignCompanionVerses<P extends Ranged, C extends Ranged>(
 ): Map<number, C[]> {
   const under = new Map<number, C[]>();
   for (const item of companion) {
-    const [start, end] = rangeOf(item);
+    const [start, end] = alignmentRange(item);
     let host: P | undefined;
     for (const candidate of reading) {
-      const [candidateStart, candidateEnd] = rangeOf(candidate);
+      const [candidateStart, candidateEnd] = alignmentRange(candidate);
       if (candidateStart <= end && candidateEnd >= start) host = candidate;
     }
     if (!host) continue;

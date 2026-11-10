@@ -35,6 +35,10 @@ describe("South Slavic catalogue grouping", () => {
     assert.equal(translationLabel("SRKDCYR", flat), "SRKD");
     assert.equal(translationLabel("SRKDLAT", flat), "SRKD-L");
     assert.equal(translationLabel("SARIC", flat), "Šarić");
+    assert.equal(
+      groups.find((group) => group.languageName === "Croatian")!.entries[0].name,
+      "Sveta Biblija (Šarić) · includes Greek Esther",
+    );
   });
 
   it("transliterates Serbian Cyrillic one-to-one, including digraphs", () => {

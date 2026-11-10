@@ -1,3 +1,4 @@
+import { SARIC_EDITION_NAME, SARIC_ID } from "@/shared/saric-versification";
 import { isYouVersionCode } from "@/shared/youversion";
 import {
   AUSTRALIAN_EDITIONS,
@@ -77,6 +78,7 @@ export function withSouthSlavicGrouping<T extends {
   languageName?: string;
   displayAbbreviation?: string;
   source?: string;
+  name?: string;
 }>(entry: T): T {
   const code = entry.abbreviation.trim().toUpperCase();
   const base = primaryLanguage(entry.language);
@@ -87,11 +89,16 @@ export function withSouthSlavicGrouping<T extends {
     entry.displayAbbreviation;
   const languageName =
     IJEKAVIAN_EDITIONS.has(code) ? "Serbian · ijekavian" :
-    code === "SARIC" ? "Croatian" :
+    code === SARIC_ID ? "Croatian" :
     entry.source === "youversion" && (base === "sr" || base === "srp") ? "Serbian · ekavian" :
     entry.languageName;
-  if (languageName === entry.languageName && displayAbbreviation === entry.displayAbbreviation) return entry;
-  return { ...entry, languageName, displayAbbreviation };
+  const name = code === SARIC_ID ? SARIC_EDITION_NAME : entry.name;
+  if (
+    languageName === entry.languageName &&
+    displayAbbreviation === entry.displayAbbreviation &&
+    name === entry.name
+  ) return entry;
+  return { ...entry, languageName, displayAbbreviation, name };
 }
 
 /** Picker groups: English first, then languages A–Z; local and licensed sources before YouVersion. */

@@ -4,6 +4,7 @@ import {
   OT_USFM,
   bibleBookId,
 } from "./bible-books";
+import { SARIC_ID, saricChapterList } from "./saric-versification";
 
 export type CoverageLabel =
   | "Full Bible"
@@ -171,6 +172,10 @@ export function chaptersInEdition(
   bookName: string,
   entry?: EditionBooks | null,
 ): readonly number[] | undefined {
+  if (code.trim().toUpperCase() === SARIC_ID) {
+    const listed = saricChapterList(bookName);
+    if (listed) return listed;
+  }
   const books = booksForEdition(code, entry);
   if (!books) return undefined;
   const usfm = API_BIBLE_BOOK_MAP[bookName];

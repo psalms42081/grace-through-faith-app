@@ -38,6 +38,8 @@ import {
 } from "../services/youversion";
 import { isKjvTranslation } from "../../lib/strong-map-policy";
 import { withSouthSlavicGrouping } from "../../lib/translation-catalog";
+import { chaptersInEdition } from "../../shared/partial-bible";
+import { isSaric } from "../../shared/saric-versification";
 import { isYouVersionCode } from "../../shared/youversion";
 import { stripAcrosticMarker } from "../../shared/acrostic-markers";
 import {
@@ -232,6 +234,13 @@ async function openTranslationChapterCount(
   source: string,
 ): Promise<number | undefined> {
   if (isKjvTranslation(translation)) return undefined;
+  if (isSaric(translation)) {
+    const listed = chaptersInEdition(translation, book.name);
+    if (listed?.length && (book.name === "Joel" || book.name === "Malachi" || book.name === "Daniel")) {
+      return listed.length;
+    }
+    return undefined;
+  }
   if (book.name !== "Joel" && book.name !== "Malachi") return undefined;
   try {
     if (source === "youversion") {

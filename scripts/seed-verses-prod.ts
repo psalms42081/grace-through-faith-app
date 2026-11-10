@@ -46,7 +46,7 @@ const TRANSLATIONS = [
   { id: "SRKDCYR", name: "Свето писмо (Караџић–Даничић)", abbreviation: "SRKDCYR", language: "sr", file: "srkd-ijekav.json" },
   { id: "SRKDLAT", name: "Sveto pismo (Karadžić–Daničić)", abbreviation: "SRKDLAT", language: "sr", file: "srkd-ijekav-lat.json" },
   // Public domain Šarić (eBible hrv). Protestant books only.
-  { id: "SARIC", name: "Sveta Biblija (Šarić)", abbreviation: "SARIC", language: "hr", file: "hrv-saric.json" },
+  { id: "SARIC", name: "Sveta Biblija (Šarić) · includes Greek Esther", abbreviation: "SARIC", language: "hr", file: "hrv-saric.json" },
 ];
 
 async function seedTranslation(translationId: string, dataFile: string, bookMap: Map<string, number>) {

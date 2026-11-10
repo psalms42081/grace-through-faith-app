@@ -16,7 +16,7 @@ import {
 import { router, useLocalSearchParams, Stack, useFocusEffect, useSegments, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -63,6 +63,13 @@ import {
 import { formatSheetReference } from "@/lib/verse-sheet";
 import { verseNumberLabel } from "@/lib/verse-label";
 import { alignCompanionVerses, companionNeedsNumbers } from "@/lib/compare-alignment";
+import {
+  SARIC_ESTHER_NOTE,
+  compareCompanionChapters,
+  isSaric,
+  projectCompareVerses,
+  saricReadingTarget,
+} from "@/shared/saric-versification";
 import {
   READER_HEADER_AA_PADDING,
   READER_HEADER_CHIP_FONT_CAP,
@@ -743,6 +750,15 @@ const sheetStyles = StyleSheet.create({
 const NAV_VERSE_WASH_HOLD_MS = 2000;
 const NAV_VERSE_WASH_FADE_MS = 400;
 
+function SaricEstherNote({ translation, bookName }: { translation: string; bookName: string }) {
+  if (!isSaric(translation) || bookName !== "Esther") return null;
+  return (
+    <Text style={styles.providerHeadingReference} testID="saric-esther-note">
+      {SARIC_ESTHER_NOTE}
+    </Text>
+  );
+}
+
 export default function VerseReaderScreen() {
   const { bookId, chapter, translation: txParam, verse: verseParam, verseEnd: verseEndParam, verses: versesParam } = useLocalSearchParams<{ bookId: string; chapter: string; translation?: string; verse?: string; verseEnd?: string; verses?: string }>();
   const useNewTypography = !READER_LEGACY_VERSE_BLOCKS;
@@ -881,29 +897,73 @@ export default function VerseReaderScreen() {
     [availableTranslations],
   );
   const chapterNumber = Number(chapter) || 1;
+  const requestedVerse = Number(Array.isArray(verseParam) ? verseParam[0] : verseParam);
+  const saricTarget = useMemo(
+    () => (isSaric(translation)
+      ? saricReadingTarget(routeBookName, chapterNumber, Number.isInteger(requestedVerse) && requestedVerse > 0 ? requestedVerse : null)
+      : null),
+    [chapterNumber, requestedVerse, routeBookName, translation],
+  );
+  useEffect(() => {
+    if (!saricTarget) return;
+    if (isScriptureOverlay) {
+      router.replace(scriptureOverlayHref({
+        bookId: String(bookId),
+        chapter: saricTarget.chapter,
+        verse: saricTarget.verse,
+        translation,
+      }) as any);
+      return;
+    }
+    router.replace(
+      `${readerBasePath}/${bookId}/${saricTarget.chapter}?translation=${encodeURIComponent(translation)}&verse=${saricTarget.verse}` as any,
+    );
+  }, [bookId, isScriptureOverlay, readerBasePath, saricTarget, translation]);
   const missingBook = useMemo(
     () => untranslatedBook(translation, routeBookName, catalogEntryFor(translation)),
     [catalogEntryFor, routeBookName, translation],
   );
   const earlyChapter = useMemo(
-    () => (missingBook ? null : untranslatedEarlyChapter(translation, routeBookName, chapterNumber, catalogEntryFor(translation))),
-    [catalogEntryFor, chapterNumber, missingBook, routeBookName, translation],
+    () => (missingBook || saricTarget ? null : untranslatedEarlyChapter(translation, routeBookName, chapterNumber, catalogEntryFor(translation))),
+    [catalogEntryFor, chapterNumber, missingBook, routeBookName, saricTarget, translation],
   );
   const splitMissingBook = useMemo(
     () => (splitMode ? untranslatedBook(splitTranslation, routeBookName, catalogEntryFor(splitTranslation)) : null),
     [catalogEntryFor, routeBookName, splitMode, splitTranslation],
   );
+  const companionChapters = useMemo(
+    () => (splitMode ? compareCompanionChapters(routeBookName, chapterNumber, translation, splitTranslation) : []),
+    [chapterNumber, routeBookName, splitMode, splitTranslation, translation],
+  );
+  const companionMapped = companionChapters.length !== 1 || companionChapters[0] !== chapterNumber;
   const splitEarlyChapter = useMemo(
-    () => (splitMode && !splitMissingBook
+    () => (splitMode && !splitMissingBook && !companionMapped
       ? untranslatedEarlyChapter(splitTranslation, routeBookName, chapterNumber, catalogEntryFor(splitTranslation))
       : null),
-    [catalogEntryFor, chapterNumber, routeBookName, splitMissingBook, splitMode, splitTranslation],
+    [catalogEntryFor, chapterNumber, companionMapped, routeBookName, splitMissingBook, splitMode, splitTranslation],
   );
 
-  const { data: splitData, error: splitError } = useQuery<PassageResponse>({
-    queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${splitTranslation}`],
-    enabled: splitMode && !splitMissingBook && !splitEarlyChapter,
+  const companionQueries = useQueries({
+    queries: companionChapters.map((companionChapter) => ({
+      queryKey: [`/api/passage?book=${bookId}&chapter=${companionChapter}&translation=${splitTranslation}`],
+      enabled: splitMode && !splitMissingBook && !splitEarlyChapter,
+    })),
   });
+  const splitError = companionQueries.find((query) => query.error)?.error;
+  const splitData = {
+    verses: companionChapters.flatMap((companionChapter, index) =>
+      ((companionQueries[index]?.data as PassageResponse | undefined)?.verses ?? []).map((verse) => ({
+        ...verse,
+        sourceChapter: companionChapter,
+      })),
+    ),
+    attribution: companionQueries
+      .map((query) => (query.data as PassageResponse | undefined)?.attribution)
+      .find((attribution) => attribution),
+  };
+  const splitChapterNote = splitMode && !splitMissingBook && companionChapters.length === 0
+    ? `This chapter isn't in ${translationLabel(splitTranslation, availableTranslations)}.`
+    : null;
 
   // If the stored split translation vanished from the authoritative catalog, do
   // NOT render another translation's text under its label — flag it unavailable.
@@ -920,8 +980,14 @@ export default function VerseReaderScreen() {
   // Compare shows headings from the reading version only; the comparison
   // version's own section titles would land under the wrong verse.
   const splitVerses = useMemo(
-    () => withAcrosticHeadings(splitLoadFailed || splitNotice ? [] : (splitData?.verses ?? []), undefined).verses,
-    [splitLoadFailed, splitNotice, splitData?.verses],
+    () => projectCompareVerses({
+      book: routeBookName,
+      readingTranslation: translation,
+      companionTranslation: splitTranslation,
+      readingChapter: chapterNumber,
+      verses: withAcrosticHeadings(splitLoadFailed || splitNotice ? [] : (splitData?.verses ?? []), undefined).verses,
+    }),
+    [chapterNumber, routeBookName, splitData?.verses, splitLoadFailed, splitNotice, splitTranslation, translation],
   );
 
   const handlePrimaryScroll = useCallback((event: any) => {
@@ -1085,7 +1151,7 @@ export default function VerseReaderScreen() {
 
   const { data, isLoading, error } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
-    enabled: !missingBook && !earlyChapter,
+    enabled: !missingBook && !earlyChapter && !saricTarget,
   });
   const untranslatedNotice: UntranslatedBook | null = missingBook
     ?? earlyChapter
@@ -1967,7 +2033,7 @@ export default function VerseReaderScreen() {
         style={[styles.container, { backgroundColor: readerBg }]}
         onLayout={(event) => setReaderWidth(event.nativeEvent.layout.width)}
       >
-        {isLoading ? (
+        {isLoading || saricTarget ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={RV2_INK_MUTED} />
           </View>
@@ -2151,6 +2217,15 @@ export default function VerseReaderScreen() {
                     testID="split-missing-translation"
                   />
                 ) : null}
+                {splitChapterNote && stackedSplit ? (
+                  <Text style={styles.providerHeadingReference} testID="saric-compare-note">
+                    {splitChapterNote}
+                  </Text>
+                ) : null}
+                <SaricEstherNote
+                  translation={isSaric(translation) ? translation : (stackedSplit && isSaric(splitTranslation) ? splitTranslation : "")}
+                  bookName={bookName}
+                />
                 {useNewTypography && !splitMode ? (
                   <TypographyPreviewProse
                     verses={visibleVerses}
@@ -2373,7 +2448,12 @@ export default function VerseReaderScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <View style={styles.proseContainer}>
-                    {splitNotice ? (
+                    <SaricEstherNote translation={splitTranslation} bookName={bookName} />
+                    {splitChapterNote ? (
+                      <Text style={styles.providerHeadingReference} testID="saric-compare-note">
+                        {splitChapterNote}
+                      </Text>
+                    ) : splitNotice ? (
                       <MissingTranslationNotice
                         bookName={splitNotice.bookName}
                         language={splitNotice.language}
