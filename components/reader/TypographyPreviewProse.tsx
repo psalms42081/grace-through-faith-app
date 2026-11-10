@@ -19,10 +19,13 @@ import type { ReaderStrongMap } from "@/lib/reader-word-study";
 import { readingType } from "@/lib/reading-font-scale";
 import { verseSurfaceStyle } from "@/lib/verse-selection";
 import { wordsOfChristRanges } from "@/lib/words-of-christ";
+import { verseNumberLabel } from "@/lib/verse-label";
 
 export interface PreviewVerse {
   id: string;
   verse: number;
+  /** Last verse number when the version prints several verses as one. */
+  verseEnd?: number;
   text: string;
 }
 
@@ -196,7 +199,7 @@ export function TypographyPreviewProse({
                       selectable={false}
                       style={[{ backgroundColor: bg }, webVerseStyle]}
                       {...(IS_WEB || useWordTokens ? undefined : { accessibilityRole: "button" as const })}
-                      accessibilityLabel={`Verse ${v.verse}`}
+                      accessibilityLabel={`Verse ${verseNumberLabel(v)}`}
                       nativeID={`reader-verse-${v.verse}`}
                       {...(IS_WEB ? { dataSet: { verse: String(v.verse) } } : undefined)}
                     >
@@ -206,7 +209,7 @@ export function TypographyPreviewProse({
                         onPress={wordStudyMode ? undefined : () => onVerseTap(v)}
                         style={[s.verseNum, { fontSize: superSize, lineHeight: bodyLine }]}
                       >
-                        {v.verse}
+                        {verseNumberLabel(v)}
                         {"\u00a0\u00a0"}
                       </Text>
                       {wordStudyMode && useWordTokens ? (
@@ -261,7 +264,7 @@ export function TypographyPreviewProse({
                       )}
                       {isBookmarked ? (
                         <Text pointerEvents="none" style={[s.bookmarkMark, { lineHeight: bodyLine }]}>
-                          {" "}◆
+                          {"\u00a0◆"}
                         </Text>
                       ) : null}
                       {gapAfterVerseInRun(run.verses, verseIndex)}

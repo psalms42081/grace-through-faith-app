@@ -40,6 +40,7 @@ import {
   planOriginalWordsLookup,
   type VerseSheetHighlightKey,
 } from "@/lib/verse-sheet";
+import { coveredVerseNumbers } from "@/lib/verse-label";
 
 export { VERSE_SHEET_COLLAPSED_HEIGHT };
 
@@ -157,7 +158,7 @@ export function VerseSheet({
   notice,
   translationChapterCount,
 }: {
-  verses: { id: string; verse: number; text: string }[];
+  verses: { id: string; verse: number; verseEnd?: number; text: string }[];
   bookName: string;
   bookId: string;
   chapter: string;
@@ -203,7 +204,7 @@ export function VerseSheet({
   const reference = formatSheetReference(
     bookName,
     chapter,
-    sorted.map((v) => v.verse),
+    coveredVerseNumbers(sorted),
   );
   const showingLabel =
     sorted.length > 1 && first

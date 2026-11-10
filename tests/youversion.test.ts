@@ -274,6 +274,39 @@ describe("YouVersion chapter HTML", () => {
   it("keeps every footnote, without the reference prefix", () => {
     assert.deepEqual(parsed.footnotes, [{ verse: 1, text: "Or alternate reading" }]);
   });
+
+  it("labels verses a version prints together and keeps cross references out of the text", async () => {
+    const { verseNumberLabel, coveredVerseNumbers } = await import("../lib/verse-label");
+    const kriol = [
+      '<div class="p"><span class="yv-v" ev="2" v="1"></span><span class="yv-vlbl">1,2</span>Wal God kaan faindim gilti.</div>',
+      '<div class="p"><span class="yv-v" v="3"></span><span class="yv-vlbl">3</span>Wal det lowa.',
+      '<span class="yv-n x"><span class="ref" usfm="1CO.3.16">1 Karin 3:16</span></span></div>',
+      '<div class="p"><span class="yv-v" v="5"></span><span class="yv-vlbl">5-6</span>Wal ol wi pipul.</div>',
+    ].join("");
+    const merged = parseYouVersionChapterHtml(kriol, { code: "YV1362", bookId: 45, chapter: 8 });
+    assert.deepEqual(
+      merged.verses.map((v) => [v.verse, v.verseEnd ?? null, v.text]),
+      [
+        [1, 2, "Wal God kaan faindim gilti."],
+        [3, null, "Wal det lowa."],
+        [5, 6, "Wal ol wi pipul."],
+      ],
+    );
+    assert.deepEqual(merged.footnotes, [{ verse: 3, text: "1 Karin 3:16" }]);
+    assert.equal(verseNumberLabel(merged.verses[0]), "1\u20132");
+    assert.equal(verseNumberLabel(merged.verses[1]), "3");
+    assert.deepEqual(coveredVerseNumbers([merged.verses[0], merged.verses[2]]), [1, 2, 5, 6]);
+    assert.equal(parsed.verses.some((v) => "verseEnd" in v), false);
+    const reader = read("app/read/[bookId]/[chapter].tsx");
+    const prose = read("components/reader/TypographyPreviewProse.tsx");
+    assert.match(reader, /\{verseNumberLabel\(v\)\}\{"\\u00a0"\}/);
+    assert.match(prose, /\{verseNumberLabel\(v\)\}/);
+    // The bookmark mark stays on the verse's last line instead of wrapping alone.
+    assert.match(reader, /\{"\\u00a0◆"\}/);
+    assert.match(prose, /\{"\\u00a0◆"\}/);
+    assert.doesNotMatch(reader, /> ◆</);
+    assert.doesNotMatch(prose, /\{" "\}◆/);
+  });
 });
 
 describe("translation picker catalog", () => {

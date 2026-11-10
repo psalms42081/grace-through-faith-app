@@ -61,6 +61,7 @@ import {
   type UntranslatedBook,
 } from "@/shared/partial-bible";
 import { formatSheetReference } from "@/lib/verse-sheet";
+import { verseNumberLabel } from "@/lib/verse-label";
 import {
   READER_HEADER_AA_PADDING,
   READER_HEADER_CHIP_FONT_CAP,
@@ -194,6 +195,8 @@ type Translation = string;
 interface Verse {
   id: string;
   verse: number;
+  /** Last verse number when the version prints several verses as one. */
+  verseEnd?: number;
   text: string;
 }
 
@@ -2223,7 +2226,7 @@ export default function VerseReaderScreen() {
                     >
                       <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
                         <Text allowFontScaling={false} style={[styles.verseNumInline, verseNumInlineScaled]}>
-                          {v.verse}{"\u00a0"}
+                          {verseNumberLabel(v)}{"\u00a0"}
                         </Text>
                         <VerseSpokenText
                           text={v.text}
@@ -2238,7 +2241,7 @@ export default function VerseReaderScreen() {
                           })}
                         />
                         {isBookmarked && (
-                          <Text style={{ color: RV2_INK_MUTED, fontSize: 10, lineHeight: 32 * fontScale }}> ◆</Text>
+                          <Text style={{ color: RV2_INK_MUTED, fontSize: 10, lineHeight: 32 * fontScale }}>{"\u00a0◆"}</Text>
                         )}
                       </Text>
                     </Pressable>
@@ -2373,7 +2376,7 @@ export default function VerseReaderScreen() {
                           <View style={[styles.verseBlock, { borderLeftWidth: 0 }]}>
                           <Text allowFontScaling={false} style={[styles.verseText, { color: textColor, fontSize: 18 * fontScale, lineHeight: 32 * fontScale }]}>
                             <Text allowFontScaling={false} style={[styles.verseNumInline, verseNumInlineScaled]}>
-                              {v.verse}{"\u00a0"}
+                              {verseNumberLabel(v)}{"\u00a0"}
                             </Text>
                             <VerseSpokenText
                               text={v.text}
