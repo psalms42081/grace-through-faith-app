@@ -250,6 +250,8 @@ describe("Sabbath School web media proxy", () => {
     );
     assert.match(watchScreenSource, /earlierLessonVideos/);
     assert.match(watchScreenSource, /useFocusEffect/);
+    assert.match(watchScreenSource, /staleTime: 0/);
+    assert.match(watchScreenSource, /void refetch\(\)/);
     assert.match(watchScreenSource, /revealKey=\{`\$\{screenVisit\}:\$\{selectedTrack\}`\}/);
     assert.equal(showOtherTrackVideosLabel("Adult"), "Show Adult videos on this lesson");
     assert.equal(showOtherTrackVideosLabel("InVerse"), "Show InVerse videos on this lesson");

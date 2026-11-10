@@ -6,6 +6,7 @@ import { flattenSabbathSchoolLessonClips, youtubeIdFromUrl } from "../lib/sabbat
 import {
   INVERSE_BIBLE_CHANNEL_ID,
   INVERSE_BIBLE_UPLOADS_PLAYLIST_ID,
+  INVERSE_EMPTY_LIST_RETRY_MS,
   INVERSE_EPISODE_CACHE_TTL_MS,
   earlierInverseLessonClips,
   getInverseEpisodes,
@@ -16,6 +17,7 @@ import {
   parseInverseUploadsRss,
   qualifyInverseUpload,
   resetInverseEpisodeCacheForTests,
+  videoFactsFromPlayerPayload,
   withInverseYouTubeLesson,
   type InverseEpisode,
   type InverseUpload,
@@ -333,5 +335,114 @@ describe("InVerse YouTube episodes", () => {
     assert.match(player, /autoplay=0/);
     assert.match(player, /autoplay:0/);
     assert.match(player, /mediaPlaybackRequiresUserAction/);
+  });
+
+  it("qualifies an episode when the watch page has no duration", async () => {
+    const facts = videoFactsFromPlayerPayload(
+      {
+        videoDetails: { videoId: "symxY-m2IIQ", lengthSeconds: "1710", isLiveContent: false },
+        playabilityStatus: { status: "UNPLAYABLE", reason: "Sign in to confirm you’re not a bot" },
+      },
+      "symxY-m2IIQ",
+    );
+    assert.equal(facts.durationSeconds, 1710);
+    assert.equal(facts.isLive, false);
+    assert.equal(facts.isPremiere, false);
+
+    const urls: string[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("feeds/videos.xml")) return new Response(RSS, { status: 200 });
+      if (url.includes("/watch")) return new Response("<html>Before you continue</html>", { status: 200 });
+      const body = JSON.parse(String(init?.body)) as { videoId?: string };
+      const seconds = body.videoId === "short123456" ? 42 : 1710;
+      return new Response(
+        JSON.stringify({
+          videoDetails: { videoId: body.videoId, lengthSeconds: String(seconds) },
+          playabilityStatus: { status: "UNPLAYABLE", reason: "Video unavailable" },
+        }),
+        { status: 200 },
+      );
+    };
+    const episodes = await getInverseEpisodes({ now: 20_000, fetchImpl });
+    assert.equal(episodes.find((item) => item.lessonNumber === 7)?.rowTitle, "Lesson 7 · Now Hear This!");
+    assert.equal(episodes.find((item) => item.lessonNumber === 7)?.durationSeconds, 1710);
+    assert.equal(episodes.some((item) => item.youtubeId === "short123456"), false);
+    assert.equal(urls.some((url) => url.includes("youtubei/v1/player")), true);
+  });
+
+  it("refetches when the saved list is empty", async () => {
+    const now = Date.parse("2026-11-10T09:46:01.109Z");
+    let writes = 0;
+    setInverseEpisodeStore({
+      async read() {
+        return { fetchedAt: now, episodes: [] };
+      },
+      async write() {
+        writes += 1;
+      },
+    });
+    const { fetchImpl, urls } = fakeFetch(RSS);
+    const episodes = await getInverseEpisodes({ now: now + 60_000, fetchImpl });
+    assert.equal(episodes.some((item) => item.lessonNumber === 7), true);
+    assert.equal(urls.filter((url) => url.includes("feeds/videos.xml")).length, 1);
+    assert.equal(writes, 1);
+  });
+
+  it("does not keep a failed qualification for a day", async () => {
+    const urls: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("feeds/videos.xml")) return new Response(RSS, { status: 200 });
+      if (url.includes("youtubei/v1/player")) return new Response("nope", { status: 503 });
+      return new Response("<html>Before you continue</html>", { status: 200 });
+    };
+    const now = Date.parse("2026-11-10T09:46:01.109Z");
+    const first = await getInverseEpisodes({ now, fetchImpl });
+    assert.deepEqual(first, []);
+    await getInverseEpisodes({ now: now + INVERSE_EMPTY_LIST_RETRY_MS - 1, fetchImpl });
+    assert.equal(urls.filter((url) => url.includes("feeds/videos.xml")).length, 1);
+    await getInverseEpisodes({ now: now + INVERSE_EMPTY_LIST_RETRY_MS, fetchImpl });
+    assert.equal(urls.filter((url) => url.includes("feeds/videos.xml")).length, 2);
+  });
+
+  it("replaces the live Adventech mp4 shape with the matching episode", () => {
+    const liveLesson = {
+      lessonNumber: 7,
+      title: "Now Hear This!",
+      videoByArtist: [
+        {
+          artist: "InVerse Bible",
+          clips: [
+            {
+              src: "https://sabbath-school-media.adventech.io/video/en/2026-04-cq/clip.mp4",
+              title: "Now Hear This!",
+              thumbnail: "https://sabbath-school-media.adventech.io/thumb.webp",
+              target: "en/2026-04-cq/07",
+            },
+          ],
+        },
+      ],
+    };
+    const episodes = [
+      episode(),
+      episode({
+        youtubeId: "BrWzdThOo9s",
+        lessonNumber: 6,
+        lessonTitle: "The Prophetic Writings",
+        youtubeTitle: "6 The Prophetic Writings",
+        rowTitle: "Lesson 6 · The Prophetic Writings",
+        publishedAt: "2026-11-01T14:00:34+00:00",
+        thumbnail: "https://i3.ytimg.com/vi/BrWzdThOo9s/hqdefault.jpg",
+      }),
+    ];
+    const replaced = withInverseYouTubeLesson(liveLesson, { curriculumType: "inverse", ...Q4 }, episodes);
+    const clips = flattenSabbathSchoolLessonClips(replaced.videoByArtist);
+    assert.equal(clips[0].title, "Lesson 7 · Now Hear This!");
+    assert.equal(clips[0].youtubeId, "symxY-m2IIQ");
+    assert.equal(clips[0].artist, "inVerse Bible");
+    assert.equal(earlierInverseLessonClips(episodes, { lessonNumber: 7, ...Q4 })[0].title, "Lesson 6 · The Prophetic Writings");
   });
 });

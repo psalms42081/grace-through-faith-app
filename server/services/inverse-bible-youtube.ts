@@ -7,6 +7,10 @@
  * 24 hours. A database store keeps episodes that have aged off the 15-item
  * uploads feed across a server restart. Opening a lesson screen does not refetch.
  *
+ * A watch page from a data-centre address often comes back without a duration.
+ * Those uploads are qualified from the public player document instead, and an
+ * empty result is not kept for the day, so a failed refresh is tried again.
+ *
  * Titles look like "7 Now Hear This!" or "6 The Prophetic Writings". The
  * leading number is the lesson. The row title is "Lesson 6 · The Prophetic
  * Writings". The thumbnail URL is the RSS media:thumbnail, unchanged.
@@ -26,6 +30,8 @@ import {
 export const INVERSE_BIBLE_CHANNEL_ID = "UCgHAzKGx-UWZwKhltWQc1lQ";
 export const INVERSE_BIBLE_UPLOADS_PLAYLIST_ID = "UUgHAzKGx-UWZwKhltWQc1lQ";
 export const INVERSE_EPISODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+/** An empty qualification is retried, not kept for the day. */
+export const INVERSE_EMPTY_LIST_RETRY_MS = 15 * 60 * 1000;
 const WATCH_PAGE_CONCURRENCY = 4;
 
 const USER_AGENT =
@@ -71,6 +77,7 @@ const memoryStore: InverseEpisodeStore = {
 
 let cache: InverseEpisodeCacheEntry | null = null;
 let inflight: Promise<InverseEpisode[]> | null = null;
+let failedFetchAt: number | null = null;
 let episodeStore: InverseEpisodeStore = memoryStore;
 
 export function setInverseEpisodeStore(store: InverseEpisodeStore): void {
@@ -80,6 +87,7 @@ export function setInverseEpisodeStore(store: InverseEpisodeStore): void {
 export function resetInverseEpisodeCacheForTests(): void {
   cache = null;
   inflight = null;
+  failedFetchAt = null;
   episodeStore = memoryStore;
 }
 
@@ -312,19 +320,82 @@ export function withInverseYouTubeLesson<T extends { lessonNumber: number; video
   return { ...lesson, videoByArtist: [inverseEpisodeArtistGroup(episode)] };
 }
 
-async function fetchText(url: string, fetchImpl: typeof fetch): Promise<string> {
-  const response = await fetchImpl(url, {
+const PLAYER_METADATA_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
+
+/**
+ * Duration from the public player document. A server often gets
+ * playability UNPLAYABLE for an ordinary episode, with the length still set.
+ * That status is not a livestream.
+ */
+export function videoFactsFromPlayerPayload(payload: unknown, youtubeId: string): VideoFacts {
+  const json = payload as {
+    videoDetails?: {
+      videoId?: string;
+      lengthSeconds?: string;
+      isShort?: boolean;
+    };
+    playabilityStatus?: { status?: string; reason?: string };
+    microformat?: {
+      playerMicroformatRenderer?: {
+        liveBroadcastDetails?: { isLiveNow?: boolean; endTimestamp?: string };
+      };
+    };
+  };
+  const details = json?.videoDetails?.videoId === youtubeId ? json.videoDetails : undefined;
+  const length = details?.lengthSeconds;
+  const durationSeconds = length && /^\d+$/.test(length) ? Number(length) : null;
+  const live = json?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails;
+  const status = json?.playabilityStatus?.status ?? "";
+  const reason = json?.playabilityStatus?.reason ?? "";
+  return {
+    durationSeconds,
+    isShort: details?.isShort === true,
+    isLive: live?.isLiveNow === true,
+    isPremiere:
+      status === "LIVE_STREAM_OFFLINE" ||
+      /premiere/i.test(reason) ||
+      (live != null && live.isLiveNow !== true && !live.endTimestamp),
+  };
+}
+
+function factsAreDecisive(facts: VideoFacts): boolean {
+  return facts.durationSeconds != null || facts.isShort || facts.isLive || facts.isPremiere;
+}
+
+async function loadInverseVideoFacts(
+  youtubeId: string,
+  fetchImpl: typeof fetch,
+): Promise<{ facts: VideoFacts; usedPlayerFallback: boolean }> {
+  let watched: VideoFacts | null = null;
+  try {
+    watched = await loadWatchFacts(youtubeId, fetchImpl);
+    if (factsAreDecisive(watched)) return { facts: watched, usedPlayerFallback: false };
+  } catch {
+    watched = null;
+  }
+
+  const response = await fetchImpl(PLAYER_METADATA_URL, {
+    method: "POST",
     headers: {
       "User-Agent": USER_AGENT,
+      "Content-Type": "application/json",
       "Accept-Language": "en-US,en;q=0.9",
     },
+    body: JSON.stringify({
+      videoId: youtubeId,
+      context: {
+        client: { clientName: "WEB", clientVersion: "2.20251110.00.00", hl: "en", gl: "US" },
+      },
+    }),
     redirect: "follow",
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) {
-    throw new Error(`YouTube request failed (${response.status})`);
+    throw new Error(`YouTube player metadata failed (${response.status})`);
   }
-  return response.text();
+  const facts = videoFactsFromPlayerPayload(JSON.parse(await response.text()) as unknown, youtubeId);
+  if (watched?.isShort) facts.isShort = true;
+  return { facts, usedPlayerFallback: true };
 }
 
 async function mapPool<T, R>(
@@ -349,19 +420,36 @@ export async function loadInverseEpisodes(
   fetchImpl: typeof fetch = fetch,
 ): Promise<InverseEpisode[]> {
   const url = `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(INVERSE_BIBLE_UPLOADS_PLAYLIST_ID)}`;
-  const xml = await fetchText(url, fetchImpl);
+  const response = await fetchImpl(url, {
+    headers: {
+      "User-Agent": USER_AGENT,
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+    redirect: "follow",
+    signal: AbortSignal.timeout(20000),
+  });
+  const xml = await response.text();
+  const entryCount = Math.max(0, xml.split("<entry>").length - 1);
+  console.log(`[inverse-bible] uploads feed HTTP ${response.status}, ${entryCount} entries`);
+  if (!response.ok) {
+    throw new Error(`YouTube request failed (${response.status})`);
+  }
   const uploads = parseInverseUploadsRss(xml);
+  let playerFallback = 0;
   const qualified = await mapPool(uploads, WATCH_PAGE_CONCURRENCY, async (upload) => {
     try {
-      const facts = await loadWatchFacts(upload.youtubeId, fetchImpl);
-      return qualifyInverseUpload(upload, facts);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "watch page failed";
-      console.error(`[inverse-bible] skipped ${upload.youtubeId}: ${message}`);
+      const loaded = await loadInverseVideoFacts(upload.youtubeId, fetchImpl);
+      if (loaded.usedPlayerFallback) playerFallback += 1;
+      return qualifyInverseUpload(upload, loaded.facts);
+    } catch {
       return null;
     }
   });
-  return qualified.filter((episode): episode is InverseEpisode => episode != null);
+  const episodes = qualified.filter((episode): episode is InverseEpisode => episode != null);
+  console.log(
+    `[inverse-bible] uploads feed HTTP ${response.status}, ${entryCount} entries, ${uploads.length} lesson titles, qualified ${episodes.length}, player fallback ${playerFallback}`,
+  );
+  return episodes;
 }
 
 /** Keep episodes that have aged off the 15-item uploads feed, for about two quarters. */
@@ -385,6 +473,7 @@ export function mergeInverseEpisodes(
 }
 
 function cacheIsFresh(entry: InverseEpisodeCacheEntry, now: number): boolean {
+  if (entry.episodes.length === 0) return false;
   return now >= entry.fetchedAt && now - entry.fetchedAt < INVERSE_EPISODE_CACHE_TTL_MS;
 }
 
@@ -414,6 +503,13 @@ export async function getInverseEpisodes(options?: {
   if (remembered && cacheIsFresh(remembered, now)) {
     return remembered.episodes;
   }
+  if (
+    failedFetchAt != null &&
+    now >= failedFetchAt &&
+    now - failedFetchAt < INVERSE_EMPTY_LIST_RETRY_MS
+  ) {
+    return remembered?.episodes.length ? remembered.episodes : [];
+  }
   if (!inflight) {
     const fetchImpl = options?.fetchImpl ?? fetch;
     const startedAt = now;
@@ -421,6 +517,12 @@ export async function getInverseEpisodes(options?: {
     inflight = loadInverseEpisodes(fetchImpl)
       .then(async (latest) => {
         const episodes = mergeInverseEpisodes(previous, latest, startedAt);
+        if (episodes.length === 0) {
+          failedFetchAt = startedAt;
+          console.error("[inverse-bible] qualified 0 episodes; the stored lesson videos stay in place");
+          return episodes;
+        }
+        failedFetchAt = null;
         const entry = { fetchedAt: startedAt, episodes };
         cache = entry;
         try {
@@ -430,6 +532,12 @@ export async function getInverseEpisodes(options?: {
           console.error(`[inverse-bible] list kept in memory: ${message}`);
         }
         return episodes;
+      })
+      .catch((error: unknown) => {
+        failedFetchAt = startedAt;
+        const message = error instanceof Error ? error.message : "feed failed";
+        console.error(`[inverse-bible] feed refresh failed: ${message}`);
+        return previous;
       })
       .finally(() => {
         inflight = null;

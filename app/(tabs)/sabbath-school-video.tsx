@@ -61,13 +61,7 @@ export default function SabbathSchoolVideoScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setScreenVisit((visit) => visit + 1);
-    }, []),
-  );
-
-  const { data, isLoading } = useQuery<{
+  const { data, isLoading, refetch } = useQuery<{
     quarterly: { quarterCode?: string } | null;
     currentLesson: {
       title: string;
@@ -101,6 +95,7 @@ export default function SabbathSchoolVideoScreen() {
       );
       return response.json();
     },
+    staleTime: 0,
   });
 
   const clips = flattenSabbathSchoolLessonClips(data?.currentLesson?.videoByArtist);
@@ -108,9 +103,10 @@ export default function SabbathSchoolVideoScreen() {
     data?.currentLesson?.lessonNumber ?? data?.currentLessonNumber ?? null;
   const otherTracks = availableTracks.filter((track) => track.id !== selectedTrack);
   const otherTrackKey = otherTracks.map((track) => track.id).join(",");
-  const { data: otherTrackVideos } = useQuery<RelatedLessonVideoGroup[]>({
+  const { data: otherTrackVideos, refetch: refetchOtherTracks } = useQuery<RelatedLessonVideoGroup[]>({
     queryKey: ["sabbath-school-other-videos", lessonNumber, otherTrackKey],
     enabled: lessonNumber != null && otherTracks.length > 0,
+    staleTime: 0,
     queryFn: async () => {
       const groups: RelatedLessonVideoGroup[] = [];
       for (const track of otherTracks) {
@@ -127,6 +123,15 @@ export default function SabbathSchoolVideoScreen() {
       return groups;
     },
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreenVisit((visit) => visit + 1);
+      void refetch();
+      if (lessonNumber != null) void refetchOtherTracks();
+    }, [lessonNumber, refetch, refetchOtherTracks]),
+  );
+
   const earlierVideos = data?.earlierLessonVideos ?? [];
   const earlier =
     earlierVideos.length > 0
