@@ -49,6 +49,17 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
     return open;
   });
 
+  useEffect(() => {
+    const current = groups.find((group) => group.entries.some((entry) => entry.abbreviation === selected));
+    if (!current) return;
+    setOpenLanguages((previous) => {
+      if (previous.has(current.languageName)) return previous;
+      const next = new Set(previous);
+      next.add(current.languageName);
+      return next;
+    });
+  }, [groups, selected]);
+
   const toggleLanguage = useCallback((languageName: string) => {
     setOpenLanguages((previous) => {
       const next = new Set(previous);
@@ -70,7 +81,7 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
       out.push({ kind: "language", key: `lang-${group.languageName}`, group, expanded });
       if (expanded) {
         for (const entry of group.entries) {
-          out.push({ kind: "translation", key: `tx-${entry.abbreviation}`, entry });
+          out.push({ kind: "translation", key: `tx-${group.languageName}-${entry.abbreviation}`, entry });
         }
       }
     }
@@ -90,7 +101,7 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
             accessibilityLabel={`${item.group.languageName}, ${count} ${count === 1 ? "version" : "versions"}`}
             style={styles.languageRow}
           >
-            <Text style={styles.languageName} numberOfLines={1}>
+            <Text style={styles.languageName}>
               {item.group.languageName}
             </Text>
             <Text style={styles.languageCount}>{count}</Text>
@@ -103,22 +114,39 @@ export function TranslationPickerList({ catalog, selected, onSelect, exclude, ma
       const entry = item.entry;
       const active = entry.abbreviation === selected;
       const label = entry.displayAbbreviation || entry.abbreviation;
+      const australia = !!entry.coverage;
       return (
         <Pressable
           onPress={() => onSelect(entry.abbreviation)}
           accessibilityRole="button"
           accessibilityState={{ selected: active }}
-          accessibilityLabel={`${label}, ${entry.name}`}
-          testID={`translation-option-${entry.abbreviation}`}
+          accessibilityLabel={
+            australia
+              ? `${entry.australiaLanguage}, ${entry.name}, ${entry.coverage}`
+              : `${label}, ${entry.name}`
+          }
+          testID={`translation-option-${entry.abbreviation}${australia ? "-australia" : ""}`}
           style={[styles.option, active && styles.optionActive]}
         >
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.optionAbbr, active && styles.optionAbbrActive]} numberOfLines={1}>
-              {label}
-            </Text>
-            <Text style={styles.optionName} numberOfLines={2}>
-              {entry.name}
-            </Text>
+          <View style={styles.optionText}>
+            {australia ? (
+              <>
+                <Text style={[styles.optionAbbr, active && styles.optionAbbrActive]}>
+                  {entry.australiaLanguage}
+                </Text>
+                <Text style={styles.optionName}>{entry.name}</Text>
+                <Text style={styles.coverage}>{entry.coverage}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.optionAbbr, active && styles.optionAbbrActive]} numberOfLines={1}>
+                  {label}
+                </Text>
+                <Text style={styles.optionName} numberOfLines={2}>
+                  {entry.name}
+                </Text>
+              </>
+            )}
           </View>
           {active ? <Ionicons name="checkmark" size={16} color={INK} /> : null}
         </Pressable>
@@ -199,7 +227,9 @@ const styles = StyleSheet.create({
   },
   languageName: {
     flex: 1,
+    flexShrink: 1,
     fontSize: 11,
+    lineHeight: 16,
     letterSpacing: 1,
     textTransform: "uppercase",
     fontFamily: "Inter_600SemiBold",
@@ -212,11 +242,14 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,
+    minHeight: 44,
   },
+  optionText: { flex: 1, flexShrink: 1 },
   optionActive: { backgroundColor: INK + "10" },
-  optionAbbr: { fontSize: 15, fontFamily: "Inter_500Medium", color: INK },
+  optionAbbr: { fontSize: 15, lineHeight: 20, fontFamily: "Inter_500Medium", color: INK },
   optionAbbrActive: { fontFamily: "Inter_700Bold" },
-  optionName: { fontSize: 12, fontFamily: "Inter_400Regular", color: INK_MUTED, marginTop: 1 },
+  optionName: { fontSize: 12, lineHeight: 17, fontFamily: "Inter_400Regular", color: INK_MUTED, marginTop: 1 },
+  coverage: { fontSize: 12, lineHeight: 17, fontFamily: "Inter_500Medium", color: INK_MUTED, marginTop: 2 },
   empty: {
     paddingVertical: 18,
     paddingHorizontal: 20,

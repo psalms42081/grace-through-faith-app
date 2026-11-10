@@ -212,7 +212,7 @@ describe("BBE acrostic letter markers", () => {
 
   it("Compare strips the companion's acrostic markers but shows headings from the reading version only", () => {
     const reader = read("app/read/[bookId]/[chapter].tsx");
-    assert.match(reader, /withAcrosticHeadings\(splitLoadFailed \? \[\] : \(splitData\?\.verses \?\? \[\]\), undefined\)\.verses/);
+    assert.match(reader, /withAcrosticHeadings\(splitLoadFailed \|\| splitNotice \? \[\] : \(splitData\?\.verses \?\? \[\]\), undefined\)\.verses/);
     assert.doesNotMatch(reader, /splitHeadings/);
     assert.doesNotMatch(reader, /split-heading/);
   });

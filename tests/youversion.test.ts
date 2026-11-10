@@ -329,8 +329,125 @@ describe("translation picker catalog", () => {
     assert.match(reader, /<ChapterAttribution[\s\S]*?attribution=\{data\.attribution\}/);
     assert.match(reader, /<ChapterAttribution[\s\S]*?attribution=\{splitData\.attribution\}/);
     assert.match(reader, /<TranslationPickerList/);
-    assert.equal(reader.match(/catalog=\{pickerCatalog\}/g)?.length, 3);
+    assert.equal(reader.match(/catalog=\{pickerCatalog\}/g)?.length, 4);
     assert.match(reader, /testID="split-translation-picker"/);
     assert.match(reader, /testID="reader-translation-picker"/);
+    assert.match(reader, /MissingTranslationNotice/);
+    assert.match(read("app/book-picker.tsx"), /bookIsInEdition/);
+  });
+});
+
+describe("Languages of Australia", () => {
+  const australia: CatalogTranslation[] = [
+    { id: "YV1362", abbreviation: "YV1362", displayAbbreviation: "rop", name: "Kriol Baibul", language: "rop", languageName: "Australian Creole", source: "youversion" },
+    { id: "YV1291", abbreviation: "YV1291", displayAbbreviation: "bvrNT", name: "Burarra", language: "bvr", languageName: "Burarra", source: "youversion" },
+    { id: "YV1332", abbreviation: "YV1332", displayAbbreviation: "wimNT", name: "Wik-Mungkan", language: "wim", languageName: "Wik-Mungkan", source: "youversion" },
+    { id: "YV1400", abbreviation: "YV1400", displayAbbreviation: "tcsDBL", name: "Torres Strait Creole NT+", language: "tcs", languageName: "Torres Strait Creole", source: "youversion" },
+    { id: "YV1355", abbreviation: "YV1355", displayAbbreviation: "wbp", name: "Warlpiri Bible 2014", language: "wbp", languageName: "Warlpiri", source: "youversion" },
+    { id: "YV2571", abbreviation: "YV2571", displayAbbreviation: "aly", name: "Alyawarr Bible", language: "aly", languageName: "Alyawarr", source: "youversion" },
+    { id: "YV2572", abbreviation: "YV2572", displayAbbreviation: "amxB", name: "Anmatyerr Bible", language: "amx", languageName: "Anmatyerre", source: "youversion" },
+    { id: "YV1399", abbreviation: "YV1399", displayAbbreviation: "mwpBIBLEPO", name: "Minar Poelayzimayl", language: "mwp", languageName: "Kala Lagaw Ya", source: "youversion" },
+    { id: "YV2403", abbreviation: "YV2403", displayAbbreviation: "dji", name: "Djinang", language: "dji", languageName: "Djinang", source: "youversion" },
+    { id: "KJV", abbreviation: "KJV", name: "King James Version", language: "en", languageName: "English", source: "db" },
+  ];
+
+  it("lists the nine editions immediately after English, most complete first, and keeps their own groups", () => {
+    const groups = groupTranslationsByLanguage(australia);
+    assert.deepEqual(groups.slice(0, 2).map((group) => group.languageName), ["English", "Languages of Australia"]);
+    const featured = groups[1].entries;
+    assert.deepEqual(featured.map((entry) => entry.abbreviation), [
+      "YV1362", "YV1291", "YV1332", "YV1400", "YV1355", "YV2571", "YV2572", "YV1399", "YV2403",
+    ]);
+    assert.deepEqual(featured.map((entry) => entry.coverage), [
+      "Full Bible",
+      "New Testament",
+      "New Testament",
+      "New Testament + some OT",
+      "New Testament + some OT",
+      "Selected books",
+      "Selected books",
+      "Selected books",
+      "Selected books",
+    ]);
+    assert.equal(featured[0].australiaLanguage, "Kriol");
+    assert.ok(groups.some((group) => group.languageName === "Burarra"));
+    assert.ok(groups.some((group) => group.languageName === "Australian Creole"));
+  });
+
+  it("finds Kriol, Yumplatok, and the whole group from the search aliases", () => {
+    const groups = groupTranslationsByLanguage(australia);
+    const codes = (query: string) =>
+      filterTranslationGroups(groups, query).flatMap((group) => group.entries.map((entry) => entry.abbreviation));
+    assert.deepEqual(
+      filterTranslationGroups(groups, "kriol").find((group) => group.languageName === "Languages of Australia")?.entries.map((entry) => entry.abbreviation),
+      ["YV1362"],
+    );
+    assert.deepEqual(
+      filterTranslationGroups(groups, "australian kriol")
+        .find((group) => group.languageName === "Languages of Australia")
+        ?.entries.map((entry) => entry.abbreviation),
+      ["YV1362"],
+    );
+    assert.equal(codes("australian kriol").includes("YV1291"), false);
+    assert.ok(codes("yumplatok").includes("YV1400"));
+    assert.equal(codes("yumplatok").includes("YV1291"), false);
+    for (const query of ["aboriginal", "torres strait", "indigenous", "australia"]) {
+      const featured = filterTranslationGroups(groups, query).find((group) => group.languageName === "Languages of Australia");
+      assert.equal(featured?.entries.length, 9, query);
+    }
+  });
+});
+
+describe("partial editions", () => {
+  it("names the gap, offers the nearest book, and keeps YouVersion text out of AI", async () => {
+    const {
+      nearestTranslatedBook,
+      noticeForMissingPassage,
+      openingChapter,
+      partialCanonBooks,
+      passageErrorIsUntranslated,
+      previousReadingTranslation,
+      untranslatedBook,
+      untranslatedBookMessage,
+      untranslatedEarlyChapter,
+      booksForEdition,
+    } = await import("../shared/partial-bible");
+    const { NT_USFM, OT_USFM } = await import("../shared/bible-books");
+
+    assert.equal(partialCanonBooks([...OT_USFM, ...NT_USFM]), undefined);
+    assert.equal(partialCanonBooks(NT_USFM)?.length, 27);
+    assert.equal(untranslatedBookMessage("Isaiah", "Warlpiri"), "Isaiah isn't translated in Warlpiri yet");
+    assert.equal(nearestTranslatedBook("Isaiah", booksForEdition("YV1355")!), "Psalms");
+    assert.equal(nearestTranslatedBook("Exodus", booksForEdition("YV2403")!), "Genesis");
+    const warlpiriIsaiah = untranslatedBook("YV1355", "Isaiah");
+    assert.equal(warlpiriIsaiah?.nearestBook, "Psalms");
+    assert.equal(warlpiriIsaiah?.nearestChapter, 23);
+    assert.equal(openingChapter("YV1355", "Judges"), 2);
+    assert.equal(openingChapter("YV1355", "Genesis"), 1);
+    const psalmsOne = untranslatedEarlyChapter("YV1355", "Psalms", 1);
+    assert.equal(psalmsOne?.bookName, "Psalms 1");
+    assert.equal(psalmsOne?.nearestChapter, 23);
+    assert.equal(untranslatedEarlyChapter("YV1355", "Psalms", 23), null);
+    const judgesThree = noticeForMissingPassage("YV1355", "Judges", 3);
+    assert.equal(judgesThree.nearestBook, "Judges");
+    assert.equal(judgesThree.nearestChapter, 2);
+    const gap = untranslatedBook("YV2403", "Exodus");
+    assert.equal(gap?.language, "Djinang");
+    assert.equal(gap?.nearestBook, "Genesis");
+    assert.equal(gap?.nearestBookId, 1);
+    assert.equal(gap?.nearestChapter, 1);
+    assert.equal(untranslatedBook("YV1362", "Isaiah"), null);
+    assert.equal(untranslatedBook("YV1291", "Matthew", { partial: false }), null);
+    assert.equal(previousReadingTranslation("YV1355", "KJV"), "KJV");
+    assert.equal(previousReadingTranslation("YV1355", "YV1355"), "KJV");
+    assert.equal(previousReadingTranslation("YV1355", "NLT"), "NLT");
+    assert.equal(passageErrorIsUntranslated(new Error("404: {\"error\":\"bvrNT doesn't include Isaiah.\"}")), true);
+    assert.equal(passageErrorIsUntranslated(new Error("500: unavailable")), false);
+    assert.equal(aiScriptureTranslation("YV1362"), "KJV");
+    assert.equal(aiScriptureTranslation("YV2403"), "KJV");
+    assert.equal(partialCanonBooks(["GEN", "1JN"])?.join(" "), "GEN 1JN");
+    const catalog = read("server/services/youversion.ts");
+    assert.match(catalog, /partialCanonBooks\(reportedBooks\)/);
+    assert.match(catalog, /partial: !!books/);
   });
 });

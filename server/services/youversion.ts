@@ -14,6 +14,7 @@ import {
   type BibleVersion,
 } from "@youversion/platform-core";
 import { youVersionBibleId, youVersionCode } from "../../shared/youversion";
+import { partialCanonBooks } from "../../shared/partial-bible";
 import { parseYouVersionChapterHtml, type YouVersionChapter } from "./youversion-html";
 import {
   API_BIBLE_BOOK_MAP,
@@ -53,6 +54,10 @@ export interface YouVersionCatalogEntry {
   license: "YouVersion Platform";
   available: true;
   providerEditionId: string;
+  /** False when the edition contains every Protestant book. Omitted when the book list was not reported. */
+  partial?: boolean;
+  /** Protestant books present, only when `partial` is true. */
+  books?: string[];
 }
 
 export interface YouVersionAttribution {
@@ -244,6 +249,8 @@ export async function getLanguageNames(): Promise<Map<string, string>> {
 
 export function toCatalogEntry(bible: YouVersionBible, languageNames?: Map<string, string>): YouVersionCatalogEntry {
   const code = youVersionCode(bible.id);
+  const reportedBooks = bible.books?.length ? bible.books : undefined;
+  const books = partialCanonBooks(reportedBooks);
   return {
     id: code,
     abbreviation: code,
@@ -256,6 +263,8 @@ export function toCatalogEntry(bible: YouVersionBible, languageNames?: Map<strin
     license: "YouVersion Platform",
     available: true,
     providerEditionId: String(bible.id),
+    ...(reportedBooks ? { partial: !!books } : {}),
+    ...(books ? { books } : {}),
   };
 }
 

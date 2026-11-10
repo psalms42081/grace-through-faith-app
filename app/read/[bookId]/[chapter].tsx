@@ -43,6 +43,7 @@ const OriginalWordsSheet = React.lazy(() =>
   import("@/components/reader/OriginalWordsSheet").then((mod) => ({ default: mod.OriginalWordsSheet })),
 );
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
+import { MissingTranslationNotice } from "@/components/reader/MissingTranslationNotice";
 import {
   ChapterAttribution,
   type ChapterAttributionData,
@@ -50,6 +51,14 @@ import {
 } from "@/components/reader/ChapterAttribution";
 import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
+import {
+  noticeForMissingPassage,
+  passageErrorIsUntranslated,
+  previousReadingTranslation,
+  untranslatedBook,
+  untranslatedEarlyChapter,
+  type UntranslatedBook,
+} from "@/shared/partial-bible";
 import { formatSheetReference } from "@/lib/verse-sheet";
 import {
   READER_HEADER_AA_PADDING,
@@ -752,7 +761,7 @@ export default function VerseReaderScreen() {
   const isDark = false; // reader-v2 is light-only; theme toggle slot arrives with global dark mode
   const { userId, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
-  const { translation: globalTranslation, setTranslation: setGlobalTranslation } = useTranslation();
+  const { translation: globalTranslation, previousTranslation, setTranslation: setGlobalTranslation } = useTranslation();
   const { data: availableTranslations } = useTranslationCatalog();
   // Authoritative catalog wins once loaded; only entries with available !== false
   // are offered in pickers. Static fallback is public-domain only (never NKJV).
@@ -861,9 +870,34 @@ export default function VerseReaderScreen() {
   /** Under 600px the second translation sits under each verse instead of a second pane. */
   const stackedSplit = splitMode && !isSideBySide;
 
+  const routeBookName = bibleBookName(bookId);
+  const catalogEntryFor = useCallback(
+    (code: string) => availableTranslations?.find((entry) => entry.abbreviation.toUpperCase() === code.trim().toUpperCase()),
+    [availableTranslations],
+  );
+  const chapterNumber = Number(chapter) || 1;
+  const missingBook = useMemo(
+    () => untranslatedBook(translation, routeBookName, catalogEntryFor(translation)),
+    [catalogEntryFor, routeBookName, translation],
+  );
+  const earlyChapter = useMemo(
+    () => (missingBook ? null : untranslatedEarlyChapter(translation, routeBookName, chapterNumber, catalogEntryFor(translation))),
+    [catalogEntryFor, chapterNumber, missingBook, routeBookName, translation],
+  );
+  const splitMissingBook = useMemo(
+    () => (splitMode ? untranslatedBook(splitTranslation, routeBookName, catalogEntryFor(splitTranslation)) : null),
+    [catalogEntryFor, routeBookName, splitMode, splitTranslation],
+  );
+  const splitEarlyChapter = useMemo(
+    () => (splitMode && !splitMissingBook
+      ? untranslatedEarlyChapter(splitTranslation, routeBookName, chapterNumber, catalogEntryFor(splitTranslation))
+      : null),
+    [catalogEntryFor, chapterNumber, routeBookName, splitMissingBook, splitMode, splitTranslation],
+  );
+
   const { data: splitData, error: splitError } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${splitTranslation}`],
-    enabled: splitMode,
+    enabled: splitMode && !splitMissingBook && !splitEarlyChapter,
   });
 
   // If the stored split translation vanished from the authoritative catalog, do
@@ -871,12 +905,18 @@ export default function VerseReaderScreen() {
   const splitUnavailable = catalogLoaded && !translationList.includes(splitTranslation);
   const translationDisplay = translationLabel(translation, availableTranslations);
   const splitTranslationLabel = translationLabel(splitTranslation, availableTranslations);
-  const splitLoadFailed = !!splitError || splitUnavailable;
+  const splitUntranslatedError = !!splitError && passageErrorIsUntranslated(splitError);
+  const splitLoadFailed = (!!splitError && !splitUntranslatedError) || splitUnavailable;
+  const splitNotice: UntranslatedBook | null = splitMissingBook
+    ?? splitEarlyChapter
+    ?? (splitUntranslatedError
+      ? noticeForMissingPassage(splitTranslation, routeBookName || "This book", chapterNumber, catalogEntryFor(splitTranslation))
+      : null);
   // Compare shows headings from the reading version only; the comparison
   // version's own section titles would land under the wrong verse.
   const splitVerses = useMemo(
-    () => withAcrosticHeadings(splitLoadFailed ? [] : (splitData?.verses ?? []), undefined).verses,
-    [splitLoadFailed, splitData?.verses],
+    () => withAcrosticHeadings(splitLoadFailed || splitNotice ? [] : (splitData?.verses ?? []), undefined).verses,
+    [splitLoadFailed, splitNotice, splitData?.verses],
   );
   const splitVerseByNum = useMemo(
     () => new Map(splitVerses.map((v) => [v.verse, v])),
@@ -1044,7 +1084,34 @@ export default function VerseReaderScreen() {
 
   const { data, isLoading, error } = useQuery<PassageResponse>({
     queryKey: [`/api/passage?book=${bookId}&chapter=${chapter}&translation=${translation}`],
+    enabled: !missingBook && !earlyChapter,
   });
+  const untranslatedNotice: UntranslatedBook | null = missingBook
+    ?? earlyChapter
+    ?? (!translationUnavailable && passageErrorIsUntranslated(error)
+      ? noticeForMissingPassage(translation, routeBookName || "This book", chapterNumber, catalogEntryFor(translation))
+      : null);
+  const previousCode = previousReadingTranslation(translation, previousTranslation);
+  const offerPrevious = previousCode.toUpperCase() !== translation.toUpperCase();
+  const previousLabel = translationLabel(previousCode, availableTranslations);
+  const openNearestTranslatedBook = useCallback((notice: UntranslatedBook | null, edition: string) => {
+    if (!notice?.nearestBookId) return;
+    if (edition !== translation) setTranslation(edition);
+    const nextChapter = notice.nearestChapter > 0 ? notice.nearestChapter : 1;
+    if (isScriptureOverlay) {
+      router.replace(scriptureOverlayHref({
+        bookId: notice.nearestBookId,
+        chapter: nextChapter,
+        translation: edition,
+      }) as any);
+      return;
+    }
+    router.replace(`${readerBasePath}/${notice.nearestBookId}/${nextChapter}?translation=${encodeURIComponent(edition)}` as any);
+  }, [isScriptureOverlay, readerBasePath, setTranslation, translation]);
+  const readChapterInPrevious = useCallback(() => {
+    if (!offerPrevious) return;
+    setTranslation(previousCode);
+  }, [offerPrevious, previousCode, setTranslation]);
 
   const sessionHighlights = useSyncExternalStore(
     subscribeSessionHighlights,
@@ -1884,6 +1951,40 @@ export default function VerseReaderScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={RV2_INK_MUTED} />
           </View>
+        ) : untranslatedNotice ? (
+          <View style={{ flex: 1 }}>
+            {showTranslationPicker ? (
+              <>
+                <Pressable
+                  style={[StyleSheet.absoluteFill, { zIndex: 50 }]}
+                  onPress={() => setShowTranslationPicker(false)}
+                />
+                <View
+                  style={[styles.translationDropdownAbsolute, { backgroundColor: LIGHT_SURFACE, borderColor: "#E0E0E0" }]}
+                  onStartShouldSetResponder={() => true}
+                >
+                  <TranslationPickerList
+                    catalog={pickerCatalog}
+                    selected={translation}
+                    testID="reader-translation-picker"
+                    onSelect={(t) => {
+                      if (t !== translation) setTranslation(t);
+                      setShowTranslationPicker(false);
+                    }}
+                  />
+                </View>
+              </>
+            ) : null}
+            <MissingTranslationNotice
+              bookName={untranslatedNotice.bookName}
+              language={untranslatedNotice.language}
+              nearestBook={untranslatedNotice.nearestBook}
+              nearestChapter={untranslatedNotice.nearestChapter}
+              onNearest={() => openNearestTranslatedBook(untranslatedNotice, translation)}
+              previousLabel={offerPrevious ? previousLabel : null}
+              onPrevious={readChapterInPrevious}
+            />
+          </View>
         ) : (translationUnavailable || error) ? (
           <View style={styles.errorContainer}>
             <Ionicons
@@ -2019,6 +2120,17 @@ export default function VerseReaderScreen() {
               )}
 
               <View style={styles.proseContainer}>
+                {stackedSplit && splitNotice ? (
+                  <MissingTranslationNotice
+                    bookName={splitNotice.bookName}
+                    language={splitNotice.language}
+                    nearestBook={splitNotice.nearestBook}
+                    nearestChapter={splitNotice.nearestChapter}
+                    onNearest={() => openNearestTranslatedBook(splitNotice, splitTranslation)}
+                    embedded
+                    testID="split-missing-translation"
+                  />
+                ) : null}
                 {useNewTypography && !splitMode ? (
                   <TypographyPreviewProse
                     verses={visibleVerses}
@@ -2212,7 +2324,17 @@ export default function VerseReaderScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <View style={styles.proseContainer}>
-                    {splitLoadFailed ? (
+                    {splitNotice ? (
+                      <MissingTranslationNotice
+                        bookName={splitNotice.bookName}
+                        language={splitNotice.language}
+                        nearestBook={splitNotice.nearestBook}
+                        nearestChapter={splitNotice.nearestChapter}
+                        onNearest={() => openNearestTranslatedBook(splitNotice, splitTranslation)}
+                        embedded
+                        testID="split-missing-translation"
+                      />
+                    ) : splitLoadFailed ? (
                       <View style={styles.errorContainer}>
                         <Ionicons name="lock-closed-outline" size={28} color={theme.error} />
                         <Text style={[styles.errorText, { color: textColor, fontFamily: "Lora_500Medium" }]}>

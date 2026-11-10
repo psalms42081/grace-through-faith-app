@@ -29,6 +29,7 @@ import { useTranslation } from "@/context/TranslationContext";
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
+import { bookIsInEdition, booksForEdition } from "@/shared/partial-bible";
 
 interface BibleBook {
   id: number;
@@ -77,6 +78,9 @@ export default function BookPickerScreen() {
 
   const otBooks = books?.filter((b) => b.testament === "OT") ?? [];
   const ntBooks = books?.filter((b) => b.testament === "NT") ?? [];
+  const edition = apiTranslations?.find((entry) => entry.abbreviation.toUpperCase() === translation.toUpperCase());
+  const editionBooks = booksForEdition(translation, edition);
+  const bookIncluded = (name: string) => bookIsInEdition(name, editionBooks);
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
@@ -181,28 +185,36 @@ export default function BookPickerScreen() {
             </Text>
           </View>
           <View style={styles.booksGrid}>
-            {otBooks.map((book) => (
-              <Pressable
-                key={book.id}
-                onPress={() => openBook(book.id)}
-                style={({ pressed }) => [
-                  styles.bookPill,
-                  {
-                    backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard,
-                    borderColor: isDark ? theme.border : theme.borderLight,
-                    borderWidth: 1,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                  {book.name}
-                </Text>
-                <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {book.chapterCount}
-                </Text>
-              </Pressable>
-            ))}
+            {otBooks.map((book) => {
+              const included = bookIncluded(book.name);
+              return (
+                <Pressable
+                  key={book.id}
+                  disabled={!included}
+                  onPress={() => openBook(book.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !included }}
+                  accessibilityLabel={included ? book.name : `${book.name}, not translated in this version`}
+                  testID={`bible-book-${book.id}`}
+                  style={({ pressed }) => [
+                    styles.bookPill,
+                    {
+                      backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard,
+                      borderColor: isDark ? theme.border : theme.borderLight,
+                      borderWidth: 1,
+                      opacity: included ? (pressed ? 0.85 : 1) : 0.38,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.bookPillText, { color: included ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                    {book.name}
+                  </Text>
+                  <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {book.chapterCount}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
           <View style={[styles.testamentSection, { marginTop: 40 }]}>
@@ -214,28 +226,36 @@ export default function BookPickerScreen() {
             </Text>
           </View>
           <View style={styles.booksGrid}>
-            {ntBooks.map((book) => (
-              <Pressable
-                key={book.id}
-                onPress={() => openBook(book.id)}
-                style={({ pressed }) => [
-                  styles.bookPill,
-                  {
-                    backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard,
-                    borderColor: isDark ? theme.border : theme.borderLight,
-                    borderWidth: 1,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <Text style={[styles.bookPillText, { color: theme.text, fontFamily: "Inter_500Medium" }]}>
-                  {book.name}
-                </Text>
-                <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                  {book.chapterCount}
-                </Text>
-              </Pressable>
-            ))}
+            {ntBooks.map((book) => {
+              const included = bookIncluded(book.name);
+              return (
+                <Pressable
+                  key={book.id}
+                  disabled={!included}
+                  onPress={() => openBook(book.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !included }}
+                  accessibilityLabel={included ? book.name : `${book.name}, not translated in this version`}
+                  testID={`bible-book-${book.id}`}
+                  style={({ pressed }) => [
+                    styles.bookPill,
+                    {
+                      backgroundColor: isDark ? theme.backgroundCard : theme.backgroundCard,
+                      borderColor: isDark ? theme.border : theme.borderLight,
+                      borderWidth: 1,
+                      opacity: included ? (pressed ? 0.85 : 1) : 0.38,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.bookPillText, { color: included ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
+                    {book.name}
+                  </Text>
+                  <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                    {book.chapterCount}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </ScrollView>
       )}
@@ -299,13 +319,18 @@ const styles = StyleSheet.create({
   bookPill: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    maxWidth: "100%",
+    minHeight: 44,
   },
   bookPillText: {
     fontSize: 14,
+    lineHeight: 20,
+    flexShrink: 1,
   },
   bookChapters: {
     fontSize: 11,

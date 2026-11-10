@@ -6,14 +6,18 @@ import i18n from "@/lib/i18n";
 
 const TRANSLATION_KEY = "@grace-through-faith/translation";
 const MANUAL_OVERRIDE_KEY = "@grace-through-faith/translation-manual";
+const PREVIOUS_KEY = "@grace-through-faith/translation-previous";
 
 interface TranslationContextType {
   translation: string;
+  /** The edition in use before the latest change. KJV until the reader switches. */
+  previousTranslation: string;
   setTranslation: (t: string) => void;
 }
 
 const TranslationContext = createContext<TranslationContextType>({
   translation: "KJV",
+  previousTranslation: "KJV",
   setTranslation: () => {},
 });
 
@@ -35,6 +39,9 @@ async function resolveTranslation(): Promise<string> {
 
 export function TranslationProvider({ children }: { children: React.ReactNode }) {
   const [translation, setTranslationState] = useState("KJV");
+  const [previousTranslation, setPreviousTranslation] = useState("KJV");
+  const translationRef = useRef(translation);
+  translationRef.current = translation;
   const hasManualOverride = useRef(false);
 
   useEffect(() => {
@@ -44,6 +51,10 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
       AsyncStorage.getItem(MANUAL_OVERRIDE_KEY).then((v) => {
         hasManualOverride.current = !!normalizeTranslation(v);
       });
+    });
+    AsyncStorage.getItem(PREVIOUS_KEY).then((v) => {
+      const previous = normalizeTranslation(v);
+      if (previous) setPreviousTranslation(previous);
     });
   }, []);
 
@@ -61,6 +72,11 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
 
   const setTranslation = useCallback((t: string) => {
     const normalized = normalizeTranslation(t) ?? "KJV";
+    const current = translationRef.current;
+    if (current !== normalized) {
+      setPreviousTranslation(current);
+      AsyncStorage.setItem(PREVIOUS_KEY, current);
+    }
     setTranslationState(normalized);
     hasManualOverride.current = true;
     // Store the same normalized value in both keys so they never diverge.
@@ -69,7 +85,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   }, []);
 
   return (
-    <TranslationContext.Provider value={{ translation, setTranslation }}>
+    <TranslationContext.Provider value={{ translation, previousTranslation, setTranslation }}>
       {children}
     </TranslationContext.Provider>
   );

@@ -1,4 +1,14 @@
 import { isYouVersionCode } from "@/shared/youversion";
+import {
+  AUSTRALIAN_EDITIONS,
+  AUSTRALIAN_ENTRY_ALIASES,
+  AUSTRALIAN_GROUP_ALIASES,
+  AUSTRALIAN_GROUP_NAME,
+  booksForEdition,
+  coverageLabel,
+  searchAliasMatches,
+  type CoverageLabel,
+} from "@/shared/partial-bible";
 
 /** One entry from GET /api/translations. `abbreviation` is the app-wide code. */
 export interface CatalogTranslation {
@@ -11,6 +21,14 @@ export interface CatalogTranslation {
   source?: string;
   provider?: string;
   available?: boolean;
+  /** Protestant books this edition contains, when it is not a full Bible. */
+  books?: string[];
+  /** False when the catalogue knows the edition contains every Protestant book. */
+  partial?: boolean;
+  /** Set on Languages of Australia rows: the language people know the edition by. */
+  australiaLanguage?: string;
+  /** Set on Languages of Australia rows. */
+  coverage?: CoverageLabel;
 }
 
 export interface TranslationLanguageGroup {
@@ -61,12 +79,37 @@ export function groupTranslationsByLanguage(catalog: CatalogTranslation[]): Tran
         translationSortLabel(a).localeCompare(translationSortLabel(b)),
     );
   }
-  return [...groups.values()].sort((a, b) => {
+  const sorted = [...groups.values()].sort((a, b) => {
     const aEnglish = primaryLanguage(a.language) === "en" && a.languageName === "English";
     const bEnglish = primaryLanguage(b.language) === "en" && b.languageName === "English";
     if (aEnglish !== bEnglish) return aEnglish ? -1 : 1;
     return a.languageName.localeCompare(b.languageName);
   });
+  const australia = australianLanguageGroup(catalog);
+  if (!australia) return sorted;
+  const englishIndex = sorted.findIndex(
+    (group) => primaryLanguage(group.language) === "en" && group.languageName === "English",
+  );
+  sorted.splice(englishIndex === -1 ? 0 : englishIndex + 1, 0, australia);
+  return sorted;
+}
+
+/** The nine First Nations editions, most complete first. They also stay in their own language groups. */
+function australianLanguageGroup(catalog: CatalogTranslation[]): TranslationLanguageGroup | null {
+  const byCode = new Map(catalog.map((entry) => [entry.abbreviation.toUpperCase(), entry]));
+  const entries: CatalogTranslation[] = [];
+  for (const edition of AUSTRALIAN_EDITIONS) {
+    const entry = byCode.get(edition.code);
+    if (!entry) continue;
+    const books = booksForEdition(edition.code, entry);
+    entries.push({
+      ...entry,
+      australiaLanguage: edition.language,
+      coverage: coverageLabel(books),
+    });
+  }
+  if (!entries.length) return null;
+  return { language: "aus", languageName: AUSTRALIAN_GROUP_NAME, entries };
 }
 
 function translationSortLabel(entry: CatalogTranslation): string {
@@ -77,13 +120,18 @@ function translationSortLabel(entry: CatalogTranslation): string {
  * 0 exact abbreviation, 1 abbreviation prefix, 2 name, 3 language.
  * Exact codes such as NET stay above a language that merely contains the letters.
  */
-function translationSearchRank(entry: CatalogTranslation, needle: string, languageMatched: boolean): number | null {
+function translationSearchRank(
+  entry: CatalogTranslation,
+  needle: string,
+  languageMatched: boolean,
+  aliasMatched: boolean,
+): number | null {
   const labels = [entry.abbreviation, entry.displayAbbreviation]
     .map((value) => (value ?? "").trim().toLowerCase())
     .filter(Boolean);
   if (labels.some((label) => label === needle)) return 0;
   if (labels.some((label) => label.startsWith(needle))) return 1;
-  if (entry.name.toLowerCase().includes(needle)) return 2;
+  if (entry.name.toLowerCase().includes(needle) || aliasMatched) return 2;
   return languageMatched ? 3 : null;
 }
 
@@ -96,11 +144,26 @@ export function filterTranslationGroups(
   if (!needle) return groups;
   const ranked: { group: TranslationLanguageGroup; rank: number }[] = [];
   for (const group of groups) {
-    const languageMatched = group.languageName.toLowerCase().includes(needle);
+    const groupAlias = group.languageName === AUSTRALIAN_GROUP_NAME && searchAliasMatches(AUSTRALIAN_GROUP_ALIASES, needle);
+    const languageMatched = group.languageName.toLowerCase().includes(needle) || groupAlias;
+    const preserveOrder = group.languageName === AUSTRALIAN_GROUP_NAME;
     const entries = group.entries
-      .map((entry) => ({ entry, rank: translationSearchRank(entry, needle, languageMatched) }))
-      .filter((item): item is { entry: CatalogTranslation; rank: number } => item.rank !== null)
-      .sort((a, b) => a.rank - b.rank || translationSortLabel(a.entry).localeCompare(translationSortLabel(b.entry)));
+      .map((entry, index) => ({
+        entry,
+        index,
+        rank: translationSearchRank(
+          entry,
+          needle,
+          languageMatched,
+          searchAliasMatches(AUSTRALIAN_ENTRY_ALIASES[entry.abbreviation.toUpperCase()], needle),
+        ),
+      }))
+      .filter((item): item is { entry: CatalogTranslation; index: number; rank: number } => item.rank !== null)
+      .sort(
+        (a, b) =>
+          a.rank - b.rank ||
+          (preserveOrder ? a.index - b.index : translationSortLabel(a.entry).localeCompare(translationSortLabel(b.entry))),
+      );
     if (!entries.length) continue;
     ranked.push({
       group: { ...group, entries: entries.map((item) => item.entry) },
