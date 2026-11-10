@@ -2668,3 +2668,11 @@ export const featuredVideos = pgTable(
 );
 
 export type FeaturedVideo = typeof featuredVideos.$inferSelect;
+
+// One row: the @inVerseBible episode list. Refreshed daily. Survives a restart
+// so a lesson that has left the 15-item uploads feed can still be matched.
+export const inverseBibleEpisodeCache = pgTable("inverse_bible_episode_cache", {
+  id: varchar("id", { length: 16 }).primaryKey().default("current"),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+  episodes: jsonb("episodes").notNull(),
+});

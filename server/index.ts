@@ -570,6 +570,22 @@ function setupErrorHandler(app: express.Application) {
       }
 
       try {
+        const { getInverseEpisodes, setInverseEpisodeStore } = await import("./services/inverse-bible-youtube");
+        const { inverseEpisodeDbStore } = await import("./services/inverse-bible-episode-store");
+        setInverseEpisodeStore(inverseEpisodeDbStore);
+        void getInverseEpisodes()
+          .then((episodes) => {
+            console.log(`[inverse-bible] cached ${episodes.length} lesson episodes`);
+          })
+          .catch((err) => {
+            const message = err instanceof Error ? err.message : "cache warm failed";
+            console.error(`[inverse-bible] cache warm failed: ${message}`);
+          });
+      } catch (err) {
+        console.error("[inverse-bible] cache warm failed:", err);
+      }
+
+      try {
         const { initOdbRefresh } = await import("./services/odb-refresh");
         initOdbRefresh();
       } catch (err) {

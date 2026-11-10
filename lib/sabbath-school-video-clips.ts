@@ -3,7 +3,30 @@ export type SabbathSchoolVideoClip = {
   title: string;
   thumbnail: string;
   artist: string;
+  youtubeId?: string;
 };
+
+/** Watch, embed, or youtu.be id. Shorts URLs are not lesson episodes. */
+export function youtubeIdFromUrl(src: string): string | null {
+  try {
+    const url = new URL(src);
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+    if (host === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0] ?? "";
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (url.pathname.startsWith("/shorts/")) return null;
+      const watchId = url.searchParams.get("v") ?? "";
+      if (/^[A-Za-z0-9_-]{11}$/.test(watchId)) return watchId;
+      const embed = /^\/embed\/([A-Za-z0-9_-]{11})/.exec(url.pathname);
+      return embed ? embed[1] : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 type ArtistGroup = {
   artist: string;
@@ -12,6 +35,7 @@ type ArtistGroup = {
     title?: string;
     thumbnail?: string;
     target?: string;
+    youtubeId?: string;
   }>;
 };
 
@@ -38,6 +62,7 @@ export function flattenSabbathSchoolLessonClips(
         title: clip.title || "Lesson Clip",
         thumbnail: clip.thumbnail || "",
         artist: group.artist,
+        ...(clip.youtubeId ? { youtubeId: clip.youtubeId } : {}),
       })),
     )
     .filter((clip) => !!clip.src && isHttpsVideoSource(clip.src))
@@ -70,6 +95,47 @@ export function relatedLessonVideoGroups(
     if (clips.length > 0) out.push({ label: group.label, clips });
   }
   return out;
+}
+
+export function earlierEpisodesHeading(trackLabel: string): string {
+  return `Earlier ${trackLabel} episodes`;
+}
+
+export function showOtherTrackVideosLabel(trackLabel: string): string {
+  return `Show ${trackLabel} videos on this lesson`;
+}
+
+/**
+ * One row for each earlier lesson in the quarter that already has a video.
+ * Newest lesson first. Lessons with no playable source are left out.
+ */
+export function earlierQuarterLessonClips(
+  lessons: readonly {
+    lessonNumber: number;
+    title?: string | null;
+    videoByArtist?: unknown;
+  }[],
+  currentLessonNumber: number,
+): SabbathSchoolVideoClip[] {
+  return lessons
+    .filter((lesson) => lesson.lessonNumber < currentLessonNumber)
+    .sort((a, b) => b.lessonNumber - a.lessonNumber)
+    .flatMap((lesson) => {
+      const clip = flattenSabbathSchoolLessonClips(
+        lesson.videoByArtist as Parameters<typeof flattenSabbathSchoolLessonClips>[0],
+        1,
+      )[0];
+      if (!clip) return [];
+      const lessonTitle = lesson.title?.trim() ?? "";
+      return [
+        {
+          ...clip,
+          title: lessonTitle
+            ? `Lesson ${lesson.lessonNumber} · ${lessonTitle}`
+            : `Lesson ${lesson.lessonNumber}`,
+        },
+      ];
+    });
 }
 
 export function hasSabbathSchoolLessonVideo(

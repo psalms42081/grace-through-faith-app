@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -20,10 +20,13 @@ import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import LessonVideoPlayer from "@/components/sabbath-school/LessonVideoPlayer";
 import {
+  earlierEpisodesHeading,
   flattenSabbathSchoolLessonClips,
   relatedLessonVideoGroups,
   type RelatedLessonVideoGroup,
+  type SabbathSchoolVideoClip,
 } from "@/lib/sabbath-school-video-clips";
+import { SABBATH_SCHOOL_TRACKS } from "@/lib/sabbath-school-tracks";
 import { resolveSabbathSchoolContinueDay } from "@/lib/sabbath-school-continue";
 import {
   buildSabbathSchoolTabRoute,
@@ -48,6 +51,7 @@ export default function SabbathSchoolVideoScreen() {
   const { userId } = useAuth();
   const { selectedTrack, availableTracks } = useSabbathSchoolTrack();
   const [clock, setClock] = useState(() => new Date());
+  const [screenVisit, setScreenVisit] = useState(0);
   const isTabContained = useSabbathSchoolTabContainment("sabbath-school-video");
   const localDay = useMemo(() => getHomeLocalDay(clock), [clock]);
   const localDateKey = localDay.dateKey;
@@ -56,6 +60,12 @@ export default function SabbathSchoolVideoScreen() {
     const timer = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(timer);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreenVisit((visit) => visit + 1);
+    }, []),
+  );
 
   const { data, isLoading } = useQuery<{
     quarterly: { quarterCode?: string } | null;
@@ -74,6 +84,7 @@ export default function SabbathSchoolVideoScreen() {
     } | null;
     currentLessonNumber?: number;
     todayDayNumber?: number | null;
+    earlierLessonVideos?: SabbathSchoolVideoClip[];
   }>({
     queryKey: [
       "sabbath-school-current",
@@ -116,6 +127,14 @@ export default function SabbathSchoolVideoScreen() {
       return groups;
     },
   });
+  const earlierVideos = data?.earlierLessonVideos ?? [];
+  const earlier =
+    earlierVideos.length > 0
+      ? {
+          heading: earlierEpisodesHeading(SABBATH_SCHOOL_TRACKS[selectedTrack].shortLabel),
+          clips: earlierVideos,
+        }
+      : undefined;
   const moreVideos = useMemo(
     () =>
       relatedLessonVideoGroups(
@@ -177,7 +196,7 @@ export default function SabbathSchoolVideoScreen() {
           contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          {clips.length === 0 && moreVideos.length === 0 ? (
+          {clips.length === 0 && moreVideos.length === 0 && earlierVideos.length === 0 ? (
             <View style={s.emptyCard}>
               <Text style={s.emptyText}>
                 No lesson video is available for this week yet.
@@ -192,7 +211,13 @@ export default function SabbathSchoolVideoScreen() {
               </Pressable>
             </View>
           ) : (
-            <LessonVideoPlayer clips={clips} layout="page" more={moreVideos} />
+            <LessonVideoPlayer
+              clips={clips}
+              layout="page"
+              more={moreVideos}
+              earlier={earlier}
+              revealKey={`${screenVisit}:${selectedTrack}`}
+            />
           )}
         </ScrollView>
       )}

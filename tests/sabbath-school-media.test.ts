@@ -7,10 +7,13 @@ import {
   sabbathSchoolMediaUrl,
 } from "../lib/sabbath-school-media";
 import {
+  earlierEpisodesHeading,
+  earlierQuarterLessonClips,
   firstPlayableSabbathSchoolClip,
   flattenSabbathSchoolLessonClips,
   hasSabbathSchoolLessonVideo,
   relatedLessonVideoGroups,
+  showOtherTrackVideosLabel,
 } from "../lib/sabbath-school-video-clips";
 
 const overviewSource = readFileSync(
@@ -100,6 +103,16 @@ describe("Sabbath School web media proxy", () => {
     assert.match(playerSource, /onFullscreenEnter=\{\(\) => \{/);
     assert.match(playerSource, /onFullscreenExit=\{\(\) => \{/);
     assert.match(playerSource, /autoPlay: false/);
+    assert.match(playerSource, /openYouTubeVideo\(youtubeId/);
+    assert.match(playerSource, /youtubeIdFromUrl\(clip\.src\)/);
+    const youtubeThumb = "https://i4.ytimg.com/vi/symxY-m2IIQ/hqdefault.jpg";
+    assert.equal(
+      sabbathSchoolMediaUrl(youtubeThumb, {
+        platform: "web",
+        baseUrl: "https://gracethroughfaith.app/",
+      }),
+      youtubeThumb,
+    );
     assert.match(watchScreenSource, /LessonVideoPlayer/);
     assert.match(watchScreenSource, /layout="page"/);
     const pageStart = playerSource.indexOf('if (layout === "page")');
@@ -231,16 +244,56 @@ describe("Sabbath School web media proxy", () => {
       /\/api\/sabbath-school\/lesson\/\$\{lessonNumber\}\?userId=\$\{userId\}&curriculum=\$\{track\.id\}/,
     );
     assert.match(watchScreenSource, /more=\{moreVideos\}/);
-    assert.match(watchScreenSource, /clips\.length === 0 && moreVideos\.length === 0/);
-    assert.match(playerSource, /More on this week's lesson/);
-    assert.match(playerSource, /testID="lesson-video-more"/);
+    assert.match(
+      watchScreenSource,
+      /clips\.length === 0 && moreVideos\.length === 0 && earlierVideos\.length === 0/,
+    );
+    assert.match(watchScreenSource, /earlierLessonVideos/);
+    assert.match(watchScreenSource, /useFocusEffect/);
+    assert.match(watchScreenSource, /revealKey=\{`\$\{screenVisit\}:\$\{selectedTrack\}`\}/);
+    assert.equal(showOtherTrackVideosLabel("Adult"), "Show Adult videos on this lesson");
+    assert.equal(showOtherTrackVideosLabel("InVerse"), "Show InVerse videos on this lesson");
+    assert.equal(earlierEpisodesHeading("InVerse"), "Earlier InVerse episodes");
+    assert.equal(earlierEpisodesHeading("Adult"), "Earlier Adult episodes");
+    assert.deepEqual(
+      earlierQuarterLessonClips(
+        [
+          {
+            lessonNumber: 7,
+            title: "Now Hear This!",
+            videoByArtist: [{ artist: "Hope Sabbath School", clips: [hope] }],
+          },
+          {
+            lessonNumber: 6,
+            title: "The Prophetic Writings",
+            videoByArtist: [
+              {
+                artist: "Hope Sabbath School",
+                clips: [{ ...hope, src: "https://sabbath-school-media.adventech.io/video/en/2026-04/lesson6.mp4", title: "Hope" }],
+              },
+            ],
+          },
+          { lessonNumber: 5, title: "Revelation and Inspiration", videoByArtist: [] },
+        ],
+        7,
+      ).map((clip) => clip.title),
+      ["Lesson 6 · The Prophetic Writings"],
+    );
+    assert.match(playerSource, /showOtherTrackVideosLabel\(group\.label\)/);
+    assert.match(playerSource, /testID="lesson-video-other-toggle"/);
+    assert.match(playerSource, /accessibilityState=\{\{ expanded: open \}\}/);
+    assert.match(playerSource, /useState<ReadonlySet<string>>\(new Set\(\)\)/);
+    assert.match(playerSource, /setOtherTracksOpen\(new Set\(\)\)/);
+    assert.match(playerSource, /testID="lesson-video-earlier"/);
+    assert.match(playerSource, /testID="lesson-video-earlier-row"/);
+    assert.match(playerSource, /\{earlier\.heading\}/);
+    assert.doesNotMatch(playerSource, /More on this week's lesson/);
     assert.match(playerSource, /testID="lesson-video-more-row"/);
-    assert.match(playerSource, /\{group\.label\}/);
-    assert.match(playerSource, /moreTrackLabel: \{[\s\S]*?fontSize: 12/);
     assert.match(playerSource, /s\.listRow/);
     const pageStart = playerSource.indexOf('if (layout === "page")');
     const pageEnd = playerSource.indexOf("const chooser = showChooser");
     const pageLayout = playerSource.slice(pageStart, pageEnd);
-    assert.match(pageLayout, /moreRows\.length > 0/);
+    assert.match(pageLayout, /lesson-video-earlier/);
+    assert.match(pageLayout, /open\s*\?\s*group\.clips\.map/);
   });
 });

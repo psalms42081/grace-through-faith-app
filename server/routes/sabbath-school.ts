@@ -34,6 +34,8 @@ import {
   tracksFromAvailableIds,
   type SabbathSchoolTrackId,
 } from "../../lib/sabbath-school-tracks";
+import { lessonWithInverseEpisode, loadEarlierInverseLessonClips } from "../services/inverse-bible-youtube";
+import { earlierQuarterLessonClips } from "../../lib/sabbath-school-video-clips";
 
 const router = Router();
 
@@ -303,13 +305,19 @@ router.get("/api/sabbath-school/current", async (req, res) => {
     const todayDayNumber = findTodayDayNumber(daysWithProgress, now, timeZone);
 
     const companion = await findCompanionForLesson(currentLesson.id);
+    const lessonForClient = await lessonWithInverseEpisode(currentLesson, q);
+    const earlierLessonVideos =
+      q.curriculumType === "inverse"
+        ? await loadEarlierInverseLessonClips(q, currentLesson.lessonNumber)
+        : earlierQuarterLessonClips(lessons, currentLesson.lessonNumber);
 
     return res.json({
       quarterly: q,
       currentLesson: {
-        ...currentLesson,
+        ...lessonForClient,
         days: daysWithProgress,
       },
+      earlierLessonVideos,
       currentLessonNumber: currentLessonNum,
       totalLessons: lessons.length,
       completedDays: daysWithProgress.filter((d) => d.completed).length,
@@ -376,9 +384,11 @@ router.get("/api/sabbath-school/lesson/:lessonNumber", async (req, res) => {
         progress.find((p) => p.dayId === day.id)?.journalEntry || null,
     }));
 
+    const lessonForClient = await lessonWithInverseEpisode(lesson[0], quarterly);
+
     return res.json({
       lesson: {
-        ...lesson[0],
+        ...lessonForClient,
         days: daysWithProgress,
       },
       quarterly,

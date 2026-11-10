@@ -16,8 +16,11 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { sabbathSchoolMediaUrl } from "@/lib/sabbath-school-media";
 import { getApiUrl } from "@/lib/query-client";
 import { useVideoSurfaceActive } from "@/lib/video-surface";
+import { openYouTubeVideo } from "@/lib/open-youtube-video";
 import {
   canInlinePlaySabbathSchoolVideo,
+  showOtherTrackVideosLabel,
+  youtubeIdFromUrl,
   type RelatedLessonVideoGroup,
   type SabbathSchoolVideoClip,
 } from "@/lib/sabbath-school-video-clips";
@@ -130,12 +133,18 @@ export default function LessonVideoPlayer({
   showChooser = true,
   layout = "row",
   more = [],
+  earlier = { heading: "", clips: [] },
+  revealKey = 0,
 }: {
   clips: SabbathSchoolVideoClip[];
   showChooser?: boolean;
   layout?: "row" | "page";
   /** Other tracks' videos for the same lesson. Page layout only. */
   more?: readonly RelatedLessonVideoGroup[];
+  /** This quarter's earlier lesson episodes. Page layout only. */
+  earlier?: { heading: string; clips: readonly SabbathSchoolVideoClip[] };
+  /** Changes when the watch screen opens again, which collapses the other track. */
+  revealKey?: string | number;
 }) {
   const [activeVideo, setActiveVideo] = useState<{
     src: string;
@@ -147,7 +156,11 @@ export default function LessonVideoPlayer({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [playRequested, setPlayRequested] = useState(false);
   const [relatedPick, setRelatedPick] = useState<SabbathSchoolVideoClip | null>(null);
+  const [otherTracksOpen, setOtherTracksOpen] = useState<ReadonlySet<string>>(new Set());
   const fullscreenLock = React.useRef(false);
+  useEffect(() => {
+    setOtherTracksOpen(new Set());
+  }, [revealKey]);
   const primaryKey = clips.map((clip) => clip.src).join("\n");
   useEffect(() => {
     setRelatedPick(null);
@@ -160,6 +173,14 @@ export default function LessonVideoPlayer({
   }, []);
 
   const startClip = useCallback((clip: SabbathSchoolVideoClip) => {
+    const youtubeId = clip.youtubeId || youtubeIdFromUrl(clip.src);
+    if (youtubeId) {
+      void openYouTubeVideo(youtubeId, {
+        title: clip.title,
+        speaker: clip.artist,
+      });
+      return;
+    }
     if (!canInlinePlaySabbathSchoolVideo(clip.src)) {
       Linking.openURL(clip.src).catch(() => {});
       return;
@@ -191,7 +212,7 @@ export default function LessonVideoPlayer({
     ? proxiedLessonMediaUrl(activeVideo.src)
     : "";
 
-  if (clips.length === 0 && more.length === 0) return null;
+  if (clips.length === 0 && more.length === 0 && earlier.clips.length === 0) return null;
 
   if (layout === "page") {
     const selectedAt = clips.length > 0 ? Math.min(selectedIndex, clips.length - 1) : 0;
@@ -204,6 +225,9 @@ export default function LessonVideoPlayer({
       }))
       .filter((group) => group.clips.length > 0);
     const playingThis = !!selected && activeVideo?.src === selected.src;
+    const earlierRows = earlier.heading
+      ? earlier.clips.filter((clip) => clip.src !== selected?.src)
+      : [];
     return (
       <View style={s.pageStack}>
         {selected ? (
@@ -292,6 +316,35 @@ export default function LessonVideoPlayer({
           </View>
         </View>
         ) : null}
+        {earlierRows.length > 0 ? (
+          <View style={s.listBlock} testID="lesson-video-earlier">
+            <Text style={s.listHeading}>{earlier.heading}</Text>
+            {earlierRows.map((clip) => (
+              <Pressable
+                key={clip.src}
+                onPress={() => {
+                  setPlayRequested(false);
+                  closePlayer();
+                  setRelatedPick(clip);
+                }}
+                style={({ pressed }) => [s.listRow, { opacity: pressed ? 0.85 : 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel={clip.title || "Lesson episode"}
+                testID="lesson-video-earlier-row"
+              >
+                <LessonVideoThumb
+                  thumbnail={clip.thumbnail}
+                  artist={clip.artist}
+                  style={s.listThumb}
+                />
+                <View style={s.listCopy}>
+                  <Text style={s.listTitle}>{clip.title || "Lesson episode"}</Text>
+                  <Text style={s.listSource}>{clip.artist}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         {primaryRows.length > 0 ? (
           <View style={s.listBlock}>
             <Text style={s.listHeading}>This week's videos</Text>
@@ -324,40 +377,62 @@ export default function LessonVideoPlayer({
             })}
           </View>
         ) : null}
-        {moreRows.length > 0 ? (
-          <View style={s.listBlock} testID="lesson-video-more">
-            <Text style={s.listHeading}>More on this week's lesson</Text>
-            {moreRows.map((group) => (
-              <View key={group.label} style={s.listBlock}>
-                <Text style={s.moreTrackLabel}>{group.label}</Text>
-                {group.clips.map((clip) => (
-                  <Pressable
-                    key={`${group.label}-${clip.src}`}
-                    onPress={() => {
-                      setPlayRequested(false);
-                      closePlayer();
-                      setRelatedPick(clip);
-                    }}
-                    style={({ pressed }) => [s.listRow, { opacity: pressed ? 0.85 : 1 }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${clip.title || "Lesson Clip"}, ${clip.artist}, ${group.label}`}
-                    testID="lesson-video-more-row"
-                  >
-                    <LessonVideoThumb
-                      thumbnail={clip.thumbnail}
-                      artist={clip.artist}
-                      style={s.listThumb}
-                    />
-                    <View style={s.listCopy}>
-                      <Text style={s.listTitle}>{clip.title || "Lesson Clip"}</Text>
-                      <Text style={s.listSource}>{clip.artist}</Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            ))}
-          </View>
-        ) : null}
+        {moreRows.map((group) => {
+          const open = otherTracksOpen.has(group.label);
+          const toggleLabel = showOtherTrackVideosLabel(group.label);
+          return (
+            <View key={group.label} style={s.listBlock} testID="lesson-video-more">
+              <Pressable
+                onPress={() => {
+                  setOtherTracksOpen((current) => {
+                    const next = new Set(current);
+                    if (next.has(group.label)) next.delete(group.label);
+                    else next.add(group.label);
+                    return next;
+                  });
+                }}
+                style={({ pressed }) => [s.otherToggle, { opacity: pressed ? 0.85 : 1 }]}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: open }}
+                accessibilityLabel={toggleLabel}
+                testID="lesson-video-other-toggle"
+              >
+                <Text style={s.otherToggleLabel}>{toggleLabel}</Text>
+                <Ionicons
+                  name={open ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={SS2.inkMuted}
+                />
+              </Pressable>
+              {open
+                ? group.clips.map((clip) => (
+                    <Pressable
+                      key={`${group.label}-${clip.src}`}
+                      onPress={() => {
+                        setPlayRequested(false);
+                        closePlayer();
+                        setRelatedPick(clip);
+                      }}
+                      style={({ pressed }) => [s.listRow, { opacity: pressed ? 0.85 : 1 }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${clip.title || "Lesson Clip"}, ${clip.artist}, ${group.label}`}
+                      testID="lesson-video-more-row"
+                    >
+                      <LessonVideoThumb
+                        thumbnail={clip.thumbnail}
+                        artist={clip.artist}
+                        style={s.listThumb}
+                      />
+                      <View style={s.listCopy}>
+                        <Text style={s.listTitle}>{clip.title || "Lesson Clip"}</Text>
+                        <Text style={s.listSource}>{clip.artist}</Text>
+                      </View>
+                    </Pressable>
+                  ))
+                : null}
+            </View>
+          );
+        })}
       </View>
     );
   }
@@ -514,11 +589,24 @@ const s = StyleSheet.create({
     lineHeight: 22,
     color: SS2.ink,
   },
-  moreTrackLabel: {
+  otherToggle: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    backgroundColor: SS2.card,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    ...HV2.rowShadow,
+  },
+  otherToggleLabel: {
+    flex: 1,
     fontFamily: F.interSemi,
-    fontSize: 12,
-    lineHeight: 16,
-    color: SS2.inkMuted,
+    fontSize: 15,
+    lineHeight: 21,
+    color: SS2.ink,
   },
   listRow: {
     flexDirection: "row",
