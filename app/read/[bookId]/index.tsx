@@ -15,6 +15,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
 import { SWEEP_LIGHT } from "@/constants/light-sweep";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/context/TranslationContext";
+import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
+import { chaptersInEdition } from "@/shared/partial-bible";
 import { bibleTabBookPath, goBibleReaderBack, isBibleTabSegments } from "@/lib/bible-tab-navigation";
 import { chapterListTitle } from "@/lib/reader-header-layout";
 import {
@@ -58,6 +61,8 @@ export default function ChapterPickerScreen() {
   const theme = SWEEP_LIGHT; // Path B — pinned light (Batch 1 Bible-tab sweep)
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const { translation } = useTranslation();
+  const { data: catalog } = useTranslationCatalog();
   const segments = useSegments();
   const isTabContained = isBibleTabSegments(segments);
   const canPopStack = useCanPopNestedStack();
@@ -81,8 +86,11 @@ export default function ChapterPickerScreen() {
   const readSet = new Set(readChapters ?? []);
 
   const book = books?.find((b) => b.id === Number(bookId));
+  const edition = catalog?.find((entry) => entry.abbreviation.toUpperCase() === translation.toUpperCase());
+  const listedChapters = book ? chaptersInEdition(translation, book.name, edition) : undefined;
   const chapterCount = book?.chapterCount ?? 0;
-  const chapters = Array.from({ length: chapterCount }, (_, i) => i + 1);
+  const chapters = listedChapters ?? Array.from({ length: chapterCount }, (_, i) => i + 1);
+  const shownChapterCount = chapters.length;
   const chaptersReadCount = readChapters?.length
     ? [...new Set(readChapters)].length
     : 0;
@@ -135,7 +143,7 @@ export default function ChapterPickerScreen() {
                 {chaptersReadCount > 0 && (
                   <View style={[styles.testamentBadge, { backgroundColor: READ_STATE.chipBg, marginLeft: 8 }]}>
                     <Text style={[styles.testamentText, { color: READ_STATE.chipText, fontFamily: "Inter_600SemiBold" }]}>
-                      {chaptersReadCount}/{chapterCount} read
+                      {chaptersReadCount}/{shownChapterCount} read
                     </Text>
                   </View>
                 )}
@@ -144,7 +152,7 @@ export default function ChapterPickerScreen() {
                 {book.name}
               </Text>
               <Text style={[styles.chapterInfo, { fontFamily: "Inter_400Regular" }]}>
-                {chapterCount} {chapterCount === 1 ? "chapter" : "chapters"}
+                {shownChapterCount} {shownChapterCount === 1 ? "chapter" : "chapters"}
               </Text>
             </View>
 

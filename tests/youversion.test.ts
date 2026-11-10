@@ -319,6 +319,10 @@ describe("translation picker catalog", () => {
   it("shows the version's own abbreviation and keeps YouVersion out of search", () => {
     assert.equal(translationLabel("YV2692", catalog), "NASB2020");
     assert.equal(translationLabel("KJV", catalog), "KJV");
+    assert.equal(translationLabel("YV1362", [{ abbreviation: "YV1362", displayAbbreviation: "rop", id: "YV1362", name: "Kriol Baibul", language: "rop" }]), "Kriol");
+    assert.equal(translationLabel("YV1400", [{ abbreviation: "YV1400", displayAbbreviation: "tcsDBL", id: "YV1400", name: "Torres Strait Creole NT+", language: "tcs" }]), "Yumplatok");
+    assert.equal(translationLabel("YV1355", [{ abbreviation: "YV1355", displayAbbreviation: "wbp", id: "YV1355", name: "Warlpiri Bible 2014", language: "wbp" }]), "Warlpiri");
+    assert.equal(translationLabel("YV1399", undefined), "Kala Lagaw Ya");
     assert.equal(isSearchableTranslation("YV2692"), false);
     assert.equal(isSearchableTranslation("NIV"), false);
     assert.equal(isSearchableTranslation("NLT"), true);
@@ -411,6 +415,7 @@ describe("partial editions", () => {
       untranslatedBookMessage,
       untranslatedEarlyChapter,
       booksForEdition,
+      chaptersInEdition,
     } = await import("../shared/partial-bible");
     const { NT_USFM, OT_USFM } = await import("../shared/bible-books");
 
@@ -424,6 +429,18 @@ describe("partial editions", () => {
     assert.equal(warlpiriIsaiah?.nearestChapter, 23);
     assert.equal(openingChapter("YV1355", "Judges"), 2);
     assert.equal(openingChapter("YV1355", "Genesis"), 1);
+    assert.deepEqual(chaptersInEdition("YV1355", "Psalms"), [23]);
+    assert.equal(chaptersInEdition("YV1355", "Judges")?.includes(1), false);
+    assert.equal(chaptersInEdition("YV1355", "Judges")?.includes(3), false);
+    assert.equal(chaptersInEdition("YV1355", "Judges")?.includes(4), true);
+    assert.equal(chaptersInEdition("YV1355", "Exodus")?.includes(18), false);
+    assert.equal(chaptersInEdition("YV1355", "Genesis"), undefined);
+    assert.deepEqual(chaptersInEdition("YV1355", "Isaiah"), []);
+    assert.equal(chaptersInEdition("YV2403", "Genesis")?.length, 31);
+    assert.equal(chaptersInEdition("YV1291", "Matthew"), undefined);
+    assert.equal(untranslatedEarlyChapter("YV1355", "Judges", 3)?.nearestChapter, 2);
+    assert.equal(untranslatedEarlyChapter("YV1355", "Judges", 9)?.nearestChapter, 8);
+    assert.equal(untranslatedEarlyChapter("YV1355", "Exodus", 18)?.nearestChapter, 17);
     const psalmsOne = untranslatedEarlyChapter("YV1355", "Psalms", 1);
     assert.equal(psalmsOne?.bookName, "Psalms 1");
     assert.equal(psalmsOne?.nearestChapter, 23);

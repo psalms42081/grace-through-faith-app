@@ -6,6 +6,7 @@ import {
   AUSTRALIAN_GROUP_NAME,
   booksForEdition,
   coverageLabel,
+  editionChipLabel,
   searchAliasMatches,
   type CoverageLabel,
 } from "@/shared/partial-bible";
@@ -43,8 +44,10 @@ export function availableCatalog(catalog: CatalogTranslation[] | undefined): Cat
   return (catalog ?? []).filter((entry) => entry.available !== false && !!entry.abbreviation);
 }
 
-/** Reader-facing abbreviation for a translation code ("YV2692" shows as "NASB2020"). */
+/** Reader-facing short name for a translation code ("YV2692" shows as "NASB2020"). */
 export function translationLabel(code: string, catalog: CatalogTranslation[] | undefined): string {
+  const chip = editionChipLabel(code);
+  if (chip) return chip;
   const entry = catalog?.find((t) => t.abbreviation.toUpperCase() === code.trim().toUpperCase());
   return entry?.displayAbbreviation || entry?.abbreviation || code;
 }

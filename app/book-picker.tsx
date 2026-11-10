@@ -29,7 +29,7 @@ import { useTranslation } from "@/context/TranslationContext";
 import { TranslationPickerList } from "@/components/reader/TranslationPickerList";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
-import { bookIsInEdition, booksForEdition } from "@/shared/partial-bible";
+import { bookIsInEdition, booksForEdition, chaptersInEdition } from "@/shared/partial-bible";
 
 interface BibleBook {
   id: number;
@@ -105,7 +105,11 @@ export default function BookPickerScreen() {
           hitSlop={8}
           onPress={() => setShowPicker(true)}
         >
-          <Text style={[styles.translationPillText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[styles.translationPillText, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}
+          >
             {translationLabel(translation, apiTranslations)}
           </Text>
           <Ionicons name="chevron-down" size={12} color={theme.accent} />
@@ -209,9 +213,11 @@ export default function BookPickerScreen() {
                   <Text style={[styles.bookPillText, { color: included ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                     {book.name}
                   </Text>
-                  <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {book.chapterCount}
-                  </Text>
+                  {included ? (
+                    <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {chaptersInEdition(translation, book.name, edition)?.length ?? book.chapterCount}
+                    </Text>
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -250,9 +256,11 @@ export default function BookPickerScreen() {
                   <Text style={[styles.bookPillText, { color: included ? theme.text : theme.textMuted, fontFamily: "Inter_500Medium" }]}>
                     {book.name}
                   </Text>
-                  <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
-                    {book.chapterCount}
-                  </Text>
+                  {included ? (
+                    <Text style={[styles.bookChapters, { color: isDark ? theme.textSecondary : theme.textMuted, fontFamily: "Inter_400Regular" }]}>
+                      {chaptersInEdition(translation, book.name, edition)?.length ?? book.chapterCount}
+                    </Text>
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -284,12 +292,14 @@ const styles = StyleSheet.create({
   translationPill: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 1,
     gap: 4,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
   },
   translationPillText: {
+    flexShrink: 1,
     fontSize: 13,
     letterSpacing: 0.5,
   },

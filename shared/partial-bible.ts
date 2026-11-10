@@ -36,6 +36,26 @@ const AUSTRALIAN_LANGUAGE_BY_CODE: Record<string, string> = Object.fromEntries(
   AUSTRALIAN_EDITIONS.map((edition) => [edition.code, edition.language]),
 );
 
+/**
+ * Short name for the Bible-tab chip, the reader chip, and the compare line.
+ * Torres Strait Creole is shown as Yumplatok, the name readers use for that language.
+ */
+export const AUSTRALIAN_CHIP_LABELS: Record<string, string> = {
+  YV1362: "Kriol",
+  YV1291: "Burarra",
+  YV1332: "Wik-Mungkan",
+  YV1400: "Yumplatok",
+  YV1355: "Warlpiri",
+  YV2571: "Alyawarr",
+  YV2572: "Anmatyerre",
+  YV1399: "Kala Lagaw Ya",
+  YV2403: "Djinang",
+};
+
+export function editionChipLabel(code: string): string | undefined {
+  return AUSTRALIAN_CHIP_LABELS[code.trim().toUpperCase()];
+}
+
 /** Extra names that should find one edition. Matched as a whole phrase or a prefix of it. */
 export const AUSTRALIAN_ENTRY_ALIASES: Record<string, readonly string[]> = {
   YV1362: ["kriol", "australian kriol"],
@@ -49,12 +69,46 @@ const NT = [...NT_USFM];
  * The live catalogue wins once it marks the edition partial or complete.
  */
 /**
- * First published chapter when a book in an edition does not begin at chapter 1.
- * Warlpiri Judges starts at chapter 2, and its Psalms is Psalm 23 only.
+ * Chapters that are not the whole Protestant book.
+ * Ranges are inclusive. A book missing from this map, but present in the edition, is complete.
  */
-const OPENING_CHAPTERS: Record<string, Record<string, number>> = {
-  YV1355: { JDG: 2, PSA: 23 },
+const PARTIAL_CHAPTERS: Record<string, Record<string, string>> = {
+  YV1355: {
+    EXO: "1-17,19-20,24,31-34,40",
+    NUM: "1-3,6,13-14,17,20-21,27",
+    DEU: "1,4,6-8,17-18,30-31,34",
+    JOS: "1-6,23-24",
+    JDG: "2,4-8,13-16",
+    PSA: "23",
+  },
+  YV2571: {
+    GEN: "1-4,6-9,11-19,21-33,35,37,39-46,49-50",
+    EXO: "1-20,23-24,31-34,40",
+    "1SA": "1-5,7-11,15-22,24-26,28,31",
+    "2SA": "1-3,5,7,11-12,15-18",
+  },
+  YV2403: {
+    GEN: "1-31",
+  },
 };
+
+function expandChapterSpec(spec: string): number[] {
+  const chapters: number[] = [];
+  for (const part of spec.split(",")) {
+    const [startRaw, endRaw] = part.split("-");
+    const start = Number(startRaw);
+    const end = endRaw == null || endRaw === "" ? start : Number(endRaw);
+    for (let chapter = start; chapter <= end; chapter += 1) chapters.push(chapter);
+  }
+  return chapters;
+}
+
+const CHAPTER_LISTS: Record<string, Record<string, readonly number[]>> = Object.fromEntries(
+  Object.entries(PARTIAL_CHAPTERS).map(([code, books]) => [
+    code,
+    Object.fromEntries(Object.entries(books).map(([usfm, spec]) => [usfm, expandChapterSpec(spec)])),
+  ]),
+);
 
 export const AUSTRALIAN_PARTIAL_BOOKS: Record<string, readonly string[]> = {
   YV1291: NT,
@@ -107,11 +161,42 @@ export function editionLanguageName(code: string, catalogLanguage?: string | nul
   return AUSTRALIAN_LANGUAGE_BY_CODE[code.trim().toUpperCase()] || catalogLanguage || code;
 }
 
+/**
+ * Chapters of this book the edition contains.
+ * Undefined when the edition is complete, or the book is included in full.
+ * An empty list means the edition does not contain the book.
+ */
+export function chaptersInEdition(
+  code: string,
+  bookName: string,
+  entry?: EditionBooks | null,
+): readonly number[] | undefined {
+  const books = booksForEdition(code, entry);
+  if (!books) return undefined;
+  const usfm = API_BIBLE_BOOK_MAP[bookName];
+  if (!usfm || !books.includes(usfm)) return [];
+  return CHAPTER_LISTS[code.trim().toUpperCase()]?.[usfm];
+}
+
+function nearestChapterNumber(chapters: readonly number[], chapter: number): number {
+  let best = chapters[0];
+  let bestDist = Math.abs(best - chapter);
+  for (const candidate of chapters) {
+    const dist = Math.abs(candidate - chapter);
+    if (dist < bestDist) {
+      best = candidate;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
 /** Chapter to open for this book. Chapter 1 unless the edition starts later. */
 export function openingChapter(code: string, bookName: string): number {
   const usfm = API_BIBLE_BOOK_MAP[bookName];
   if (!usfm) return 1;
-  return OPENING_CHAPTERS[code.trim().toUpperCase()]?.[usfm] ?? 1;
+  const listed = CHAPTER_LISTS[code.trim().toUpperCase()]?.[usfm];
+  return listed?.[0] ?? 1;
 }
 
 export function bookIsInEdition(bookName: string, books: readonly string[] | undefined): boolean {
@@ -175,8 +260,8 @@ export function untranslatedBook(
 }
 
 /**
- * A chapter before the first published chapter of a book this edition does contain.
- * Null when the chapter may exist, so the passage can still be requested.
+ * A chapter this edition's book does not contain.
+ * Null when the chapter is published, or this edition has no chapter list for the book.
  */
 export function untranslatedEarlyChapter(
   code: string,
@@ -184,16 +269,14 @@ export function untranslatedEarlyChapter(
   chapter: number,
   entry?: (EditionBooks & { languageName?: string | null }) | null,
 ): UntranslatedBook | null {
-  const books = booksForEdition(code, entry);
-  if (!books || !bookIsInEdition(bookName, books)) return null;
-  const open = openingChapter(code, bookName);
-  if (chapter >= open) return null;
+  const listed = chaptersInEdition(code, bookName, entry);
+  if (!listed?.length || listed.includes(chapter)) return null;
   return {
     bookName: `${bookName} ${chapter}`,
     language: editionLanguageName(code, entry?.languageName),
     nearestBook: bookName,
     nearestBookId: bibleBookId(bookName),
-    nearestChapter: open,
+    nearestChapter: nearestChapterNumber(listed, chapter),
   };
 }
 
@@ -209,8 +292,18 @@ export function noticeForMissingPassage(
   const usfm = API_BIBLE_BOOK_MAP[bookName];
   const inEdition = !!books && !!usfm && books.includes(usfm);
   if (inEdition) {
+    const listed = usfm ? CHAPTER_LISTS[code.trim().toUpperCase()]?.[usfm] : undefined;
+    if (listed?.length && !listed.includes(chapter)) {
+      return {
+        bookName: `${bookName} ${chapter}`,
+        language,
+        nearestBook: bookName,
+        nearestBookId: bibleBookId(bookName),
+        nearestChapter: nearestChapterNumber(listed, chapter),
+      };
+    }
     const open = openingChapter(code, bookName);
-    if (open !== chapter) {
+    if (!listed && open !== chapter) {
       return {
         bookName: `${bookName} ${chapter}`,
         language,

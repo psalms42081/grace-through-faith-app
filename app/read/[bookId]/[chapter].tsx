@@ -52,6 +52,7 @@ import {
 import { originalWordsFromStepMaps } from "@/lib/reader-word-study";
 import { translationLabel, type CatalogTranslation } from "@/lib/translation-catalog";
 import {
+  chaptersInEdition,
   noticeForMissingPassage,
   passageErrorIsUntranslated,
   previousReadingTranslation,
@@ -1198,9 +1199,23 @@ export default function VerseReaderScreen() {
   const totalChapters = data?.book?.chapterCount ?? 0;
   const translationChapterCount = data?.translationChapterCount ?? totalChapters;
   const chapterNum = Number(chapter);
+  const editionChapters = useMemo(
+    () => chaptersInEdition(translation, routeBookName, catalogEntryFor(translation)),
+    [catalogEntryFor, routeBookName, translation],
+  );
+  const pickerChapters = useMemo(() => {
+    if (editionChapters !== undefined) return editionChapters;
+    if (totalChapters > 0) return Array.from({ length: totalChapters }, (_, index) => index + 1);
+    return [] as number[];
+  }, [editionChapters, totalChapters]);
+  const nextChapter = pickerChapters.find((n) => n > chapterNum);
+  const prevChapter = [...pickerChapters].reverse().find((n) => n < chapterNum);
+  const chapterListKnown = editionChapters !== undefined || totalChapters > 0;
+  const prevTarget = chapterListKnown ? prevChapter : (chapterNum > 1 ? chapterNum - 1 : undefined);
+  const nextTarget = chapterListKnown ? nextChapter : undefined;
 
-  const canGoPrev = chapterNum > 1;
-  const canGoNext = chapterNum < totalChapters;
+  const canGoPrev = prevTarget != null;
+  const canGoNext = nextTarget != null;
 
   const primaryAcrostic = useMemo(
     () => withAcrosticHeadings(data?.verses ?? [], data?.providerContent?.headings),
@@ -1438,18 +1453,18 @@ export default function VerseReaderScreen() {
   }, [data?.verses, bookId, chapter, translation, isAuthenticated]);
 
   const goToPrev = useCallback(() => {
-    if (canGoPrev) {
+    if (prevTarget != null) {
       audioHandleStop();
-      router.replace(readerRoute(chapterNum - 1));
+      router.replace(readerRoute(prevTarget));
     }
-  }, [chapterNum, canGoPrev, audioHandleStop, readerRoute]);
+  }, [prevTarget, audioHandleStop, readerRoute]);
 
   const goToNext = useCallback(() => {
-    if (canGoNext) {
+    if (nextTarget != null) {
       audioHandleStop();
-      router.replace(readerRoute(chapterNum + 1));
+      router.replace(readerRoute(nextTarget));
     }
-  }, [chapterNum, canGoNext, audioHandleStop, readerRoute]);
+  }, [nextTarget, audioHandleStop, readerRoute]);
 
   const tabBarClearance = readerTabBarClearance(
     isTabReader || Platform.OS === "web",
@@ -2288,7 +2303,7 @@ export default function VerseReaderScreen() {
                     style={({ pressed }) => [styles.quietRow, { opacity: pressed ? 0.6 : 1 }]}
                   >
                     <Text style={[styles.quietRowText, { color: RV2_INK }]}>Continue Reading</Text>
-                    <Text style={[styles.quietRowMeta, { color: RV2_INK_MUTED }]}>{bookName} {chapterNum + 1}</Text>
+                    <Text style={[styles.quietRowMeta, { color: RV2_INK_MUTED }]}>{bookName} {nextTarget}</Text>
                     <Ionicons name="chevron-forward" size={16} color={RV2_INK_MUTED} />
                   </Pressable>
                 )}
@@ -2309,7 +2324,13 @@ export default function VerseReaderScreen() {
                 { borderColor: isDark ? DARK_BORDER : "#E8E8E8" },
               ]}>
                 <View style={[styles.splitPaneHeader, { borderBottomColor: isDark ? DARK_BORDER : "#E8E8E8" }]}>
-                  <Text style={[styles.translationBadgeText, { color: RV2_INK_MUTED }]}>{splitTranslationLabel}</Text>
+                  <Text
+                    style={[styles.splitVersionLabel, { color: RV2_INK_MUTED }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {splitTranslationLabel}
+                  </Text>
                 </View>
 
                 <ScrollView
@@ -2564,7 +2585,7 @@ export default function VerseReaderScreen() {
         )}
 
         {/* A.2: chapter selector sheet */}
-        {showChapterPicker && totalChapters > 0 && (
+        {showChapterPicker && pickerChapters.length > 0 && (
           <>
             <Pressable style={[StyleSheet.absoluteFill, styles.modalDim]} onPress={() => setShowChapterPicker(false)} />
             <View style={[styles.lightSheet, { paddingBottom: bottomPad + 16 }]}>
@@ -2587,7 +2608,7 @@ export default function VerseReaderScreen() {
                 <Ionicons name="chevron-forward" size={16} color={RV2_INK_MUTED} />
               </Pressable>
               <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={styles.chapterGrid} showsVerticalScrollIndicator={false}>
-                {Array.from({ length: totalChapters }, (_, i) => i + 1).map((n) => {
+                {pickerChapters.map((n) => {
                   const isCurrent = n === chapterNum;
                   return (
                     <Pressable
@@ -2766,6 +2787,11 @@ const styles = StyleSheet.create({
   },
   translationBadgeText: {
     maxWidth: READER_VERSION_CHIP_MAX_WIDTH,
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  splitVersionLabel: {
+    flexShrink: 1,
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
