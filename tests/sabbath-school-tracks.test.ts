@@ -32,6 +32,7 @@ const videoSource = read("app/(tabs)/sabbath-school-video.tsx");
 const daySource = read("app/(tabs)/sabbath-school-day.tsx");
 const quarterSource = read("app/(tabs)/sabbath-school-quarter.tsx");
 const gradientCardSource = read("components/home-v2/SSGradientCard.tsx");
+const trackHookSource = read("hooks/useSabbathSchoolTrack.ts");
 const trackSwitchSource = read("components/sabbath-school/TrackSwitch.tsx");
 const syncSource = read("server/services/sabbath-school-sync.ts");
 const routesSource = read("server/routes/sabbath-school.ts");
@@ -94,18 +95,45 @@ describe("Sabbath School track selection", () => {
     assert.doesNotMatch(overviewSource, /Cornerstone Connections \(Youth\)/);
   });
 
-  it("lets Home switch tracks from the Sabbath School card", () => {
-    assert.match(gradientCardSource, /<TrackSwitchPill/);
+  it("lets Home switch tracks from a two-segment control on the Sabbath School card", () => {
+    assert.match(gradientCardSource, /<HomeTrackSwitch/);
+    assert.doesNotMatch(gradientCardSource, /TrackSwitchPill/);
     assert.match(gradientCardSource, /onSelectTrack \?/);
+    assert.match(gradientCardSource, /testID="home-ss-track-row"/);
+    assert.match(gradientCardSource, /onStartShouldSetResponder=\{\(\) => true\}/);
+    const cardBody = gradientCardSource.split("onSelectTrack ?")[1].split("onOpenOverview")[0];
+    assert.match(cardBody, /<HomeTrackSwitch/);
     assert.match(homeSource, /tracks=\{availableTracks\}/);
     assert.match(homeSource, /selectedTrack=\{selectedTrack\}/);
     assert.match(homeSource, /onSelectTrack=\{\(id\) => void setTrack\(id\)\}/);
-    assert.match(trackSwitchSource, /testID="home-ss-track-pill"/);
-    assert.match(trackSwitchSource, /onPress=\{\(\) => onSelect\(next\)\}/);
-    assert.match(trackSwitchSource, /Switch to \$\{target\.shortLabel\}/);
+    assert.match(homeSource, /prefetchQuery/);
+    assert.match(trackSwitchSource, /testID="home-ss-track-switch"/);
+    assert.match(trackSwitchSource, /testID=\{`home-ss-track-option-\$\{track\.id\}`\}/);
+    assert.match(trackSwitchSource, /onPressIn=\{\(\) => \{/);
+    assert.match(trackSwitchSource, /hitSlop=\{\{ top: 6, bottom: 6 \}\}/);
+    assert.match(trackSwitchSource, /minHeight: 32/);
+    assert.match(trackSwitchSource, /Animated\.timing/);
+    assert.match(
+      trackSwitchSource,
+      /Sabbath School lesson: \$\{track\.shortLabel\}, selected\. Double-tap to switch to/,
+    );
+    assert.match(trackSwitchSource, /homeLabelSelected: \{ color: "#1F1A12" \}/);
+    assert.match(trackSwitchSource, /backgroundColor: "#FFFFFF"/);
     assert.equal(nextSabbathSchoolTrack("adult", ["adult", "inverse"]), "inverse");
     assert.equal(nextSabbathSchoolTrack("inverse", ["adult", "inverse"]), "adult");
     assert.equal(nextSabbathSchoolTrack("adult", ["adult"]), "adult");
+  });
+
+  it("selects a track immediately and only reverts when saving fails", () => {
+    assert.match(trackHookSource, /setOptimisticTrack\(value\)/);
+    assert.match(trackHookSource, /const preferred = optimisticTrack \?\? persisted/);
+    assert.match(trackHookSource, /notifyToast\("Couldn't save your lesson track\.", "error"\)/);
+    assert.match(trackHookSource, /if \(seq !== saveSeq\.current\) return/);
+    assert.match(trackHookSource, /setOptimisticTrack\(null\)/);
+    const save = trackHookSource.split("const setTrack = useCallback(")[1].split("return {")[0];
+    assert.match(save, /setOptimisticTrack\(value\)/);
+    const beforeAwait = save.split("await AsyncStorage")[0];
+    assert.match(beforeAwait, /setOptimisticTrack\(value\)/);
   });
 
   it("picker only lists tracks the API reports with content", () => {

@@ -1,12 +1,18 @@
-// Sabbath School track controls: a two-segment chooser for the overview and a
-// small tap-to-switch pill for the Home card. Both are hidden by their callers
-// when /api/sabbath-school/tracks reports a single track.
-import React from "react";
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+// Sabbath School track controls. Hidden by their callers when
+// /api/sabbath-school/tracks reports a single track.
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { F } from "@/components/home-v2/theme";
 import {
-  nextSabbathSchoolTrack,
   type SabbathSchoolTrackId,
   type SabbathSchoolTrackMeta,
 } from "@/lib/sabbath-school-tracks";
@@ -64,27 +70,77 @@ export function TrackSegmentedControl({ tracks, selected, onSelect, style }: Pro
   );
 }
 
-/** Small translucent pill for the Home gradient card: shows the track, tap switches to the next one. */
-export function TrackSwitchPill({ tracks, selected, onSelect, style }: Props) {
+/**
+ * Compact Adult | InVerse switch for the dark Home card. The white fill slides
+ * between the two sides. The visual is 32px; hitSlop brings each side to 44px.
+ */
+export function HomeTrackSwitch({ tracks, selected, onSelect, style }: Props) {
+  const [width, setWidth] = useState(0);
+  const index = Math.max(0, tracks.findIndex((track) => track.id === selected));
+  const slide = useRef(new Animated.Value(index)).current;
+
+  useEffect(() => {
+    Animated.timing(slide, {
+      toValue: index,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [index, slide]);
+
   if (tracks.length < 2) return null;
-  const ids = tracks.map((track) => track.id);
-  const next = nextSabbathSchoolTrack(selected, ids);
-  const current = tracks.find((track) => track.id === selected) ?? tracks[0];
-  const target = tracks.find((track) => track.id === next) ?? current;
+
+  const inner = Math.max(0, width - 6);
+  const segmentWidth = inner / tracks.length;
+  const translateX = slide.interpolate({
+    inputRange: [0, Math.max(tracks.length - 1, 1)],
+    outputRange: [0, segmentWidth * Math.max(tracks.length - 1, 1)],
+  });
+
   return (
-    <Pressable
-      onPress={() => onSelect(next)}
-      hitSlop={8}
-      style={({ pressed }) => [s.pill, style, pressed && { opacity: 0.7 }]}
-      accessibilityRole="button"
-      accessibilityLabel={`Lesson track ${current.shortLabel}. Switch to ${target.shortLabel}`}
-      testID="home-ss-track-pill"
+    <View
+      style={[s.homeWrap, style]}
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      accessibilityRole="radiogroup"
+      accessibilityLabel="Sabbath School lesson"
+      testID="home-ss-track-switch"
     >
-      <Text style={s.pillLabel} numberOfLines={1} maxFontSizeMultiplier={1.3}>
-        {current.shortLabel}
-      </Text>
-      <Ionicons name="swap-horizontal" size={12} color="#FFFFFF" />
-    </Pressable>
+      {segmentWidth > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[s.homeFill, { width: segmentWidth, transform: [{ translateX }] }]}
+        />
+      ) : null}
+      {tracks.map((track) => {
+        const isSelected = track.id === selected;
+        const other = tracks.find((item) => item.id !== track.id);
+        const label = isSelected
+          ? `Sabbath School lesson: ${track.shortLabel}, selected. Double-tap to switch to ${other?.shortLabel ?? "the other lesson"}`
+          : `Sabbath School lesson: ${track.shortLabel}. Double-tap to select.`;
+        return (
+          <Pressable
+            key={track.id}
+            onPressIn={() => {
+              if (!isSelected) onSelect(track.id);
+            }}
+            hitSlop={{ top: 6, bottom: 6 }}
+            style={({ pressed }) => [s.homeSegment, pressed && s.homeSegmentPressed]}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isSelected }}
+            accessibilityLabel={label}
+            testID={`home-ss-track-option-${track.id}`}
+          >
+            <Text
+              style={[s.homeLabel, isSelected && s.homeLabelSelected]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.5}
+            >
+              {track.shortLabel}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -110,17 +166,37 @@ const s = StyleSheet.create({
   segmentSelected: { backgroundColor: TEAL },
   segmentLabel: { fontFamily: F.interSemi, fontSize: 14, lineHeight: 18, color: TEAL },
   segmentLabelSelected: { color: "#FFFFFF" },
-  pill: {
+  homeWrap: {
+    alignSelf: "flex-start",
     flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255,255,255,0.20)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    position: "relative",
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    minHeight: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.40)",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    padding: 3,
+    overflow: "hidden",
   },
-  pillLabel: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
+  homeFill: {
+    position: "absolute",
+    top: 3,
+    bottom: 3,
+    left: 3,
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+  },
+  homeSegment: {
+    minHeight: 32,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  homeSegmentPressed: { opacity: 0.65 },
+  homeLabel: {
+    fontFamily: F.interSemi,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.78)",
+  },
+  homeLabelSelected: { color: "#1F1A12" },
 });

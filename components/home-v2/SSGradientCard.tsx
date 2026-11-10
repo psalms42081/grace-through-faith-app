@@ -6,7 +6,7 @@ import {
   getSabbathSchoolQuarterTheme,
   SABBATH_SCHOOL_PENDING_SURFACE,
 } from "@/lib/sabbath-school-quarter-theme";
-import { TrackSwitchPill } from "@/components/sabbath-school/TrackSwitch";
+import { HomeTrackSwitch } from "@/components/sabbath-school/TrackSwitch";
 import type { SabbathSchoolTrackId, SabbathSchoolTrackMeta } from "@/lib/sabbath-school-tracks";
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
   onOpenOverview: () => void;
   onWatch: () => void;
   showWatch?: boolean;
-  /** Tracks with content; the pill renders when there are two or more. */
+  /** Tracks with content; the switch renders when there are two or more. */
   tracks?: readonly SabbathSchoolTrackMeta[];
   selectedTrack?: SabbathSchoolTrackId;
   onSelectTrack?: (track: SabbathSchoolTrackId) => void;
@@ -58,8 +58,12 @@ export default function SSGradientCard({
           )}
         </View>
         {onSelectTrack ? (
-          <View style={s.trackRow}>
-            <TrackSwitchPill tracks={tracks} selected={selectedTrack} onSelect={onSelectTrack} />
+          <View
+            style={s.trackRow}
+            onStartShouldSetResponder={() => true}
+            testID="home-ss-track-row"
+          >
+            <HomeTrackSwitch tracks={tracks} selected={selectedTrack} onSelect={onSelectTrack} />
           </View>
         ) : null}
         <Pressable

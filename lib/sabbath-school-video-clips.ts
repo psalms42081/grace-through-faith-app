@@ -44,6 +44,34 @@ export function flattenSabbathSchoolLessonClips(
     .slice(0, limit);
 }
 
+export type RelatedLessonVideoGroup = {
+  label: string;
+  clips: SabbathSchoolVideoClip[];
+};
+
+/**
+ * Videos from the other lesson tracks, dropping empties and anything already
+ * shown for the selected track. An empty result means the page should render
+ * no "more" heading.
+ */
+export function relatedLessonVideoGroups(
+  groups: readonly { label: string; clips: readonly SabbathSchoolVideoClip[] }[],
+  alreadyShownSrcs: ReadonlySet<string> = new Set(),
+): RelatedLessonVideoGroup[] {
+  const seen = new Set(alreadyShownSrcs);
+  const out: RelatedLessonVideoGroup[] = [];
+  for (const group of groups) {
+    const clips: SabbathSchoolVideoClip[] = [];
+    for (const clip of group.clips) {
+      if (!clip.src || seen.has(clip.src)) continue;
+      seen.add(clip.src);
+      clips.push(clip);
+    }
+    if (clips.length > 0) out.push({ label: group.label, clips });
+  }
+  return out;
+}
+
 export function hasSabbathSchoolLessonVideo(
   videoByArtist: ArtistGroup[] | null | undefined,
 ): boolean {

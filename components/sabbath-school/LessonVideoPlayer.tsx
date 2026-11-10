@@ -18,6 +18,7 @@ import { getApiUrl } from "@/lib/query-client";
 import { useVideoSurfaceActive } from "@/lib/video-surface";
 import {
   canInlinePlaySabbathSchoolVideo,
+  type RelatedLessonVideoGroup,
   type SabbathSchoolVideoClip,
 } from "@/lib/sabbath-school-video-clips";
 
@@ -78,12 +79,14 @@ function SabbathSchoolInlineVideo({
   onReady,
   onError,
   playWhenReady = false,
+  fullscreenLock,
 }: {
   uri: string;
   style: object;
   onReady: () => void;
   onError: () => void;
   playWhenReady?: boolean;
+  fullscreenLock?: React.RefObject<boolean | null>;
 }) {
   // Paused until the user taps play. playWhenReady is set only from that tap.
   const player = useVideoPlayer(uri);
@@ -111,6 +114,13 @@ function SabbathSchoolInlineVideo({
       style={style}
       contentFit="contain"
       nativeControls
+      fullscreenOptions={{ enable: true, orientation: "landscape" }}
+      onFullscreenEnter={() => {
+        if (fullscreenLock) fullscreenLock.current = true;
+      }}
+      onFullscreenExit={() => {
+        if (fullscreenLock) fullscreenLock.current = false;
+      }}
     />
   );
 }
@@ -119,10 +129,13 @@ export default function LessonVideoPlayer({
   clips,
   showChooser = true,
   layout = "row",
+  more = [],
 }: {
   clips: SabbathSchoolVideoClip[];
   showChooser?: boolean;
   layout?: "row" | "page";
+  /** Other tracks' videos for the same lesson. Page layout only. */
+  more?: readonly RelatedLessonVideoGroup[];
 }) {
   const [activeVideo, setActiveVideo] = useState<{
     src: string;
@@ -133,6 +146,12 @@ export default function LessonVideoPlayer({
   const [videoReady, setVideoReady] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [playRequested, setPlayRequested] = useState(false);
+  const [relatedPick, setRelatedPick] = useState<SabbathSchoolVideoClip | null>(null);
+  const fullscreenLock = React.useRef(false);
+  const primaryKey = clips.map((clip) => clip.src).join("\n");
+  useEffect(() => {
+    setRelatedPick(null);
+  }, [primaryKey]);
 
   const closePlayer = useCallback(() => {
     setActiveVideo(null);
@@ -154,7 +173,7 @@ export default function LessonVideoPlayer({
     });
   }, []);
 
-  const surfaceActive = useVideoSurfaceActive();
+  const surfaceActive = useVideoSurfaceActive(fullscreenLock);
   useEffect(() => {
     if (!surfaceActive) {
       setPlayRequested(false);
@@ -172,14 +191,22 @@ export default function LessonVideoPlayer({
     ? proxiedLessonMediaUrl(activeVideo.src)
     : "";
 
-  if (clips.length === 0) return null;
+  if (clips.length === 0 && more.length === 0) return null;
 
   if (layout === "page") {
-    const selectedAt = Math.min(selectedIndex, clips.length - 1);
-    const selected = clips[selectedAt];
-    const playingThis = activeVideo?.src === selected.src;
+    const selectedAt = clips.length > 0 ? Math.min(selectedIndex, clips.length - 1) : 0;
+    const selected = relatedPick ?? (clips.length > 0 ? clips[selectedAt] : null);
+    const primaryRows = clips.filter((clip) => clip.src !== selected?.src);
+    const moreRows = more
+      .map((group) => ({
+        label: group.label,
+        clips: group.clips.filter((clip) => clip.src !== selected?.src),
+      }))
+      .filter((group) => group.clips.length > 0);
+    const playingThis = !!selected && activeVideo?.src === selected.src;
     return (
       <View style={s.pageStack}>
+        {selected ? (
         <View
           style={s.featureCard}
           accessibilityState={{ selected: true }}
@@ -226,6 +253,7 @@ export default function LessonVideoPlayer({
                   uri={activePlaybackUrl}
                   style={s.inlineVideo}
                   playWhenReady={playRequested}
+                  fullscreenLock={fullscreenLock}
                   onReady={() => setVideoReady(true)}
                   onError={() => setVideoError(true)}
                 />
@@ -263,18 +291,20 @@ export default function LessonVideoPlayer({
             <Text style={s.featureSource}>{selected.artist}</Text>
           </View>
         </View>
-        {clips.length > 1 ? (
+        ) : null}
+        {primaryRows.length > 0 ? (
           <View style={s.listBlock}>
             <Text style={s.listHeading}>This week's videos</Text>
-            {clips.map((clip, index) => {
-              if (index === selectedAt) return null;
+            {primaryRows.map((clip) => {
+              const index = clips.findIndex((item) => item.src === clip.src);
               return (
                 <Pressable
                   key={`${clip.src}-${index}`}
                   onPress={() => {
                     setPlayRequested(false);
                     closePlayer();
-                    setSelectedIndex(index);
+                    setRelatedPick(null);
+                    if (index >= 0) setSelectedIndex(index);
                   }}
                   style={({ pressed }) => [s.listRow, { opacity: pressed ? 0.85 : 1 }]}
                   accessibilityRole="button"
@@ -292,6 +322,40 @@ export default function LessonVideoPlayer({
                 </Pressable>
               );
             })}
+          </View>
+        ) : null}
+        {moreRows.length > 0 ? (
+          <View style={s.listBlock} testID="lesson-video-more">
+            <Text style={s.listHeading}>More on this week's lesson</Text>
+            {moreRows.map((group) => (
+              <View key={group.label} style={s.listBlock}>
+                <Text style={s.moreTrackLabel}>{group.label}</Text>
+                {group.clips.map((clip) => (
+                  <Pressable
+                    key={`${group.label}-${clip.src}`}
+                    onPress={() => {
+                      setPlayRequested(false);
+                      closePlayer();
+                      setRelatedPick(clip);
+                    }}
+                    style={({ pressed }) => [s.listRow, { opacity: pressed ? 0.85 : 1 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${clip.title || "Lesson Clip"}, ${clip.artist}, ${group.label}`}
+                    testID="lesson-video-more-row"
+                  >
+                    <LessonVideoThumb
+                      thumbnail={clip.thumbnail}
+                      artist={clip.artist}
+                      style={s.listThumb}
+                    />
+                    <View style={s.listCopy}>
+                      <Text style={s.listTitle}>{clip.title || "Lesson Clip"}</Text>
+                      <Text style={s.listSource}>{clip.artist}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
           </View>
         ) : null}
       </View>
@@ -377,6 +441,7 @@ export default function LessonVideoPlayer({
               uri={activePlaybackUrl}
               style={s.inlineVideo}
               playWhenReady={playRequested}
+              fullscreenLock={fullscreenLock}
               onReady={() => setVideoReady(true)}
               onError={() => setVideoError(true)}
             />
@@ -448,6 +513,12 @@ const s = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     color: SS2.ink,
+  },
+  moreTrackLabel: {
+    fontFamily: F.interSemi,
+    fontSize: 12,
+    lineHeight: 16,
+    color: SS2.inkMuted,
   },
   listRow: {
     flexDirection: "row",

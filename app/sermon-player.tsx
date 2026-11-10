@@ -30,23 +30,28 @@ export default function SermonPlayerScreen() {
   const [loading, setLoading] = useState(true);
   const [playerFailed, setPlayerFailed] = useState(false);
   const [engaged, setEngaged] = useState(false);
-  const surfaceActive = useVideoSurfaceActive();
+  const fullscreenLock = useRef(false);
+  const surfaceActive = useVideoSurfaceActive(fullscreenLock);
   const showPlayer = engaged && surfaceActive;
   const readyRef = useRef(false);
   const embedOrigin = "https://informedministries.app";
   const appOrigin = Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : embedOrigin;
   const originParam = `&origin=${encodeURIComponent(appOrigin)}`;
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&autoplay=0${originParam}`;
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&fs=1&autoplay=0${originParam}`;
   const validVideoId = typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId);
   const nativeHtml = useMemo(() => `<!DOCTYPE html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:#000;height:100%}#player{position:absolute;inset:0;width:100%;height:100%}</style></head><body><div id="player"></div><script src="https://www.youtube.com/iframe_api"></script><script>
     function post(msg){if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(msg)}
     function onYouTubeIframeAPIReady(){
       new YT.Player("player",{
         videoId:${JSON.stringify(validVideoId ? videoId : "")},
-        playerVars:{autoplay:0,playsinline:1,rel:0,modestbranding:1,origin:${JSON.stringify(embedOrigin)}},
+        playerVars:{autoplay:0,playsinline:1,fs:1,rel:0,modestbranding:1,origin:${JSON.stringify(embedOrigin)}},
         events:{onReady:function(){post("ready")},onError:function(){post("error")}}
       });
     }
+    function fullscreenOn(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
+    ["fullscreenchange","webkitfullscreenchange"].forEach(function(name){
+      document.addEventListener(name,function(){post(fullscreenOn()?"fullscreen-enter":"fullscreen-exit")});
+    });
   </script></body></html>`, [embedOrigin, validVideoId, videoId]);
 
   const markFailed = useCallback(() => {
@@ -188,11 +193,20 @@ export default function SermonPlayerScreen() {
           originWhitelist={["*"]}
           setSupportMultipleWindows={false}
           onMessage={(event) => {
-            if (event.nativeEvent.data === "ready") {
+            const message = event.nativeEvent.data;
+            if (message === "fullscreen-enter") {
+              fullscreenLock.current = true;
+              return;
+            }
+            if (message === "fullscreen-exit") {
+              fullscreenLock.current = false;
+              return;
+            }
+            if (message === "ready") {
               readyRef.current = true;
               setLoading(false);
               setPlayerFailed(false);
-            } else if (event.nativeEvent.data === "error") {
+            } else if (message === "error") {
               markFailed();
             }
           }}

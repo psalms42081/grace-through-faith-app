@@ -60,7 +60,15 @@ describe("second Android build sources", () => {
     assert.match(player, /setTimeout\(markFailed, 8000\)/);
     assert.match(player, /autoplay:0/);
     assert.match(player, /autoplay=0/);
-    assert.match(player, /useVideoSurfaceActive/);
+    assert.match(player, /useVideoSurfaceActive\(fullscreenLock\)/);
+    assert.match(player, /playsinline:1,fs:1/);
+    assert.match(player, /playsinline=1&fs=1/);
+    assert.match(player, /fullscreen-enter/);
+    assert.match(player, /fullscreen-exit/);
+    assert.match(player, /allowsFullscreenVideo/);
+    const surface = readFileSync(new URL("../lib/video-surface.ts", import.meta.url), "utf8");
+    assert.match(surface, /if \(state !== "active" && fullscreenLock\?\.current\) return/);
+    assert.match(surface, /requestAnimationFrame/);
     assert.match(player, /mediaPlaybackRequiresUserAction/);
     assert.match(player, /accessibilityLabel="Play video"/);
     assert.match(player, /Open in YouTube/);

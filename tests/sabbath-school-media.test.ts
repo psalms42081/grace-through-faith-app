@@ -10,6 +10,7 @@ import {
   firstPlayableSabbathSchoolClip,
   flattenSabbathSchoolLessonClips,
   hasSabbathSchoolLessonVideo,
+  relatedLessonVideoGroups,
 } from "../lib/sabbath-school-video-clips";
 
 const overviewSource = readFileSync(
@@ -94,7 +95,10 @@ describe("Sabbath School web media proxy", () => {
     assert.match(playerSource, /backgroundColor: "#2F4A47"/);
     assert.doesNotMatch(watchScreenSource, /autoPlayFirst/);
     assert.doesNotMatch(playerSource, /autoPlayFirst|p\.play\(\)|autoPlay: true/);
-    assert.match(playerSource, /useVideoSurfaceActive/);
+    assert.match(playerSource, /useVideoSurfaceActive\(fullscreenLock\)/);
+    assert.match(playerSource, /fullscreenOptions=\{\{ enable: true, orientation: "landscape" \}\}/);
+    assert.match(playerSource, /onFullscreenEnter=\{\(\) => \{/);
+    assert.match(playerSource, /onFullscreenExit=\{\(\) => \{/);
     assert.match(playerSource, /autoPlay: false/);
     assert.match(watchScreenSource, /LessonVideoPlayer/);
     assert.match(watchScreenSource, /layout="page"/);
@@ -193,5 +197,50 @@ describe("Sabbath School web media proxy", () => {
       watchScreenSource,
       /clips\.length === 0 \? \s*<View style=\{s\.center\}/,
     );
+  });
+
+  it("lists the other track's videos under the selected lesson video", () => {
+    const hope = {
+      src: "https://sabbath-school-media.adventech.io/video/en/2026-04/hope.mp4",
+      title: "Hope Sabbath School",
+      thumbnail: adventechThumb,
+      artist: "Hope Sabbath School",
+    };
+    const inverse = {
+      src: "https://sabbath-school-media.adventech.io/video/en/2026-04/inverse.mp4",
+      title: "Now Hear This!",
+      thumbnail: adventechThumb,
+      artist: "inVerse Bible",
+    };
+    const adult = relatedLessonVideoGroups(
+      [
+        { label: "Adult", clips: [hope] },
+        { label: "InVerse", clips: [] },
+      ],
+      new Set([inverse.src]),
+    );
+    assert.deepEqual(adult.map((group) => group.label), ["Adult"]);
+    assert.equal(adult[0].clips[0].title, "Hope Sabbath School");
+    assert.deepEqual(
+      relatedLessonVideoGroups([{ label: "Adult", clips: [hope] }], new Set([hope.src])),
+      [],
+    );
+    assert.match(watchScreenSource, /sabbath-school-other-videos/);
+    assert.match(
+      watchScreenSource,
+      /\/api\/sabbath-school\/lesson\/\$\{lessonNumber\}\?userId=\$\{userId\}&curriculum=\$\{track\.id\}/,
+    );
+    assert.match(watchScreenSource, /more=\{moreVideos\}/);
+    assert.match(watchScreenSource, /clips\.length === 0 && moreVideos\.length === 0/);
+    assert.match(playerSource, /More on this week's lesson/);
+    assert.match(playerSource, /testID="lesson-video-more"/);
+    assert.match(playerSource, /testID="lesson-video-more-row"/);
+    assert.match(playerSource, /\{group\.label\}/);
+    assert.match(playerSource, /moreTrackLabel: \{[\s\S]*?fontSize: 12/);
+    assert.match(playerSource, /s\.listRow/);
+    const pageStart = playerSource.indexOf('if (layout === "page")');
+    const pageEnd = playerSource.indexOf("const chooser = showChooser");
+    const pageLayout = playerSource.slice(pageStart, pageEnd);
+    assert.match(pageLayout, /moreRows\.length > 0/);
   });
 });

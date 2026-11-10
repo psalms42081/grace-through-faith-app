@@ -19,7 +19,11 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import LessonVideoPlayer from "@/components/sabbath-school/LessonVideoPlayer";
-import { flattenSabbathSchoolLessonClips } from "@/lib/sabbath-school-video-clips";
+import {
+  flattenSabbathSchoolLessonClips,
+  relatedLessonVideoGroups,
+  type RelatedLessonVideoGroup,
+} from "@/lib/sabbath-school-video-clips";
 import { resolveSabbathSchoolContinueDay } from "@/lib/sabbath-school-continue";
 import {
   buildSabbathSchoolTabRoute,
@@ -42,7 +46,7 @@ const SS2 = {
 export default function SabbathSchoolVideoScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
-  const { selectedTrack } = useSabbathSchoolTrack();
+  const { selectedTrack, availableTracks } = useSabbathSchoolTrack();
   const [clock, setClock] = useState(() => new Date());
   const isTabContained = useSabbathSchoolTabContainment("sabbath-school-video");
   const localDay = useMemo(() => getHomeLocalDay(clock), [clock]);
@@ -91,6 +95,35 @@ export default function SabbathSchoolVideoScreen() {
   const clips = flattenSabbathSchoolLessonClips(data?.currentLesson?.videoByArtist);
   const lessonNumber =
     data?.currentLesson?.lessonNumber ?? data?.currentLessonNumber ?? null;
+  const otherTracks = availableTracks.filter((track) => track.id !== selectedTrack);
+  const otherTrackKey = otherTracks.map((track) => track.id).join(",");
+  const { data: otherTrackVideos } = useQuery<RelatedLessonVideoGroup[]>({
+    queryKey: ["sabbath-school-other-videos", lessonNumber, otherTrackKey],
+    enabled: lessonNumber != null && otherTracks.length > 0,
+    queryFn: async () => {
+      const groups: RelatedLessonVideoGroup[] = [];
+      for (const track of otherTracks) {
+        const response = await apiRequest(
+          "GET",
+          `/api/sabbath-school/lesson/${lessonNumber}?userId=${userId}&curriculum=${track.id}`,
+        );
+        const json = await response.json();
+        groups.push({
+          label: track.shortLabel,
+          clips: flattenSabbathSchoolLessonClips(json?.lesson?.videoByArtist, 8),
+        });
+      }
+      return groups;
+    },
+  });
+  const moreVideos = useMemo(
+    () =>
+      relatedLessonVideoGroups(
+        otherTrackVideos ?? [],
+        new Set(clips.map((clip) => clip.src)),
+      ),
+    [otherTrackVideos, clips],
+  );
   const continueDay = resolveSabbathSchoolContinueDay({
     days: data?.currentLesson?.days ?? [],
     todayDayNumber: data?.todayDayNumber ?? localDay.sabbathSchoolDayNumber,
@@ -144,7 +177,7 @@ export default function SabbathSchoolVideoScreen() {
           contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          {clips.length === 0 ? (
+          {clips.length === 0 && moreVideos.length === 0 ? (
             <View style={s.emptyCard}>
               <Text style={s.emptyText}>
                 No lesson video is available for this week yet.
@@ -159,7 +192,7 @@ export default function SabbathSchoolVideoScreen() {
               </Pressable>
             </View>
           ) : (
-            <LessonVideoPlayer clips={clips} layout="page" />
+            <LessonVideoPlayer clips={clips} layout="page" more={moreVideos} />
           )}
         </ScrollView>
       )}

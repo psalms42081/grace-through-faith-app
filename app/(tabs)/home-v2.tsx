@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { ScrollView, StyleSheet, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 
@@ -60,6 +60,7 @@ export default function HomeV2Screen() {
   const { t } = useTranslation();
   const { userId, user, isAuthenticated } = useAuth();
   const { selectedTrack, availableTracks, setTrack } = useSabbathSchoolTrack();
+  const queryClient = useQueryClient();
   const [heroTab, setHeroTab] = useState<HeroTab>("verse");
   const [showShareCard, setShowShareCard] = useState(false);
   const [clock, setClock] = useState(() => new Date());
@@ -277,6 +278,39 @@ export default function HomeV2Screen() {
       return res.json();
     },
   });
+
+  // The other track's lesson is fetched ahead of the tap, so the card can
+  // swap from cache the moment the switch moves.
+  useEffect(() => {
+    for (const track of availableTracks) {
+      if (track.id === selectedTrack) continue;
+      void queryClient.prefetchQuery({
+        queryKey: [
+          "home-sabbath-school-current",
+          userId,
+          deviceTimeZone,
+          localDay.dateKey,
+          track.id,
+        ],
+        queryFn: async () => {
+          const res = await apiRequest(
+            "GET",
+            withDeviceTimeZone(
+              `/api/sabbath-school/current?userId=${userId}&curriculum=${track.id}`,
+            ),
+          );
+          return res.json();
+        },
+      });
+    }
+  }, [
+    availableTracks,
+    deviceTimeZone,
+    localDay.dateKey,
+    queryClient,
+    selectedTrack,
+    userId,
+  ]);
 
   const { data: myGroupsData } = useQuery<{
     groups: {
