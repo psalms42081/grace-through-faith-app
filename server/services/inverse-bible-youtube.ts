@@ -1,15 +1,13 @@
 /**
  * InVerse lesson episodes from the public @inVerseBible uploads feed.
  *
- * Same approach as Watch This Week: the channel uploads playlist RSS, then
- * the public watch page to drop Shorts, livestreams, and anything under
- * five minutes. No YouTube Data API key. The qualified list is cached for
+ * The feed is the only YouTube request. Watch pages and player documents
+ * answer HTTP 429 from Render, so duration is not used for this channel.
+ * A lesson episode has a title matching /^\d{1,2}\s+\S/, lesson number 1–14,
+ * and a normal /watch link. Shorts links are skipped. The list is cached for
  * 24 hours. A database store keeps episodes that have aged off the 15-item
- * uploads feed across a server restart. Opening a lesson screen does not refetch.
- *
- * A watch page from a data-centre address often comes back without a duration.
- * Those uploads are qualified from the public player document instead, and an
- * empty result is not kept for the day, so a failed refresh is tried again.
+ * uploads feed across a server restart. An empty result is not kept for the
+ * day. Opening a lesson screen does not refetch.
  *
  * Titles look like "7 Now Hear This!" or "6 The Prophetic Writings". The
  * leading number is the lesson. The row title is "Lesson 6 · The Prophetic
@@ -21,18 +19,12 @@
  * "13 Earth’s Closing Scenes" (2026-09-20) stays with the previous one.
  */
 
-import {
-  classifyVideoFacts,
-  loadWatchFacts,
-  type VideoFacts,
-} from "./watch-this-week";
-
 export const INVERSE_BIBLE_CHANNEL_ID = "UCgHAzKGx-UWZwKhltWQc1lQ";
 export const INVERSE_BIBLE_UPLOADS_PLAYLIST_ID = "UUgHAzKGx-UWZwKhltWQc1lQ";
 export const INVERSE_EPISODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /** An empty qualification is retried, not kept for the day. */
 export const INVERSE_EMPTY_LIST_RETRY_MS = 15 * 60 * 1000;
-const WATCH_PAGE_CONCURRENCY = 4;
+const LESSON_NUMBER_MAX = 14;
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
@@ -48,9 +40,7 @@ export interface InverseUpload {
   publishedAt: string;
 }
 
-export interface InverseEpisode extends InverseUpload {
-  durationSeconds: number;
-}
+export type InverseEpisode = InverseUpload;
 
 export interface InverseQuarterWindow {
   curriculumType?: string | null;
@@ -117,17 +107,38 @@ export function parseInverseEpisodeTitle(title: string): {
   lessonTitle: string;
   rowTitle: string;
 } | null {
-  const match = /^(\d{1,2})(?!\d)\s+(.+)$/.exec(title.trim());
+  const match = /^(\d{1,2})\s+(\S.*)$/.exec(title.trim());
   if (!match) return null;
   const lessonNumber = Number(match[1]);
   const lessonTitle = match[2].trim();
-  if (!Number.isInteger(lessonNumber) || lessonNumber < 1 || lessonNumber > 13) return null;
+  if (!Number.isInteger(lessonNumber) || lessonNumber < 1 || lessonNumber > LESSON_NUMBER_MAX) return null;
   if (!lessonTitle) return null;
   return {
     lessonNumber,
     lessonTitle,
     rowTitle: `Lesson ${lessonNumber} · ${lessonTitle}`,
   };
+}
+
+function isNormalWatchLink(href: string, youtubeId: string): boolean {
+  try {
+    const url = new URL(href);
+    if (url.pathname.toLowerCase().includes("/shorts/")) return false;
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      return url.pathname === "/watch" && url.searchParams.get("v") === youtubeId;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/** A /shorts/ link disqualifies the entry. A normal /watch link for this id is required. */
+function entryHasWatchLink(body: string, youtubeId: string): boolean {
+  const hrefs = [...body.matchAll(/\bhref="([^"]+)"/gi)].map((match) => decodeXml(match[1]));
+  if (hrefs.some((href) => /\/shorts\//i.test(href))) return false;
+  return hrefs.some((href) => isNormalWatchLink(href, youtubeId));
 }
 
 /** Calendar day of an upload, from the UTC date in the timestamp. */
@@ -190,6 +201,7 @@ export function parseInverseUploadsRss(xml: string): InverseUpload[] {
     const parsed = parseInverseEpisodeTitle(youtubeTitle);
     if (!parsed) continue;
     if (!/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) continue;
+    if (!entryHasWatchLink(body, youtubeId)) continue;
     if (!uploadDayKey(publishedAt)) continue;
     if (!thumbnail.startsWith("https://")) continue;
     uploads.push({
@@ -204,14 +216,6 @@ export function parseInverseUploadsRss(xml: string): InverseUpload[] {
     });
   }
   return uploads;
-}
-
-export function qualifyInverseUpload(
-  upload: InverseUpload,
-  facts: VideoFacts,
-): InverseEpisode | null {
-  if (!classifyVideoFacts(facts).eligible || facts.durationSeconds == null) return null;
-  return { ...upload, durationSeconds: facts.durationSeconds };
 }
 
 export function matchInverseEpisode(
@@ -320,100 +324,13 @@ export function withInverseYouTubeLesson<T extends { lessonNumber: number; video
   return { ...lesson, videoByArtist: [inverseEpisodeArtistGroup(episode)] };
 }
 
-const PLAYER_METADATA_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
-
-/**
- * Duration from the public player document. A server often gets
- * playability UNPLAYABLE for an ordinary episode, with the length still set.
- * That status is not a livestream.
- */
-export function videoFactsFromPlayerPayload(payload: unknown, youtubeId: string): VideoFacts {
-  const json = payload as {
-    videoDetails?: {
-      videoId?: string;
-      lengthSeconds?: string;
-      isShort?: boolean;
-    };
-    playabilityStatus?: { status?: string; reason?: string };
-    microformat?: {
-      playerMicroformatRenderer?: {
-        liveBroadcastDetails?: { isLiveNow?: boolean; endTimestamp?: string };
-      };
-    };
-  };
-  const details = json?.videoDetails?.videoId === youtubeId ? json.videoDetails : undefined;
-  const length = details?.lengthSeconds;
-  const durationSeconds = length && /^\d+$/.test(length) ? Number(length) : null;
-  const live = json?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails;
-  const status = json?.playabilityStatus?.status ?? "";
-  const reason = json?.playabilityStatus?.reason ?? "";
-  return {
-    durationSeconds,
-    isShort: details?.isShort === true,
-    isLive: live?.isLiveNow === true,
-    isPremiere:
-      status === "LIVE_STREAM_OFFLINE" ||
-      /premiere/i.test(reason) ||
-      (live != null && live.isLiveNow !== true && !live.endTimestamp),
-  };
-}
-
-function factsAreDecisive(facts: VideoFacts): boolean {
-  return facts.durationSeconds != null || facts.isShort || facts.isLive || facts.isPremiere;
-}
-
-async function loadInverseVideoFacts(
-  youtubeId: string,
-  fetchImpl: typeof fetch,
-): Promise<{ facts: VideoFacts; usedPlayerFallback: boolean }> {
-  let watched: VideoFacts | null = null;
-  try {
-    watched = await loadWatchFacts(youtubeId, fetchImpl);
-    if (factsAreDecisive(watched)) return { facts: watched, usedPlayerFallback: false };
-  } catch {
-    watched = null;
+function countLessonTitles(xml: string): number {
+  let count = 0;
+  for (const chunk of xml.split("<entry>").slice(1)) {
+    const body = chunk.split("</entry>")[0] ?? chunk;
+    if (parseInverseEpisodeTitle(tagText(body, "title"))) count += 1;
   }
-
-  const response = await fetchImpl(PLAYER_METADATA_URL, {
-    method: "POST",
-    headers: {
-      "User-Agent": USER_AGENT,
-      "Content-Type": "application/json",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-    body: JSON.stringify({
-      videoId: youtubeId,
-      context: {
-        client: { clientName: "WEB", clientVersion: "2.20251110.00.00", hl: "en", gl: "US" },
-      },
-    }),
-    redirect: "follow",
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!response.ok) {
-    throw new Error(`YouTube player metadata failed (${response.status})`);
-  }
-  const facts = videoFactsFromPlayerPayload(JSON.parse(await response.text()) as unknown, youtubeId);
-  if (watched?.isShort) facts.isShort = true;
-  return { facts, usedPlayerFallback: true };
-}
-
-async function mapPool<T, R>(
-  items: readonly T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const index = next;
-      next += 1;
-      results[index] = await fn(items[index]);
-    }
-  });
-  await Promise.all(workers);
-  return results;
+  return count;
 }
 
 export async function loadInverseEpisodes(
@@ -430,24 +347,13 @@ export async function loadInverseEpisodes(
   });
   const xml = await response.text();
   const entryCount = Math.max(0, xml.split("<entry>").length - 1);
-  console.log(`[inverse-bible] uploads feed HTTP ${response.status}, ${entryCount} entries`);
   if (!response.ok) {
+    console.log(`[inverse-bible] uploads feed HTTP ${response.status}, ${entryCount} entries`);
     throw new Error(`YouTube request failed (${response.status})`);
   }
-  const uploads = parseInverseUploadsRss(xml);
-  let playerFallback = 0;
-  const qualified = await mapPool(uploads, WATCH_PAGE_CONCURRENCY, async (upload) => {
-    try {
-      const loaded = await loadInverseVideoFacts(upload.youtubeId, fetchImpl);
-      if (loaded.usedPlayerFallback) playerFallback += 1;
-      return qualifyInverseUpload(upload, loaded.facts);
-    } catch {
-      return null;
-    }
-  });
-  const episodes = qualified.filter((episode): episode is InverseEpisode => episode != null);
+  const episodes = parseInverseUploadsRss(xml);
   console.log(
-    `[inverse-bible] uploads feed HTTP ${response.status}, ${entryCount} entries, ${uploads.length} lesson titles, qualified ${episodes.length}, player fallback ${playerFallback}`,
+    `[inverse-bible] uploads feed HTTP ${response.status}, ${entryCount} entries, ${countLessonTitles(xml)} lesson titles, qualified ${episodes.length}`,
   );
   return episodes;
 }

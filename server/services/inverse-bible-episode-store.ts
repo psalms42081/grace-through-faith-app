@@ -25,8 +25,7 @@ function isInverseEpisode(value: unknown): value is InverseEpisode {
     typeof row.rowTitle === "string" &&
     typeof row.thumbnail === "string" &&
     typeof row.channel === "string" &&
-    typeof row.publishedAt === "string" &&
-    typeof row.durationSeconds === "number"
+    typeof row.publishedAt === "string"
   );
 }
 

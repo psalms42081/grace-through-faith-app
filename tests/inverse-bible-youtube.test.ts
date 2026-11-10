@@ -15,9 +15,7 @@ import {
   matchInverseEpisode,
   parseInverseEpisodeTitle,
   parseInverseUploadsRss,
-  qualifyInverseUpload,
   resetInverseEpisodeCacheForTests,
-  videoFactsFromPlayerPayload,
   withInverseYouTubeLesson,
   type InverseEpisode,
   type InverseUpload,
@@ -34,6 +32,7 @@ const RSS = `<?xml version="1.0"?>
   <entry>
     <yt:videoId>symxY-m2IIQ</yt:videoId>
     <title>7 Now Hear This!</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=symxY-m2IIQ"/>
     <published>2026-11-08T14:00:11+00:00</published>
     <author><name>inVerse Bible</name></author>
     <media:group>
@@ -52,6 +51,7 @@ const RSS = `<?xml version="1.0"?>
   <entry>
     <yt:videoId>short123456</yt:videoId>
     <title>8 A Short Lesson</title>
+    <link rel="alternate" href="https://www.youtube.com/shorts/short123456"/>
     <published>2026-11-15T14:00:00+00:00</published>
     <author><name>inVerse Bible</name></author>
     <media:group>
@@ -61,6 +61,7 @@ const RSS = `<?xml version="1.0"?>
   <entry>
     <yt:videoId>GULEYad6Kt8</yt:videoId>
     <title>13 Earth’s Closing Scenes</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=GULEYad6Kt8"/>
     <published>2026-09-20T13:00:26+00:00</published>
     <author><name>inVerse Bible</name></author>
     <media:group>
@@ -70,6 +71,7 @@ const RSS = `<?xml version="1.0"?>
   <entry>
     <yt:videoId>CFyZLiV7jVI</yt:videoId>
     <title>1 The Creator Speaks</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=CFyZLiV7jVI"/>
     <published>2026-09-27T13:00:04+00:00</published>
     <author><name>inVerse Bible</name></author>
     <media:group>
@@ -79,6 +81,7 @@ const RSS = `<?xml version="1.0"?>
   <entry>
     <yt:videoId>BrWzdThOo9s</yt:videoId>
     <title>6 The Prophetic Writings</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=BrWzdThOo9s"/>
     <published>2026-11-01T14:00:34+00:00</published>
     <author><name>inVerse Bible</name></author>
     <media:group>
@@ -122,7 +125,7 @@ function episode(overrides: Partial<InverseEpisode> = {}): InverseEpisode {
     publishedAt: "2026-11-08T14:00:11+00:00",
     ...overrides,
   };
-  return { ...upload, durationSeconds: 28 * 60, ...overrides };
+  return { ...upload, ...overrides };
 }
 
 describe("InVerse YouTube episodes", () => {
@@ -141,9 +144,10 @@ describe("InVerse YouTube episodes", () => {
       lessonTitle: "Now Hear This!",
       rowTitle: "Lesson 7 · Now Hear This!",
     });
+    assert.equal(parseInverseEpisodeTitle("14 The Extra Lesson")?.lessonNumber, 14);
     assert.equal(parseInverseEpisodeTitle("Join us on Facebook or at HopeTV.org/inVerse!"), null);
     assert.equal(parseInverseEpisodeTitle("Episode 07 Now Hear This!"), null);
-    assert.equal(parseInverseEpisodeTitle("14 Outside the Quarter"), null);
+    assert.equal(parseInverseEpisodeTitle("15 Outside the Quarter"), null);
   });
 
   it("keeps the YouTube thumbnail and skips promos, shorts, and the previous quarter", () => {
@@ -152,7 +156,6 @@ describe("InVerse YouTube episodes", () => {
       uploads.map((item) => item.youtubeTitle),
       [
         "7 Now Hear This!",
-        "8 A Short Lesson",
         "13 Earth’s Closing Scenes",
         "1 The Creator Speaks",
         "6 The Prophetic Writings",
@@ -164,17 +167,7 @@ describe("InVerse YouTube episodes", () => {
     assert.equal(lesson7.rowTitle, "Lesson 7 · Now Hear This!");
     assert.equal(lesson7.channel, "inVerse Bible");
 
-    const qualified = uploads
-      .map((item) =>
-        qualifyInverseUpload(item, {
-          durationSeconds: item.youtubeId === "short123456" ? 42 : 28 * 60,
-          isShort: false,
-          isLive: false,
-          isPremiere: false,
-        }),
-      )
-      .filter((item): item is InverseEpisode => item != null);
-
+    const qualified = uploads;
     const quarter = { curriculumType: "inverse", ...Q4 };
     const matched = matchInverseEpisode(qualified, { lessonNumber: 7, ...Q4 });
     assert.equal(matched?.rowTitle, "Lesson 7 · Now Hear This!");
@@ -337,39 +330,16 @@ describe("InVerse YouTube episodes", () => {
     assert.match(player, /mediaPlaybackRequiresUserAction/);
   });
 
-  it("qualifies an episode when the watch page has no duration", async () => {
-    const facts = videoFactsFromPlayerPayload(
-      {
-        videoDetails: { videoId: "symxY-m2IIQ", lengthSeconds: "1710", isLiveContent: false },
-        playabilityStatus: { status: "UNPLAYABLE", reason: "Sign in to confirm you’re not a bot" },
-      },
-      "symxY-m2IIQ",
-    );
-    assert.equal(facts.durationSeconds, 1710);
-    assert.equal(facts.isLive, false);
-    assert.equal(facts.isPremiere, false);
-
-    const urls: string[] = [];
-    const fetchImpl: typeof fetch = async (input, init) => {
-      const url = String(input);
-      urls.push(url);
-      if (url.includes("feeds/videos.xml")) return new Response(RSS, { status: 200 });
-      if (url.includes("/watch")) return new Response("<html>Before you continue</html>", { status: 200 });
-      const body = JSON.parse(String(init?.body)) as { videoId?: string };
-      const seconds = body.videoId === "short123456" ? 42 : 1710;
-      return new Response(
-        JSON.stringify({
-          videoDetails: { videoId: body.videoId, lengthSeconds: String(seconds) },
-          playabilityStatus: { status: "UNPLAYABLE", reason: "Video unavailable" },
-        }),
-        { status: 200 },
-      );
-    };
+  it("qualifies episodes from the uploads feed without watch pages", async () => {
+    const source = readFileSync(new URL("../server/services/inverse-bible-youtube.ts", import.meta.url), "utf8");
+    assert.doesNotMatch(source, /loadWatchFacts/);
+    assert.doesNotMatch(source, /youtubei\/v1\/player/);
+    const { fetchImpl, urls } = fakeFetch(RSS);
     const episodes = await getInverseEpisodes({ now: 20_000, fetchImpl });
-    assert.equal(episodes.find((item) => item.lessonNumber === 7)?.rowTitle, "Lesson 7 · Now Hear This!");
-    assert.equal(episodes.find((item) => item.lessonNumber === 7)?.durationSeconds, 1710);
+    assert.equal(episodes.find((item) => item.lessonNumber === 7)?.youtubeId, "symxY-m2IIQ");
     assert.equal(episodes.some((item) => item.youtubeId === "short123456"), false);
-    assert.equal(urls.some((url) => url.includes("youtubei/v1/player")), true);
+    assert.equal(urls.some((url) => url.includes("youtube.com/watch") || url.includes("youtubei")), false);
+    assert.equal(urls.filter((url) => url.includes("feeds/videos.xml")).length, 1);
   });
 
   it("refetches when the saved list is empty", async () => {
@@ -391,13 +361,15 @@ describe("InVerse YouTube episodes", () => {
   });
 
   it("does not keep a failed qualification for a day", async () => {
+    const promoOnly = RSS.replace(/<entry>[\s\S]*?<\/entry>/g, (entry) =>
+      entry.includes("Join us on Facebook") ? entry : "",
+    );
     const urls: string[] = [];
     const fetchImpl: typeof fetch = async (input) => {
       const url = String(input);
       urls.push(url);
-      if (url.includes("feeds/videos.xml")) return new Response(RSS, { status: 200 });
-      if (url.includes("youtubei/v1/player")) return new Response("nope", { status: 503 });
-      return new Response("<html>Before you continue</html>", { status: 200 });
+      if (url.includes("feeds/videos.xml")) return new Response(promoOnly, { status: 200 });
+      return new Response("unused", { status: 500 });
     };
     const now = Date.parse("2026-11-10T09:46:01.109Z");
     const first = await getInverseEpisodes({ now, fetchImpl });
