@@ -20,6 +20,7 @@ import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
+import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
 import { apiRequest } from "@/lib/query-client";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
@@ -177,6 +178,7 @@ export default function BibleGroupHomeScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const { userId, isAuthenticated } = useAuth();
+  const blockedUserIds = useBlockedUserIds();
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [draft, setDraft] = useState("");
@@ -483,6 +485,19 @@ export default function BibleGroupHomeScreen() {
             </Pressable>
           )}
         </Pressable>
+        {liveSession != null && liveSession.endedAt == null && (
+          <ReportOrBlock
+            surface="bible-group-live"
+            contentId={liveSession.id}
+            targetUserId={liveSession.startedBy}
+            authorName={
+              data.members.find((member) => member.userId === liveSession.startedBy)?.displayName ||
+              "Host"
+            }
+            snapshot="Live group session"
+            color={C.inkMuted}
+          />
+        )}
 
         {isHost && (
           <Pressable
@@ -520,6 +535,14 @@ export default function BibleGroupHomeScreen() {
                 <Text style={s.memberName}>{member.displayName}</Text>
                 <Text style={s.memberRole}>{member.role === "host" ? "Host" : "Member"}</Text>
               </View>
+              <ReportOrBlock
+                surface="bible-group-member"
+                contentId={member.userId}
+                targetUserId={member.userId}
+                authorName={member.displayName}
+                snapshot={member.displayName}
+                color={C.inkMuted}
+              />
               {isHost && member.role !== "host" && (
                 <Pressable
                   onPress={() => {
@@ -543,15 +566,25 @@ export default function BibleGroupHomeScreen() {
 
         <View style={s.card} testID="bible-group-thread">
           <Text style={s.sectionLabel}>This week's conversation</Text>
-          {data.posts.length === 0 ? (
+          {data.posts.filter((post) => !blockedUserIds.has(post.userId)).length === 0 ? (
             <Text style={s.emptyThread} testID="bible-group-thread-empty">
               No notes yet this week. Leave a quiet thought from the lesson if you wish.
             </Text>
           ) : (
-            data.posts.map((post) => (
+            data.posts
+              .filter((post) => !blockedUserIds.has(post.userId))
+              .map((post) => (
               <View key={post.id} style={s.post}>
                 <Text style={s.postAuthor}>{post.displayName}</Text>
                 <Text style={s.postBody}>{post.body}</Text>
+                <ReportOrBlock
+                  surface="bible-group-post"
+                  contentId={post.id}
+                  targetUserId={post.userId}
+                  authorName={post.displayName}
+                  snapshot={post.body}
+                  color={C.inkMuted}
+                />
               </View>
             ))
           )}

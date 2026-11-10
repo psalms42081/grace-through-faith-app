@@ -17,6 +17,7 @@ import { PathB } from "@/constants/colors";
 import { HV2 } from "@/components/home-v2/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
+import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { joinApiPath } from "@/lib/join-api-path";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
@@ -359,6 +360,8 @@ function WebLiveRoom({
   const [camEnabled, setCamEnabled] = useState(true);
   const [facingUser, setFacingUser] = useState(true);
   const [tiles, setTiles] = useState<TileInfo[]>([]);
+  const [reportTile, setReportTile] = useState<TileInfo | null>(null);
+  const blockedUserIds = useBlockedUserIds();
   const [debugLines, setDebugLines] = useState<string[]>([]);
   const [showFlip] = useState(() => {
     if (Platform.OS !== "web") return true;
@@ -759,14 +762,15 @@ function WebLiveRoom({
     onLeave();
   }, [onLeave]);
 
+  const visibleTiles = tiles.filter((tile) => tile.isLocal || !blockedUserIds.has(tile.identity));
   const spotlightId = useMemo(() => {
-    const speaker = tiles.find((t) => t.speaking);
-    return speaker?.identity ?? tiles[0]?.identity;
-  }, [tiles]);
-  const useSpotlight = tiles.length > 4;
-  const spotlightTile = tiles.find((t) => t.identity === spotlightId) ?? tiles[0];
-  const stripTiles = useSpotlight ? tiles.filter((t) => t.identity !== spotlightTile?.identity) : [];
-  const gridTiles = useSpotlight ? [] : tiles;
+    const speaker = visibleTiles.find((t) => t.speaking);
+    return speaker?.identity ?? visibleTiles[0]?.identity;
+  }, [visibleTiles]);
+  const useSpotlight = visibleTiles.length > 4;
+  const spotlightTile = visibleTiles.find((t) => t.identity === spotlightId) ?? visibleTiles[0];
+  const stripTiles = useSpotlight ? visibleTiles.filter((t) => t.identity !== spotlightTile?.identity) : [];
+  const gridTiles = useSpotlight ? [] : visibleTiles;
 
   const renderTile = (tile: TileInfo, tall?: boolean) => (
     <div
@@ -833,6 +837,27 @@ function WebLiveRoom({
       >
         {tile.name}
       </div>
+      {!tile.isLocal ? (
+        <button
+          type="button"
+          aria-label={`Report ${tile.name}`}
+          onClick={() => setReportTile(tile)}
+          style={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            zIndex: 3,
+            background: "rgba(31,26,18,0.7)",
+            color: C.surface,
+            border: 0,
+            borderRadius: 6,
+            fontSize: 12,
+            padding: "4px 8px",
+          }}
+        >
+          Report
+        </button>
+      ) : null}
       <div
         style={{
           position: "absolute",
@@ -859,6 +884,17 @@ function WebLiveRoom({
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>
+      {reportTile ? (
+        <ReportOrBlock
+          sheetOnly
+          surface="live-participant"
+          contentId={reportTile.identity}
+          targetUserId={reportTile.identity}
+          authorName={reportTile.name}
+          snapshot={reportTile.name}
+          onClose={() => setReportTile(null)}
+        />
+      ) : null}
       <View style={s.top}>
         <Text style={s.groupName} numberOfLines={1}>
           {groupName}
@@ -994,6 +1030,7 @@ export default function BibleGroupLiveScreen() {
   const { isAuthenticated, token, user } = useAuth();
   const qc = useQueryClient();
   const [webViewLoading, setWebViewLoading] = useState(true);
+  const [liveReport, setLiveReport] = useState<{ identity: string; name: string } | null>(null);
 
   const { data, isLoading } = useQuery<GroupDetail>({
     queryKey: ["/api/bible-groups", id],
@@ -1060,6 +1097,11 @@ export default function BibleGroupLiveScreen() {
           endMutation.mutate();
         } else if (payload.type === "call_ended") {
           leaveToGroup();
+        } else if (payload.type === "ugc_report" && payload.identity) {
+          setLiveReport({
+            identity: String(payload.identity),
+            name: String(payload.name || payload.identity),
+          });
         }
       } catch {}
     },
@@ -1162,6 +1204,17 @@ export default function BibleGroupLiveScreen() {
               grant(resources);
             }}
           />
+          {liveReport ? (
+            <ReportOrBlock
+              sheetOnly
+              surface="live-participant"
+              contentId={liveReport.identity}
+              targetUserId={liveReport.identity}
+              authorName={liveReport.name}
+              snapshot={liveReport.name}
+              onClose={() => setLiveReport(null)}
+            />
+          ) : null}
           {isHost && (
             <Pressable
               onPress={() => {

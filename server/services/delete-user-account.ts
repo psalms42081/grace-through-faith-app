@@ -1,11 +1,14 @@
-import { eq, inArray } from "drizzle-orm";
-import { db } from "../db";
+import { eq, inArray, sql } from "drizzle-orm";
+import { db, pool } from "../db";
 import {
   bibleSmallGroupMembers,
   bibleSmallGroupPosts,
   bibleSmallGroups,
   bibleSmallGroupLiveSessions,
   deviceTokens,
+  groupAnnouncements,
+  groupDiscussionReplies,
+  groupDiscussions,
   hierarchyBroadcastReceipt,
   hierarchyMembership,
   heygenVideos,
@@ -109,6 +112,30 @@ export async function deleteUserAccount(userId: string): Promise<void> {
   for (const { table, col } of owned) {
     await deleteWhere(() => db.delete(table).where(eq(col, userId)));
   }
+
+  await deleteWhere(() =>
+    db.delete(groupDiscussionReplies).where(eq(groupDiscussionReplies.userId, userId)),
+  );
+  await deleteWhere(() =>
+    db.delete(groupDiscussionReplies).where(
+      sql`${groupDiscussionReplies.discussionId} IN (SELECT id FROM group_discussion WHERE user_id = ${userId})`,
+    ),
+  );
+  await deleteWhere(() =>
+    db.delete(groupDiscussions).where(eq(groupDiscussions.userId, userId)),
+  );
+  await deleteWhere(() =>
+    db.delete(groupAnnouncements).where(eq(groupAnnouncements.userId, userId)),
+  );
+  await deleteWhere(() =>
+    pool.query(
+      `UPDATE group_discussion
+          SET reply_count = (
+            SELECT count(*)::int FROM group_discussion_reply
+             WHERE discussion_id = group_discussion.id
+          )`,
+    ),
+  );
 
   await deleteWhere(() =>
     db.delete(bibleSmallGroups).where(eq(bibleSmallGroups.hostUserId, userId)),

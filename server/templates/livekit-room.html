@@ -47,6 +47,18 @@
     font-size: 12px;
     color: #fff;
   }
+  .participant-report {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 6;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: 0;
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
   .participant-avatar {
     width: 64px;
     height: 64px;
@@ -244,7 +256,18 @@ function updateGridLayout() {
   else if (count > 2) grid.classList.add('multi-participants');
 }
 
+function isBlockedIdentity(identity) {
+  const blocked = (config.blockedUserIds || []);
+  return blocked.indexOf(identity) !== -1;
+}
+
 function getOrCreateTile(identity, name) {
+  if (isBlockedIdentity(identity)) {
+    const hidden = document.getElementById('tile-' + identity);
+    if (hidden) hidden.remove();
+    updateGridLayout();
+    return null;
+  }
   let tile = document.getElementById('tile-' + identity);
   if (!tile) {
     tile = document.createElement('div');
@@ -261,6 +284,21 @@ function getOrCreateTile(identity, name) {
     label.className = 'participant-name';
     label.textContent = name || identity;
     tile.appendChild(label);
+
+    const localId = room && room.localParticipant ? room.localParticipant.identity : '';
+    if (identity !== localId) {
+      const report = document.createElement('button');
+      report.type = 'button';
+      report.className = 'participant-report';
+      report.textContent = 'Report';
+      report.setAttribute('aria-label', 'Report ' + (name || 'participant'));
+      report.onclick = function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        postToApp({ type: 'ugc_report', identity: identity, name: name || identity });
+      };
+      tile.appendChild(report);
+    }
 
     grid.appendChild(tile);
     updateGridLayout();
@@ -309,6 +347,7 @@ function attachTrack(track, identity, name) {
   }
 
   const tile = getOrCreateTile(identity, name);
+  if (!tile) return;
   const avatar = document.getElementById('avatar-' + identity);
   const isLocal = room && room.localParticipant && identity === room.localParticipant.identity;
 

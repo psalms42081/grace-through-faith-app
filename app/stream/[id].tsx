@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import { useToast } from "@/contexts/ToastContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
+import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
 import { Camera } from "expo-camera";
 import { requestRecordingPermissionsAsync } from "expo-audio";
 import { displayInitials } from "@/lib/user-initials";
@@ -43,6 +44,7 @@ interface ParticipantInfo {
   name: string;
   isMuted: boolean;
   hasVideo: boolean;
+  isLocal: boolean;
 }
 
 function attachTrackToTile(track: any, tileId: string, isLocal: boolean) {
@@ -80,6 +82,8 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(false);
   const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
+  const [reportTile, setReportTile] = useState<ParticipantInfo | null>(null);
+  const blockedUserIds = useBlockedUserIds();
 
   useEffect(() => {
     let mounted = true;
@@ -131,6 +135,7 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
               name: room.localParticipant.name || displayName,
               isMuted: !room.localParticipant.isMicrophoneEnabled,
               hasVideo: room.localParticipant.isCameraEnabled,
+              isLocal: true,
             });
           }
           room.remoteParticipants.forEach((p: any) => {
@@ -139,6 +144,7 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
               name: p.name || p.identity,
               isMuted: !p.isMicrophoneEnabled,
               hasVideo: p.isCameraEnabled,
+              isLocal: false,
             });
           });
           setParticipants([...parts]);
@@ -305,7 +311,7 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
           minHeight: 0,
         } as any}
       >
-        {participants.map((p) => (
+        {participants.filter((p) => p.isLocal || !blockedUserIds.has(p.identity)).map((p) => (
           <div
             key={p.identity}
             id={`tile-${p.identity}`}
@@ -350,10 +356,42 @@ function WebLiveKitRoom({ session, displayName, isHost, onEndSession }: { sessio
             }}>
               {p.name}{p.isMuted ? " 🔇" : ""}
             </div>
+            {!p.isLocal ? (
+              <button
+                type="button"
+                aria-label={`Report ${p.name}`}
+                onClick={() => setReportTile(p)}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  zIndex: 6,
+                  background: "rgba(0,0,0,0.6)",
+                  color: "#fff",
+                  border: 0,
+                  borderRadius: 6,
+                  fontSize: 12,
+                  padding: "4px 8px",
+                }}
+              >
+                Report
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
 
+      {reportTile ? (
+        <ReportOrBlock
+          sheetOnly
+          surface="live-participant"
+          contentId={reportTile.identity}
+          targetUserId={reportTile.identity}
+          authorName={reportTile.name}
+          snapshot={reportTile.name}
+          onClose={() => setReportTile(null)}
+        />
+      ) : null}
       <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 16, padding: 12, paddingBottom: 24, backgroundColor: "#111114" }}>
         <Pressable
           onPress={toggleMic}
@@ -421,6 +459,7 @@ export default function StreamScreen() {
   const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === "web");
   const [permissionsDenied, setPermissionsDenied] = useState(false);
   const [permissionsChecking, setPermissionsChecking] = useState(Platform.OS !== "web");
+  const [liveReport, setLiveReport] = useState<{ identity: string; name: string } | null>(null);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -488,6 +527,8 @@ export default function StreamScreen() {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === "call_ended") {
         safeGoBack(router);
+      } else if (data.type === "ugc_report" && data.identity) {
+        setLiveReport({ identity: String(data.identity), name: String(data.name || data.identity) });
       }
     } catch {}
   }, []);
@@ -634,6 +675,17 @@ export default function StreamScreen() {
               grant(resources);
             }}
           />
+          {liveReport ? (
+            <ReportOrBlock
+              sheetOnly
+              surface="live-participant"
+              contentId={liveReport.identity}
+              targetUserId={liveReport.identity}
+              authorName={liveReport.name}
+              snapshot={liveReport.name}
+              onClose={() => setLiveReport(null)}
+            />
+          ) : null}
         </>
       )}
     </View>

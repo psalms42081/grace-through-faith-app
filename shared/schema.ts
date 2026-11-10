@@ -1794,6 +1794,46 @@ export const feedback = pgTable("feedback", {
 }));
 
 /** "Report this answer" on AI-generated content (Google Play AI-generated content policy). */
+export const userBlocks = pgTable(
+  "user_blocks",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    blockerUserId: varchar("blocker_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    blockedUserId: varchar("blocked_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pairUnique: uniqueIndex("user_blocks_pair_unique").on(table.blockerUserId, table.blockedUserId),
+    blockerIdx: index("user_blocks_blocker_idx").on(table.blockerUserId),
+  }),
+);
+
+export const ugcReports = pgTable(
+  "ugc_reports",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    reporterUserId: varchar("reporter_user_id").references(() => users.id, { onDelete: "set null" }),
+    targetUserId: varchar("target_user_id").references(() => users.id, { onDelete: "set null" }),
+    surface: varchar("surface", { length: 64 }).notNull(),
+    contentId: varchar("content_id", { length: 120 }).notNull(),
+    snapshot: text("snapshot").notNull(),
+    reason: varchar("reason", { length: 32 }).notNull(),
+    comment: text("comment"),
+  },
+  (table) => ({
+    createdAtIdx: index("ugc_reports_created_at_idx").on(table.createdAt),
+  }),
+);
+
 export const aiReports = pgTable("ai_reports", {
   id: varchar("id")
     .primaryKey()

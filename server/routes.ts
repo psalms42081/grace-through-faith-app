@@ -52,6 +52,7 @@ import demoRoutes from "./routes/demo";
 import youtubeRoutes from "./routes/youtube";
 import watchThisWeekRoutes from "./routes/watch-this-week";
 import aiReportRoutes from "./routes/ai-report";
+import ugcRoutes from "./routes/ugc";
 import { createOdbRouter } from "./routes/odb";
 import { createDefaultOdbStore } from "./odb-store";
 import bibleGroupRoutes from "./routes/bible-groups";
@@ -178,6 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(youtubeRoutes);
   app.use(watchThisWeekRoutes);
   app.use(aiReportRoutes);
+  app.use(ugcRoutes);
   app.use(createOdbRouter(createDefaultOdbStore()));
   app.use(bibleGroupRoutes);
 

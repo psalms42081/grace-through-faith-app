@@ -12,6 +12,7 @@ import {
 } from "../../shared/schema";
 import { eq, and, desc, inArray, isNull, sql } from "drizzle-orm";
 import { getAuthUserId, requireAuth } from "../middleware/auth";
+import { blockedUserIdSet, withoutBlockedUsers } from "../services/user-blocks";
 import { bibleGroupWriteLimiter } from "../middleware/rate-limit";
 import { normalizeSabbathSchoolTimeZone } from "../services/sabbath-school-date";
 import { resolveCurrentWeekPointer } from "../services/sabbath-school-current";
@@ -464,6 +465,7 @@ router.get("/api/bible-groups/:id", requireAuth, async (req, res) => {
           .orderBy(bibleSmallGroupPosts.createdAt)
       : [];
 
+    const blocked = await blockedUserIdSet(userId);
     return res.json({
       group: publicGroup(group, {
         role: member.role,
@@ -476,7 +478,7 @@ router.get("/api/bible-groups/:id", requireAuth, async (req, res) => {
         joinedAt: m.joinedAt,
         displayName: m.displayName || "Member",
       })),
-      posts: posts.map((p) => ({
+      posts: withoutBlockedUsers(posts, blocked).map((p) => ({
         id: p.id,
         userId: p.userId,
         ssWeekKey: p.ssWeekKey,
@@ -928,6 +930,7 @@ router.get(
         isHost,
         groupName: ctx.group.name,
         lessonTitle,
+        blockedUserIds: [...(await blockedUserIdSet(userId))],
       };
       html = html.replace(
         "<!--SERVER_INJECTED_CONFIG-->",

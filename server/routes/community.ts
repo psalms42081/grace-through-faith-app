@@ -23,13 +23,14 @@ import { Router } from "express";
   } from "../../shared/schema";
   import { eq, and, or, ilike, sql, desc, asc } from "drizzle-orm";
   import { notifyGroupMembers, notifyUser } from "../services/push-notifications";
-  import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getEffectiveUserId } from "../middleware/auth";
+  import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
   import { churchDirectoryQueryReady, recordChurchSubmission, verifiedDirectoryWhere } from "../services/church-directory";
   import { geocodeChurchQuery, reverseGeocodeChurch } from "../services/church-geocode";
   import { churchesNearResolvedPlace, haversineKm, type ResolvedChurchPlace } from "../../lib/church-finder";
   import { readRegisteredPushToken } from "../../lib/daily-verse-push";
   import { churchSubmissionLimiter } from "../middleware/rate-limit";
+  import { blockedUserIdSet, withoutBlockedUsers } from "../services/user-blocks";
 
   const router = Router();
 
@@ -361,8 +362,8 @@ router.get("/api/groups/:id/prayers", async (req, res) => {
     const prayers = await db.select().from(prayerRequests)
       .where(eq(prayerRequests.groupId, id))
       .orderBy(desc(prayerRequests.createdAt));
-
-    return res.json(prayers);
+    const blocked = await blockedUserIdSet(getAuthUserId(req));
+    return res.json(withoutBlockedUsers(prayers, blocked));
   } catch (err) {
     console.error("Group prayers error:", err);
     return res.status(500).json({ error: "Failed to get group prayers" });
@@ -525,7 +526,8 @@ router.get("/api/groups/:id/discussions", requireAuth, async (req, res) => {
     const discussions = await db.select().from(groupDiscussions)
       .where(eq(groupDiscussions.groupId, id))
       .orderBy(desc(groupDiscussions.createdAt));
-    return res.json(discussions);
+    const blocked = await blockedUserIdSet(userId);
+    return res.json(withoutBlockedUsers(discussions, blocked));
   } catch (err) {
     console.error("Group discussions error:", err);
     return res.status(500).json({ error: "Failed to get discussions" });
@@ -578,7 +580,8 @@ router.get("/api/groups/:id/discussions/:discussionId/replies", async (req, res)
     const replies = await db.select().from(groupDiscussionReplies)
       .where(eq(groupDiscussionReplies.discussionId, discussionId))
       .orderBy(groupDiscussionReplies.createdAt);
-    return res.json(replies);
+    const blocked = await blockedUserIdSet(getAuthUserId(req));
+    return res.json(withoutBlockedUsers(replies, blocked));
   } catch (err) {
     console.error("Discussion replies error:", err);
     return res.status(500).json({ error: "Failed to get replies" });
@@ -623,7 +626,8 @@ router.get("/api/groups/:id/announcements", async (req, res) => {
     const announcements = await db.select().from(groupAnnouncements)
       .where(eq(groupAnnouncements.groupId, id))
       .orderBy(desc(groupAnnouncements.createdAt));
-    return res.json(announcements);
+    const blocked = await blockedUserIdSet(getAuthUserId(req));
+    return res.json(withoutBlockedUsers(announcements, blocked));
   } catch (err) {
     console.error("Group announcements error:", err);
     return res.status(500).json({ error: "Failed to get announcements" });
@@ -1133,7 +1137,12 @@ router.get("/api/streams/:id/token", async (req, res) => {
     if (session.status === "ended") return res.status(410).json({ error: "Session has ended" });
 
     const isHost = !!userId && userId === session.hostUserId;
-    const token = await generateToken(session.roomUrl, displayName, isHost);
+    const token = await generateToken(
+      session.roomUrl,
+      displayName,
+      isHost,
+      userId ? { identity: userId } : undefined,
+    );
 
     return res.json({
       token,
@@ -1178,16 +1187,22 @@ router.get("/api/streams/:id/room", async (req, res) => {
         .where(and(eq(prayerGroupMembers.groupId, session.groupId), eq(prayerGroupMembers.userId, userId)));
       if (mem && (mem.role === "leader" || mem.role === "moderator")) canShare = true;
     }
-    const token = await generateToken(session.roomUrl, displayName, isHost);
+    const token = await generateToken(
+      session.roomUrl,
+      displayName,
+      isHost,
+      userId ? { identity: userId } : undefined,
+    );
     const wsUrl = getLiveKitUrl();
 
     const fs = await import("fs");
     const htmlPath = path.join(process.cwd(), "server", "templates", "livekit-room.html");
     let html = fs.readFileSync(htmlPath, "utf-8");
 
+    const blockedUserIds = [...(await blockedUserIdSet(userId))];
     html = html.replace(
       "<!--SERVER_INJECTED_CONFIG-->",
-      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName, isHost, canShare })};</script>`
+      `<script>window.__LIVEKIT_CONFIG__=${JSON.stringify({ wsUrl, token, displayName, isHost, canShare, blockedUserIds })};</script>`
     );
 
     res.setHeader("Content-Type", "text/html");

@@ -52,5 +52,7 @@ describe("Google Play first-build prep", () => {
     assert.match(deleter, /userBookmarks/);
     assert.match(deleter, /userPlanProgress/);
     assert.match(deleter, /db\.delete\(users\)/);
+    assert.match(deleter, /groupDiscussions/);
+    assert.match(deleter, /groupDiscussionReplies/);
   });
 });

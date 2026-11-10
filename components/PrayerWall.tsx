@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import EmptyState from "@/components/ui/EmptyState";
+import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
 import { PathB } from "@/constants/colors";
 
 interface FamilyPrayer {
@@ -145,6 +146,15 @@ function GlowCard({
         </View>
       )}
 
+      <ReportOrBlock
+        surface="group-prayer"
+        contentId={prayer.id}
+        targetUserId={prayer.userId}
+        authorName={prayer.authorName}
+        snapshot={[prayer.title, prayer.content].filter(Boolean).join("\n")}
+        color={theme.textMuted}
+      />
+
       <View style={styles.cardActions}>
         <Pressable
           style={[styles.supportButton, { backgroundColor: isDark ? "#1F1F2E" : "#F0EBE0" }]}
@@ -201,6 +211,7 @@ export default function PrayerWall({ groupId }: { groupId: string }) {
   const { theme, isDark } = useTheme();
   const { isPro } = useProStatus();
   const { userId, user } = useAuth();
+  const blockedUserIds = useBlockedUserIds();
   const qc = useQueryClient();
   const displayName = user?.displayName || "Group Member";
 
@@ -278,8 +289,9 @@ export default function PrayerWall({ groupId }: { groupId: string }) {
     answeredMutation.mutate({ id, answered });
   }, [answeredMutation]);
 
-  const activePrayers = prayers?.filter((p) => !p.answered) || [];
-  const answeredPrayers = prayers?.filter((p) => p.answered) || [];
+  const visiblePrayers = (prayers || []).filter((p) => !blockedUserIds.has(p.userId));
+  const activePrayers = visiblePrayers.filter((p) => !p.answered);
+  const answeredPrayers = visiblePrayers.filter((p) => p.answered);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundCard, borderColor: theme.border }]}>

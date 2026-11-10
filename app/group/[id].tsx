@@ -24,6 +24,7 @@ import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { confirmWebSafe } from "@/components/WebSafeConfirm";
 import PrayerWall from "@/components/PrayerWall";
+import { ReportOrBlock, useBlockedUserIds } from "@/components/ReportOrBlock";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/hooks/useTheme";
 import { displayInitials } from "@/lib/user-initials";
@@ -136,6 +137,7 @@ export default function GroupDetailScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
+  const blockedUserIds = useBlockedUserIds();
   const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -189,6 +191,7 @@ export default function GroupDetailScreen() {
     queryKey: [`/api/groups/${id}/discussions`],
     enabled: !!id && activeTab === "discussion",
   });
+  const visibleDiscussions = (discussions || []).filter((disc) => !blockedUserIds.has(disc.userId));
 
   const { data: tracks } = useQuery<AvailableTrack[]>({
     queryKey: ["/api/tracks"],
@@ -368,7 +371,7 @@ export default function GroupDetailScreen() {
         </Pressable>
       </View>
 
-      {(discussions || []).length === 0 ? (
+      {visibleDiscussions.length === 0 ? (
         <View style={s.tabEmpty}>
           <Ionicons name="chatbubbles-outline" size={40} color={theme.textMuted} />
           <Text style={[s.tabEmptyText, { color: theme.textSecondary, fontFamily: "Inter_500Medium" }]}>
@@ -376,7 +379,7 @@ export default function GroupDetailScreen() {
           </Text>
         </View>
       ) : (
-        (discussions || []).map((disc) => (
+        visibleDiscussions.map((disc) => (
           <DiscussionCard
             key={disc.id}
             disc={disc}
@@ -662,6 +665,14 @@ export default function GroupDetailScreen() {
                     {member.role}
                   </Text>
                 </View>
+                <ReportOrBlock
+                  surface="group-member"
+                  contentId={member.userId}
+                  targetUserId={member.userId}
+                  authorName={member.displayName}
+                  snapshot={member.displayName || "Member"}
+                  color={theme.textMuted}
+                />
                 {isLeader && member.userId !== userId ? (
                   <Pressable
                     onPress={() => setManageMember(member)}
@@ -736,6 +747,14 @@ export default function GroupDetailScreen() {
                   <Text style={{ color: theme.textMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
                     Hosted by {groupStream.hostDisplayName || "Group Leader"}
                   </Text>
+                  <ReportOrBlock
+                    surface="group-live"
+                    contentId={String(groupStream.id)}
+                    targetUserId={groupStream.hostUserId}
+                    authorName={groupStream.hostDisplayName}
+                    snapshot={`Live session: ${groupStream.title || ""}`}
+                    color={theme.textMuted}
+                  />
                 </View>
                 <Pressable
                   onPress={() => router.push(`/stream/${groupStream.id}` as any)}
@@ -958,6 +977,7 @@ function DiscussionCard({
   replyPending: boolean;
 }) {
   const [replyText, setReplyText] = useState("");
+  const blockedUserIds = useBlockedUserIds();
   const { data: replies } = useQuery<DiscussionReply[]>({
     queryKey: [`/api/groups/${groupId}/discussions/${disc.id}/replies`],
     enabled: isExpanded,
@@ -993,6 +1013,14 @@ function DiscussionCard({
       <Text style={[s.discContent, { color: theme.text, fontFamily: "Inter_400Regular" }]}>
         {disc.content}
       </Text>
+      <ReportOrBlock
+        surface="group-discussion"
+        contentId={disc.id}
+        targetUserId={disc.userId}
+        authorName={disc.authorName}
+        snapshot={disc.content}
+        color={theme.textMuted}
+      />
       <Pressable onPress={onToggle} style={s.replyToggle}>
         <Ionicons name="chatbubble-outline" size={14} color={theme.textMuted} />
         <Text style={[s.replyCount, { color: theme.textMuted, fontFamily: "Inter_500Medium" }]}>
@@ -1002,7 +1030,9 @@ function DiscussionCard({
 
       {isExpanded ? (
         <View style={s.repliesSection}>
-          {(replies || []).map((r) => (
+          {(replies || [])
+            .filter((r) => !blockedUserIds.has(r.userId))
+            .map((r) => (
             <View key={r.id} style={[s.replyItem, { borderColor: theme.border }]}>
               <Text style={[s.replyAuthor, { color: theme.accent, fontFamily: "Inter_600SemiBold" }]}>
                 {r.authorName || "Member"}
@@ -1013,6 +1043,14 @@ function DiscussionCard({
               <Text style={[s.replyTime, { color: theme.textMuted, fontFamily: "Inter_400Regular" }]}>
                 {formatTimeAgo(r.createdAt)}
               </Text>
+              <ReportOrBlock
+                surface="group-reply"
+                contentId={r.id}
+                targetUserId={r.userId}
+                authorName={r.authorName}
+                snapshot={r.content}
+                color={theme.textMuted}
+              />
             </View>
           ))}
           <View style={[s.replyInputRow, { backgroundColor: isDark ? "#1A1A2E" : "#F5F3EE" }]}>

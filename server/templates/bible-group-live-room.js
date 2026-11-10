@@ -234,7 +234,17 @@
     return host;
   }
 
+  function isBlockedIdentity(identity) {
+    var blocked = config.blockedUserIds || [];
+    return blocked.indexOf(identity) !== -1;
+  }
+
   function getOrCreateTile(identity, name, parent) {
+    if (isBlockedIdentity(identity)) {
+      var hidden = document.getElementById("tile-" + identity);
+      if (hidden) hidden.remove();
+      return null;
+    }
     var id = "tile-" + identity;
     var tile = document.getElementById(id);
     if (!tile) {
@@ -254,6 +264,20 @@
       icons.className = "icons";
       icons.id = "icons-" + identity;
       tile.appendChild(icons);
+      var localId = room && room.localParticipant ? room.localParticipant.identity : "";
+      if (identity !== localId) {
+        var report = document.createElement("button");
+        report.type = "button";
+        report.className = "report";
+        report.textContent = "Report";
+        report.setAttribute("aria-label", "Report " + (name || "participant"));
+        report.onclick = function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          postToApp({ type: "ugc_report", identity: identity, name: name || identity });
+        };
+        tile.appendChild(report);
+      }
     }
     if (parent && tile.parentElement !== parent) parent.appendChild(tile);
     return tile;
@@ -285,6 +309,7 @@
 
   function attachTrack(track, identity, name) {
     var tile = getOrCreateTile(identity, name, grid);
+    if (!tile) return;
     var avatar = document.getElementById("avatar-" + identity);
     var isLocal = room && room.localParticipant && identity === room.localParticipant.identity;
     if (isLocal && track.kind === "audio") return;
@@ -334,7 +359,9 @@
     if (room.localParticipant) {
       list.push(room.localParticipant);
     }
-    room.remoteParticipants.forEach(function (p) { list.push(p); });
+    room.remoteParticipants.forEach(function (p) {
+      if (!isBlockedIdentity(p.identity)) list.push(p);
+    });
     return list.slice(0, 12);
   }
 
@@ -356,6 +383,7 @@
         if (spotlight.childElementCount > 0 && parent === spotlight) parent = strip;
       }
       var tile = getOrCreateTile(p.identity, p.name, parent);
+      if (!tile) return;
       tile.classList.toggle("speaking", !!speaking[p.identity]);
       var muted = p.isMicrophoneEnabled === false;
       var cameraOff = p.isCameraEnabled === false;
