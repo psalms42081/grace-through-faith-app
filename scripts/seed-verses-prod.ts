@@ -42,6 +42,11 @@ const TRANSLATIONS = [
   { id: "TAGV", name: "Ang Biblia (Tagalog)", abbreviation: "TAGV", language: "fil", file: "tagv.json" },
   // Built by scripts/prepare-net-bible.ts from the noteless text; quoted by permission (see shared/translation-notices.ts).
   { id: "NET", name: "NET Bible®, New English Translation", abbreviation: "NET", language: "en", file: "net.json" },
+  // Public domain. Built by scripts/prepare-south-slavic.ts. Cyrillic, then its Latin transliteration.
+  { id: "SRKDCYR", name: "Свето писмо (Караџић–Даничић)", abbreviation: "SRKDCYR", language: "sr", file: "srkd-ijekav.json" },
+  { id: "SRKDLAT", name: "Sveto pismo (Karadžić–Daničić)", abbreviation: "SRKDLAT", language: "sr", file: "srkd-ijekav-lat.json" },
+  // Public domain Šarić (eBible hrv). Protestant books only.
+  { id: "SARIC", name: "Sveta Biblija (Šarić)", abbreviation: "SARIC", language: "hr", file: "hrv-saric.json" },
 ];
 
 async function seedTranslation(translationId: string, dataFile: string, bookMap: Map<string, number>) {
@@ -125,7 +130,18 @@ async function seedVerses() {
     bookMap.set(b.abbreviation.toLowerCase(), b.id);
   }
 
-  for (const tx of TRANSLATIONS) {
+  const requested = process.argv.slice(2).map((id) => id.toUpperCase());
+  const selected = requested.length
+    ? TRANSLATIONS.filter((tx) => requested.includes(tx.id))
+    : TRANSLATIONS;
+  if (requested.length && selected.length !== requested.length) {
+    const known = TRANSLATIONS.map((tx) => tx.id).join(", ");
+    console.error(`Unknown translation id. Known ids: ${known}`);
+    await pool.end();
+    process.exit(1);
+  }
+
+  for (const tx of selected) {
     await db.insert(bibleTranslations).values({
       id: tx.id,
       name: tx.name,

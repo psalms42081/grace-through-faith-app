@@ -37,6 +37,7 @@ import {
   type ResolvedYouVersionChapter,
 } from "../services/youversion";
 import { isKjvTranslation } from "../../lib/strong-map-policy";
+import { withSouthSlavicGrouping } from "../../lib/translation-catalog";
 import { isYouVersionCode } from "../../shared/youversion";
 import { stripAcrosticMarker } from "../../shared/acrostic-markers";
 import {
@@ -413,8 +414,9 @@ router.get("/api/translations", async (_req, res) => {
     }
 
     const languageNames = await getLanguageNames();
-    for (const entry of result) {
-      entry.languageName ??= languageNameForTag(entry.language, languageNames);
+    for (let i = 0; i < result.length; i += 1) {
+      result[i].languageName ??= languageNameForTag(result[i].language, languageNames);
+      result[i] = withSouthSlavicGrouping(result[i]);
     }
 
     return res.json(result);

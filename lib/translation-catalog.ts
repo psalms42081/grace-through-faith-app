@@ -65,10 +65,40 @@ function primaryLanguage(tag: string): string {
   return (tag || "").split("-")[0].toLowerCase();
 }
 
+const IJEKAVIAN_EDITIONS = new Set(["SRKDCYR", "SRKDLAT"]);
+
+/**
+ * Picker labels for the local ijekavian texts and the YouVersion Serbian editions.
+ * Does not change which translation a language selects.
+ */
+export function withSouthSlavicGrouping<T extends {
+  abbreviation: string;
+  language: string;
+  languageName?: string;
+  displayAbbreviation?: string;
+  source?: string;
+}>(entry: T): T {
+  const code = entry.abbreviation.trim().toUpperCase();
+  const base = primaryLanguage(entry.language);
+  const displayAbbreviation =
+    code === "SRKDCYR" ? "SRKD" :
+    code === "SRKDLAT" ? "SRKD-L" :
+    code === "SARIC" ? "Šarić" :
+    entry.displayAbbreviation;
+  const languageName =
+    IJEKAVIAN_EDITIONS.has(code) ? "Serbian · ijekavian" :
+    code === "SARIC" ? "Croatian" :
+    entry.source === "youversion" && (base === "sr" || base === "srp") ? "Serbian · ekavian" :
+    entry.languageName;
+  if (languageName === entry.languageName && displayAbbreviation === entry.displayAbbreviation) return entry;
+  return { ...entry, languageName, displayAbbreviation };
+}
+
 /** Picker groups: English first, then languages A–Z; local and licensed sources before YouVersion. */
 export function groupTranslationsByLanguage(catalog: CatalogTranslation[]): TranslationLanguageGroup[] {
   const groups = new Map<string, TranslationLanguageGroup>();
-  for (const entry of catalog) {
+  for (const raw of catalog) {
+    const entry = withSouthSlavicGrouping(raw);
     const languageName = entry.languageName || entry.language || "Other";
     const key = languageName.toLowerCase();
     const group = groups.get(key) ?? { language: entry.language, languageName, entries: [] };
