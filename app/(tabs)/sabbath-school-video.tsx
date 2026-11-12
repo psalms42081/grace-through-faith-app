@@ -224,6 +224,9 @@ export default function SabbathSchoolVideoScreen() {
               revealKey={`${screenVisit}:${selectedTrack}`}
             />
           )}
+          <Text style={s.attribution} testID="sabbath-school-video-attribution">
+            Lesson content courtesy of the Adventech Sabbath School project.
+          </Text>
         </ScrollView>
       )}
     </View>
@@ -261,6 +264,12 @@ const s = StyleSheet.create({
     lineHeight: 22,
   },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
+  attribution: {
+    fontFamily: F.inter,
+    fontSize: 12,
+    lineHeight: 18,
+    color: SS2.inkMuted,
+  },
   emptyCard: {
     backgroundColor: SS2.card,
     borderRadius: 16,

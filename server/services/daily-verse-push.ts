@@ -30,11 +30,14 @@ import {
   devotionalPlans,
   deviceTokens,
   pushSubscriptions,
+  readingPlans,
   userPlanEnrollments,
   userPlanProgress,
+  userPlans,
   type PushSubscription,
 } from "../../shared/schema";
 import { db } from "../db";
+import { readingPlanCards } from "./plan-reading-progress";
 import { env } from "../env";
 import { loadCurrentSabbathSchoolLesson } from "./sabbath-school-current";
 
@@ -304,22 +307,73 @@ async function sabbathPayloadFor(timeZone: string, now: Date): Promise<PushDeliv
   return payload;
 }
 
-async function planPayloadFor(userId: string, today: string): Promise<PushDelivery | null> {
-  const enrollments = await db
+async function planPayloadFor(
+  userId: string,
+  today: string,
+  sentFor: string | null,
+): Promise<{ delivery: PushDelivery; planCompleteFor: string | null } | null> {
+  const enrolled = await db
+    .select({
+      id: userPlans.id,
+      planId: userPlans.planId,
+      currentDay: userPlans.currentDay,
+      completedAt: userPlans.completedAt,
+      title: readingPlans.title,
+    })
+    .from(userPlans)
+    .innerJoin(readingPlans, eq(readingPlans.id, userPlans.planId))
+    .where(eq(userPlans.userId, userId));
+  let finished: { id: string; title: string } | null = null;
+  try {
+    const cards = await readingPlanCards(enrolled, today);
+    for (const row of enrolled) {
+      const card = cards.get(row.id);
+      if (!card) continue;
+      if (card.status === "finished") {
+        if (sentFor !== row.id) finished = { id: row.id, title: row.title };
+        continue;
+      }
+      if (card.status !== "reading" || !card.passage || !card.continueReading) continue;
+      return {
+        delivery: readingPlanNotification({
+          dayNumber: card.focusDay,
+          planTitle: row.title,
+          passage: card.passage,
+          url: scripturePushPath(
+            card.continueReading.bookId,
+            card.continueReading.chapter,
+            card.continueReading.verseStart ?? 1,
+          ),
+        }),
+        planCompleteFor: null,
+      };
+    }
+  } catch (err) {
+    if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "42P01")) throw err;
+  }
+
+  const series = await db
     .select({
       id: userPlanEnrollments.id,
       planId: userPlanEnrollments.planId,
       title: devotionalPlans.title,
+      active: userPlanEnrollments.isActive,
     })
     .from(userPlanEnrollments)
     .innerJoin(devotionalPlans, eq(devotionalPlans.id, userPlanEnrollments.planId))
-    .where(and(eq(userPlanEnrollments.userId, userId), eq(userPlanEnrollments.isActive, true)))
+    .where(eq(userPlanEnrollments.userId, userId))
     .orderBy(desc(userPlanEnrollments.enrolledAt));
 
-  for (const enrollment of enrollments) {
+  for (const enrollment of series) {
     const [days, completed] = await Promise.all([
       db
-        .select({ dayNumber: devotionalDays.dayNumber })
+        .select({
+          dayNumber: devotionalDays.dayNumber,
+          bookId: devotionalDays.bookId,
+          chapter: devotionalDays.chapter,
+          verseStart: devotionalDays.verseStart,
+          passageLabel: devotionalDays.passageLabel,
+        })
         .from(devotionalDays)
         .where(eq(devotionalDays.planId, enrollment.planId)),
       db
@@ -331,15 +385,43 @@ async function planPayloadFor(userId: string, today: string): Promise<PushDelive
         .innerJoin(devotionalDays, eq(devotionalDays.id, userPlanProgress.dayId))
         .where(eq(userPlanProgress.enrollmentId, enrollment.id)),
     ]);
-    const ready = pacePlanDays({
+    const pace = pacePlanDays({
       dayNumbers: days.map((day) => day.dayNumber),
       completed,
       today,
-    }).find((day) => day.canComplete);
+    });
+    if (pace.length > 0 && pace.every((day) => day.status === "complete")) {
+      if (sentFor !== enrollment.id) finished = finished ?? { id: enrollment.id, title: enrollment.title };
+      continue;
+    }
+    if (!enrollment.active) continue;
+    const ready = pace.find((day) => day.canComplete);
     if (!ready) continue;
-    return readingPlanNotification(ready.dayNumber, enrollment.title, enrollment.planId);
+    const reading = days.find((day) => day.dayNumber === ready.dayNumber);
+    return {
+      delivery: readingPlanNotification({
+        dayNumber: ready.dayNumber,
+        planTitle: enrollment.title,
+        passage: reading?.passageLabel || "Today's reading",
+        url: reading?.bookId && reading.chapter
+          ? scripturePushPath(reading.bookId, reading.chapter, reading.verseStart ?? 1)
+          : `/devotional-day-preview?planId=${enrollment.planId}`,
+      }),
+      planCompleteFor: null,
+    };
   }
-  return null;
+
+  if (!finished) return null;
+  return {
+    delivery: readingPlanNotification({
+      dayNumber: 0,
+      planTitle: finished.title,
+      passage: finished.title,
+      url: "/devotions",
+      planComplete: true,
+    }),
+    planCompleteFor: finished.id,
+  };
 }
 
 async function sendClaimed(
@@ -359,18 +441,28 @@ async function sendClaimed(
         : row.lastPlanLocalDate;
   const claimed = await claimDate(row, kind, clock.dateKey);
   if (!claimed) return "skipped";
+  const planResult = kind === "plan"
+    ? await planPayloadFor(row.userId, clock.dateKey, row.planCompleteSentFor)
+    : null;
   const payload = prayerTime
     ? prayerTimeNotification(verseReferenceForLocalDate(clock.dateKey))
     : kind === "verse"
       ? await versePayloadFor(clock.dateKey)
       : kind === "sabbath"
         ? await sabbathPayloadFor(row.timezone, now)
-        : await planPayloadFor(row.userId, clock.dateKey);
+        : planResult?.delivery ?? null;
+  const planCompleteFor = planResult?.planCompleteFor ?? null;
   if (!payload) {
     await releaseClaim(row, kind, clock.dateKey, previous);
     return "skipped";
   }
   const result = await deliver(row, payload);
+  if (result === "ok" && planCompleteFor) {
+    await db
+      .update(pushSubscriptions)
+      .set({ planCompleteSentFor: planCompleteFor })
+      .where(eq(pushSubscriptions.id, row.id));
+  }
   if (result === "gone") {
     await retireSubscription(row);
     return "retired";
@@ -472,6 +564,62 @@ export async function sendDailyVerseNow(userId: string): Promise<{
     }
   }
   return { sent, retired, title, url };
+}
+
+/** Admin plan-reminder test. Does not claim the day or the one-time plan-complete flag. */
+export async function sendPlanReminderNow(userId: string): Promise<{
+  sent: number;
+  title: string | null;
+  url: string | null;
+}> {
+  const rows = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.userId, userId));
+  if (!rows.length) return { sent: 0, title: null, url: null };
+  const clock = zonedClock(new Date(), rows[0].timezone) ?? zonedClock(new Date(), "UTC");
+  const today = clock?.dateKey ?? "";
+  const scheduled = await planPayloadFor(userId, today, null);
+  let delivery = scheduled?.delivery ?? null;
+  if (!delivery) {
+    const enrolled = await db
+      .select({
+        id: userPlans.id,
+        planId: userPlans.planId,
+        currentDay: userPlans.currentDay,
+        completedAt: userPlans.completedAt,
+        title: readingPlans.title,
+      })
+      .from(userPlans)
+      .innerJoin(readingPlans, eq(readingPlans.id, userPlans.planId))
+      .where(eq(userPlans.userId, userId));
+    try {
+      const cards = await readingPlanCards(enrolled, today);
+      for (const row of enrolled) {
+        const card = cards.get(row.id);
+        if (!card?.passage || card.status === "finished" || !card.continueReading) continue;
+        delivery = readingPlanNotification({
+          dayNumber: card.focusDay,
+          planTitle: row.title,
+          passage: card.passage,
+          url: scripturePushPath(
+            card.continueReading.bookId,
+            card.continueReading.chapter,
+            card.continueReading.verseStart ?? 1,
+          ),
+        });
+        break;
+      }
+    } catch (err) {
+      if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "42P01")) throw err;
+    }
+  }
+  if (!delivery) return { sent: 0, title: null, url: null };
+  let sent = 0;
+  for (const row of rows) {
+    if ((await deliver(row, delivery)) === "ok") sent += 1;
+  }
+  return { sent, title: delivery.title, url: delivery.url };
 }
 
 export function startDailyVersePushScheduler(intervalMs = FIFTEEN_MINUTES_MS): void {

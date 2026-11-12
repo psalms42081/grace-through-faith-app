@@ -2139,6 +2139,27 @@ export const userPlans = pgTable(
 
 export type UserPlan = typeof userPlans.$inferSelect;
 
+export const userReadingPlanDays = pgTable(
+  "user_reading_plan_day",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userPlanId: varchar("user_plan_id")
+      .notNull()
+      .references(() => userPlans.id, { onDelete: "cascade" }),
+    dayNumber: integer("day_number").notNull(),
+    completedParts: jsonb("completed_parts").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    completedLocalDate: text("completed_local_date"),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => ({
+    uniqueDay: uniqueIndex("user_reading_plan_day_unique").on(table.userPlanId, table.dayNumber),
+  }),
+);
+
+export type UserReadingPlanDay = typeof userReadingPlanDays.$inferSelect;
+
 export const sabbathTypes = pgTable(
   "sabbath_types",
   {
@@ -2638,6 +2659,7 @@ export const pushSubscriptions = pgTable(
     lastVerseLocalDate: text("last_verse_local_date"),
     lastSsLocalDate: text("last_ss_local_date"),
     lastPlanLocalDate: text("last_plan_local_date"),
+    planCompleteSentFor: text("plan_complete_sent_for"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

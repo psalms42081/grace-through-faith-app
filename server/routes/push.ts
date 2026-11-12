@@ -5,7 +5,7 @@ import { pushSubscriptions } from "../../shared/schema";
 import { db } from "../db";
 import { env } from "../env";
 import { requireAdmin, requireAuth } from "../middleware/auth";
-import { readPushPreference, sendDailyVerseNow, vapidConfigured } from "../services/daily-verse-push";
+import { readPushPreference, sendDailyVerseNow, sendPlanReminderNow, vapidConfigured } from "../services/daily-verse-push";
 
 const router = Router();
 
@@ -124,6 +124,14 @@ router.delete("/api/push/subscription", requireAuth, async (req, res) => {
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, req.authUserId!));
   }
   res.json({ subscribed: false });
+});
+
+router.post("/api/push/plan-reminder-test", requireAdmin, async (req, res) => {
+  const result = await sendPlanReminderNow(req.authUserId!);
+  if (!result.title) {
+    return res.status(404).json({ error: "No plan reminder could be sent. Allow notifications and keep a reading plan." });
+  }
+  res.json(result);
 });
 
 router.post("/api/push/send-now", requireAdmin, async (req, res) => {

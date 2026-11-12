@@ -152,7 +152,7 @@ describe("typography preview source contracts", () => {
     assert.doesNotMatch(reader, /testID="reader-typography-preview-entry"/);
     assert.doesNotMatch(reader, /testID="reader-typography-preview-pill"/);
     assert.match(reader, /visibleVerses\.map\(\(v, i\) =>/);
-    assert.match(reader, /useBibleAudio\(verses,/);
+    assert.match(reader, /useBibleAudio\(/);
   });
 
   it("warms API.Bible with the live html + titles-on fetch, not titles-off text", () => {

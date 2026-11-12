@@ -30,6 +30,7 @@ import {
   type WebPermissionStart,
 } from "@/lib/push-subscribe";
 import { explainAndRequestNotificationPermission } from "@/lib/notification-consent";
+import { useAuth } from "@/contexts/AuthContext";
 
 type StoredSubscription = {
   endpoint: string;
@@ -75,6 +76,7 @@ const QUERY_KEY = ["/api/push/subscription"];
 
 export default function NotificationSettings() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const permission = notificationPermissionState();
   const [blocked, setBlocked] = useState(permission === "denied");
   const [setupFailed, setSetupFailed] = useState(false);
@@ -87,6 +89,7 @@ export default function NotificationSettings() {
   const [planChoice, setPlanChoice] = useState<boolean | null>(null);
   const [prayerChoice, setPrayerChoice] = useState<string[] | null>(null);
   const [batteryTipDismissed, setBatteryTipDismissed] = useState(true);
+  const [planTestNote, setPlanTestNote] = useState<string | null>(null);
 
   useEffect(() => {
     void currentWebEndpoint().then((endpoint) => {
@@ -418,6 +421,24 @@ export default function NotificationSettings() {
           accessibilityLabel="Reading plan"
         />
       </View>
+      {user?.role === "admin" ? (
+        <Pressable
+          accessibilityRole="button"
+          testID="profile-plan-reminder-test"
+          onPress={() => {
+            setPlanTestNote(null);
+            void apiRequest("POST", "/api/push/plan-reminder-test", {})
+              .then(async (response) => {
+                const body = await response.json() as { title?: string };
+                setPlanTestNote(body.title ? `Sent: ${body.title}` : "Sent");
+              })
+              .catch(() => setPlanTestNote("Could not send. Allow notifications and keep a reading plan."));
+          }}
+        >
+          <Text style={styles.tipText}>Send me a test plan reminder now</Text>
+          {planTestNote ? <Text style={styles.meta}>{planTestNote}</Text> : null}
+        </Pressable>
+      ) : null}
       <View style={styles.row}>
         <View style={styles.copy}>
           <Text style={styles.title}>Sabbath School reminder</Text>

@@ -72,7 +72,10 @@ export default function useBibleAudio(
   translation: string,
   scrollViewRef: React.RefObject<ScrollView | null>,
   bookName?: string,
+  onChapterFinished?: () => void,
 ): UseBibleAudioReturn {
+  const finishedRef = useRef(onChapterFinished);
+  finishedRef.current = onChapterFinished;
   const audioCtx = useAudioContext();
   const audioCtxRef = useRef(audioCtx);
   useEffect(() => { audioCtxRef.current = audioCtx; }, [audioCtx]);
@@ -243,6 +246,7 @@ export default function useBibleAudio(
 
     const vrs = versesRef.current;
     if (index < 0 || index >= vrs.length) {
+      if (index > 0 && vrs.length > 0) finishedRef.current?.();
       setIsSpeaking(false);
       setIsPaused(false);
       setSpeakingVerseIndex(-1);
@@ -294,6 +298,7 @@ export default function useBibleAudio(
 
     const vrs = versesRef.current;
     if (index < 0 || index >= vrs.length) {
+      if (index > 0 && vrs.length > 0) finishedRef.current?.();
       setIsSpeaking(false);
       setIsPaused(false);
       setSpeakingVerseIndex(-1);

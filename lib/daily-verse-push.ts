@@ -207,12 +207,24 @@ export function sabbathSchoolNotification(lessonNumber: number) {
   };
 }
 
-export function readingPlanNotification(dayNumber: number, planTitle: string, planId: string) {
-  const params = new URLSearchParams({ planId });
+export function readingPlanNotification(input: {
+  dayNumber: number;
+  planTitle: string;
+  passage: string;
+  url: string;
+  planComplete?: boolean;
+}) {
+  if (input.planComplete) {
+    return {
+      title: "Plan complete",
+      body: input.planTitle,
+      url: input.url,
+    };
+  }
   return {
-    title: "Reading plan",
-    body: `Day ${dayNumber} of ${planTitle} is ready`,
-    url: `/devotional-day-preview?${params.toString()}`,
+    title: `Day ${input.dayNumber} of ${input.planTitle} is ready`,
+    body: input.passage,
+    url: input.url,
   };
 }
 

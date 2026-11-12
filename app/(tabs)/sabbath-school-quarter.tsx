@@ -157,6 +157,9 @@ export default function SabbathSchoolQuarterV2Screen() {
               </Pressable>
             ))}
           </View>
+          <Text style={s.attribution} testID="sabbath-school-quarter-attribution">
+            {t("sabbathSchool.sourceAttribution", { defaultValue: "Lesson content courtesy of the Adventech Sabbath School project." })}
+          </Text>
         </ScrollView>
       )}
     </View>
@@ -171,6 +174,7 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
   centerText: { fontFamily: F.inter, fontSize: 14, color: SSQ.inkMuted, textAlign: "center" },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
+  attribution: { fontFamily: F.inter, fontSize: 12, lineHeight: 18, color: SSQ.inkMuted },
   quarterCard: { borderRadius: 20, padding: 20, gap: 6, ...HV2.cardShadow },
   quarterEyebrow: { fontFamily: F.interBold, fontSize: 10.5, letterSpacing: 1.6, color: "rgba(255,255,255,0.9)" },
   quarterTitle: { fontFamily: F.loraBold, fontSize: 20, color: "#FFFFFF", lineHeight: 28 },

@@ -9,14 +9,9 @@ import {
   bibleTranslations,
   bibleCache,
   searchCache,
-  devotionalDays,
-  userPlanEnrollments,
-  userPlanProgress,
 } from "../../shared/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { getCalendarDate, normalizeTimeZone } from "../../shared/calendar-date";
-import { pacePlanDays } from "../../lib/plan-pacing";
-import { getEffectiveUserId, optionalAuth } from "../middleware/auth";
+import { optionalAuth } from "../middleware/auth";
 import { generateVerseMap, generateQuickInsight } from "../services/ai-engine";
 import {
   normalizeTranslationParam,
@@ -348,115 +343,8 @@ router.post("/api/quick-insight", aiGenerationLimiter, async (req, res) => {
   }
 });
 
-router.post("/api/devotionals/complete", optionalAuth, async (req, res) => {
-  try {
-    const { enrollmentId, dayId, journalEntry } = req.body;
-    if (!enrollmentId || !dayId) {
-      return res.status(400).json({ error: "enrollmentId and dayId are required" });
-    }
-
-    const userId = getEffectiveUserId(req);
-    const [enrollment] = await db
-      .select({
-        id: userPlanEnrollments.id,
-        planId: userPlanEnrollments.planId,
-      })
-      .from(userPlanEnrollments)
-      .where(
-        and(
-          eq(userPlanEnrollments.id, String(enrollmentId)),
-          eq(userPlanEnrollments.userId, userId)
-        )
-      )
-      .limit(1);
-
-    if (!enrollment) {
-      return res.status(404).json({ error: "Enrollment not found" });
-    }
-
-    const [day] = await db
-      .select({ id: devotionalDays.id, dayNumber: devotionalDays.dayNumber })
-      .from(devotionalDays)
-      .where(
-        and(
-          eq(devotionalDays.id, String(dayId)),
-          eq(devotionalDays.planId, enrollment.planId)
-        )
-      )
-      .limit(1);
-
-    if (!day) {
-      return res.status(400).json({ error: "Day does not belong to this devotional plan" });
-    }
-
-    const today = getCalendarDate(new Date(), normalizeTimeZone(req.body?.timezone)).dateKey;
-    const [allDayRows, completedRows] = await Promise.all([
-      db
-        .select({ dayNumber: devotionalDays.dayNumber })
-        .from(devotionalDays)
-        .where(eq(devotionalDays.planId, enrollment.planId)),
-      db
-        .select({
-          dayNumber: devotionalDays.dayNumber,
-          localDate: userPlanProgress.completedLocalDate,
-        })
-        .from(userPlanProgress)
-        .innerJoin(devotionalDays, eq(devotionalDays.id, userPlanProgress.dayId))
-        .where(eq(userPlanProgress.enrollmentId, enrollment.id)),
-    ]);
-    const pace = pacePlanDays({
-      dayNumbers: allDayRows.map((item) => item.dayNumber),
-      completed: completedRows,
-      today,
-    });
-    const target = pace.find((item) => item.dayNumber === day.dayNumber);
-    if (!target || target.status === "locked") {
-      return res.status(409).json({ error: "This reading is still locked." });
-    }
-    if (!target.canComplete) {
-      return res.status(409).json({
-        error: target.status === "complete"
-          ? "This reading is already complete."
-          : "This reading can be marked complete tomorrow.",
-      });
-    }
-
-    const progress = await db
-      .insert(userPlanProgress)
-      .values({
-        enrollmentId: enrollment.id,
-        dayId: day.id,
-        journalEntry,
-        completedLocalDate: today,
-      })
-      .onConflictDoNothing()
-      .returning();
-
-    const [allDays, completedDays] = await Promise.all([
-      db
-        .select({ id: devotionalDays.id })
-        .from(devotionalDays)
-        .where(eq(devotionalDays.planId, enrollment.planId)),
-      db
-        .select({ dayId: userPlanProgress.dayId })
-        .from(userPlanProgress)
-        .where(eq(userPlanProgress.enrollmentId, enrollment.id)),
-    ]);
-    const completedDayIds = new Set(completedDays.map((item) => item.dayId));
-    const planComplete = allDays.length > 0 && allDays.every((item) => completedDayIds.has(item.id));
-
-    if (planComplete) {
-      await db
-        .update(userPlanEnrollments)
-        .set({ isActive: false })
-        .where(eq(userPlanEnrollments.id, enrollment.id));
-    }
-
-    return res.json({ progress: progress[0] ?? null, planComplete });
-  } catch (err) {
-    console.error(err);
-    return res.status(getErrorStatusCode(err)).json({ error: "Internal server error" });
-  }
+router.post("/api/devotionals/complete", optionalAuth, async (_req, res) => {
+  return res.status(409).json({ error: "A devotional day is recorded when its reading is finished." });
 });
 
 export default router;

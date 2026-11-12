@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
   Pressable,
@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useStudyDepth } from "@/contexts/StudyDepthContext";
@@ -22,11 +22,11 @@ import { useProStatus } from "@/contexts/ProContext";
 import * as Haptics from "expo-haptics";
 import LightDepthSelector from "./LightDepthSelector";
 import { D2, F } from "./tokens";
-import { EmptyState, ErrorState, Header, LoadingState, PrimaryButton } from "./PreviewPrimitives";
+import { EmptyState, ErrorState, Header, LoadingState } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { ReportAiAnswer } from "@/components/ReportAiAnswer";
-import { getCalendarDate } from "@/shared/calendar-date";
+import { usePassageEndWatch } from "@/hooks/usePassageEndWatch";
 import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 import { readingSpace, readingType } from "@/lib/reading-font-scale";
 import { useReadingFontScale, useSystemFontScale } from "@/lib/use-reading-font-scale";
@@ -217,8 +217,6 @@ export default function DevotionalDayPreview() {
 
   const [journal, setJournal] = useState("");
   const [share, setShare] = useState(false);
-  const [pending, setPending] = useState(false);
-  const finishing = React.useRef(false);
 
   useEffect(() => {
     if (depthParam === "quick" || depthParam === "standard" || depthParam === "deep") {
@@ -254,37 +252,36 @@ export default function DevotionalDayPreview() {
 
   const canComplete = today.data?.canComplete === true;
   const outline = today.data?.outline ?? [];
-
-  const finish = async () => {
-    if (finishing.current || !canComplete || !today.data?.enrollment || !day) return;
-    finishing.current = true;
-    setPending(true);
-    try {
-      await apiRequest("POST", "/api/devotionals/complete", {
-        enrollmentId: today.data.enrollment.id,
-        dayId: day.id,
-        journalEntry: journal.trim() || null,
-        timezone,
-        localDate: getCalendarDate(new Date(), timezone).dateKey,
-      });
-      if (share && groupId && journal.trim()) {
-        await apiRequest("POST", `/api/groups/${groupId}/share-reflection`, {
+  const verseEnd = useRef(0);
+  const cardY = useRef(0);
+  const lastLocal = useRef(0);
+  const scrollMetrics = useRef({ y: 0, height: 0 });
+  const passageWatch = usePassageEndWatch({
+    enabled: Boolean(userId) && canComplete && Boolean(day?.bookId && day?.chapter),
+    bookId: day?.bookId ?? null,
+    chapter: day?.chapter ?? null,
+    translation,
+    lastVerse: verses.length ? verses[verses.length - 1].verse : null,
+    bottomPadding: 0,
+    journalEntry: journal,
+    onDayComplete: () => {
+      const current = today.data?.today;
+      if (share && groupId && journal.trim() && current) {
+        void apiRequest("POST", `/api/groups/${groupId}/share-reflection`, {
           content: journal.trim(),
-          dayTitle: day.title,
-          passageLabel: day.passageLabel || null,
+          dayTitle: current.title,
+          passageLabel: current.passageLabel || null,
         });
       }
       triggerMissionInvite();
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast(`Day ${day.dayNumber} complete`, "success");
-      queryClient.invalidateQueries({ queryKey: [endpoint] });
-      queryClient.invalidateQueries({ queryKey: [`/api/devotionals/today?userId=${userId}`] });
-    } catch {
-      showToast("Could not save. Your reading is still here. Please try again.", "error");
-    } finally {
-      finishing.current = false;
-      setPending(false);
-    }
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (current) showToast(`Day ${current.dayNumber} complete`, "success");
+    },
+  });
+  const reportPassageScroll = (y: number, height: number) => {
+    scrollMetrics.current = { y, height };
+    verseEnd.current = cardY.current + lastLocal.current;
+    passageWatch.onScroll(y, height, verseEnd.current);
   };
 
   if (today.isLoading) {
@@ -336,6 +333,16 @@ export default function DevotionalDayPreview() {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          reportPassageScroll(
+            event.nativeEvent.contentOffset.y,
+            event.nativeEvent.layoutMeasurement.height,
+          );
+        }}
+        onLayout={(event) => {
+          reportPassageScroll(scrollMetrics.current.y, event.nativeEvent.layout.height);
+        }}
         contentContainerStyle={{ paddingBottom: readingScreenBottomPad(insets.bottom) }}
       >
         <View style={s.progress}>
@@ -388,13 +395,26 @@ export default function DevotionalDayPreview() {
         </View>
 
         {verses.length ? (
-          <View style={[s.card, cardGap]}>
+          <View
+            style={[s.card, cardGap]}
+            onLayout={(event) => {
+              cardY.current = event.nativeEvent.layout.y;
+              reportPassageScroll(scrollMetrics.current.y, scrollMetrics.current.height);
+            }}
+          >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <Text style={s.label}>SCRIPTURE READING</Text>
               <Text style={[s.label, { color: D2.muted, fontFamily: F.inter, letterSpacing: 0 }]}>{day.passageLabel ? `${day.passageLabel} · ${versionLabel}` : versionLabel}</Text>
             </View>
-            {verses.map((v) => (
-              <View style={[s.verse, { gap: readingSpace(10, scale) }]} key={v.id}>
+            {verses.map((v, index) => (
+              <View
+                style={[s.verse, { gap: readingSpace(10, scale) }]}
+                key={v.id}
+                onLayout={index === verses.length - 1 ? (event) => {
+                  lastLocal.current = event.nativeEvent.layout.y + event.nativeEvent.layout.height;
+                  reportPassageScroll(scrollMetrics.current.y, scrollMetrics.current.height);
+                } : undefined}
+              >
                 <Text allowFontScaling={false} style={[s.verseNum, readingType(12, 18, scale), { width: 20 * scale }]}>{v.verse}</Text>
                 <Text allowFontScaling={false} style={[s.verseText, readingType(16, 25, scale)]}>{v.text}</Text>
               </View>
@@ -516,7 +536,7 @@ export default function DevotionalDayPreview() {
               placeholderTextColor={D2.muted}
               allowFontScaling={false}
               style={[s.journal, readingType(13, 20, scale)]}
-              editable={canComplete && !pending}
+              editable={canComplete}
             />
           ) : null}
           {groupId ? (
@@ -529,17 +549,15 @@ export default function DevotionalDayPreview() {
               <Text style={s.shareText}>Share reflection with group</Text>
             </Pressable>
           ) : null}
-          <PrimaryButton
-            label={pending ? "Saving…" : "Mark day complete"}
-            onPress={finish}
-            disabled={pending || !canComplete}
-            testID="devotional-day-preview-complete"
-          />
-          {!canComplete ? (
-            <Text style={s.paceNote} testID="devotional-day-complete-wait">
-              You can mark this day complete tomorrow.
+          {canComplete ? (
+            <Text style={s.paceNote} testID="devotional-day-reading-status">
+              This day is complete when you reach the end of the reading.
             </Text>
-          ) : null}
+          ) : (
+            <Text style={s.paceNote} testID="devotional-day-complete-wait">
+              {`Day ${[...outline].reverse().find((item) => item.status === "complete")?.dayNumber ?? day.dayNumber} complete · Next reading tomorrow`}
+            </Text>
+          )}
         </View>
       </ScrollView>
     </View>

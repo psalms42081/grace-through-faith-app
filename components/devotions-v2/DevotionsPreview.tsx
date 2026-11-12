@@ -96,6 +96,22 @@ type Plan = {
   isAiGenerated?: boolean | null;
 };
 type DevotionalPlan = DevotionalCatalogPlan;
+type PlanProgress = {
+  status: "reading" | "done-today" | "finished";
+  focusDay: number;
+  completedDays: number;
+  percent: number;
+  partsDone: number;
+  partsTotal: number;
+  passage: string | null;
+  nextPassage: string | null;
+  continueReading: {
+    bookId: number;
+    chapter: number;
+    verseStart: number | null;
+    verseEnd: number | null;
+  } | null;
+} | null;
 type UserPlan = {
   id: string;
   planId: string;
@@ -106,6 +122,7 @@ type UserPlan = {
   planDescription: string | null;
   planCategory: string | null;
   planDurationDays: number;
+  progress?: PlanProgress;
 };
 type Day = {
   id: string;
@@ -226,7 +243,7 @@ export default function DevotionsPreview() {
   const plans = useQuery<Plan[]>({ queryKey: ["/api/plans"] });
   const userPlans = useQuery<UserPlan[]>({
     queryKey: ["/api/user-plans", "devotions-preview", userId],
-    queryFn: async () => (await apiRequest("GET", "/api/user-plans")).json(),
+    queryFn: async () => (await apiRequest("GET", withDeviceTimeZone("/api/user-plans"))).json(),
     enabled: isAuthenticated,
   });
   const books = useQuery<Book[]>({ queryKey: ["/api/books"] });
@@ -309,16 +326,6 @@ export default function DevotionsPreview() {
     onError: () => showToast("Could not start plan. Please try again in a moment.", "error"),
   });
 
-  const completeDay = useMutation({
-    mutationFn: async ({ enrollmentId, day }: { enrollmentId: string; day: number }) =>
-      (await apiRequest("PATCH", `/api/user-plans/${enrollmentId}/day/${day}`)).json(),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/user-plans"] });
-      qc.invalidateQueries({ queryKey: ["/api/plans"] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    },
-  });
-
   const enrollSeries = useMutation({
     mutationFn: async (id: string) =>
       (await apiRequest("POST", "/api/devotionals/enroll", { userId, planId: id })).json(),
@@ -350,13 +357,24 @@ export default function DevotionsPreview() {
     action();
   };
 
-  const first = active[0];
-  const firstDetail = activeDetails[0]?.data as Detail | undefined;
-  const firstDay = firstDetail?.days?.find((item) => item.dayNumber === first?.currentDay);
-  const readingRef =
-    formatPlanDayReference(books.data, firstDay) ||
-    first?.planDescription ||
-    "Return to today's reading";
+  const openPlanReading = (plan: UserPlan, detail: Detail | undefined) => {
+    const target = plan.progress?.continueReading;
+    const focusDay = plan.progress?.focusDay ?? plan.currentDay;
+    const day = detail?.days?.find((item) => item.dayNumber === focusDay);
+    const bookId = target?.bookId ?? day?.bookId;
+    const chapter = target?.chapter ?? day?.chapter;
+    if (bookId && chapter) {
+      navigateToScriptureByParts(
+        bookId,
+        chapter,
+        (target?.verseStart ?? day?.verseStart) || undefined,
+        translation,
+        target?.verseEnd ?? day?.verseEnd ?? undefined,
+      );
+      return;
+    }
+    setDetailId(plan.planId);
+  };
 
   return (
     <View style={s.root}>
@@ -389,55 +407,77 @@ export default function DevotionsPreview() {
         />
         {userPlans.isLoading ? (
           <LoadingState label="Finding your reading" />
-        ) : first ? (
-          <View style={s.continueCard} testID="devotions-preview-continue-card">
-            <View style={s.continueTop}>
-              <View style={s.continueIcon}>
-                <Ionicons name="book-outline" size={22} color={D2.coral} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.meta}>
-                  READING PLAN · DAY {first.currentDay} OF {first.planDurationDays}
-                </Text>
-                {firstDetail?.isAiGenerated ? (
-                  <View style={{ marginVertical: 4 }}>
-                    <AIGeneratedLabel />
-                  </View>
-                ) : null}
-                <Text style={s.cardTitle}>{first.planTitle}</Text>
-                <Text style={s.cardSub}>{readingRef}</Text>
-              </View>
-              <Text style={s.percent}>
-                {Math.round((first.currentDay / Math.max(1, first.planDurationDays)) * 100)}%
-              </Text>
-            </View>
-            <View style={s.continueActions}>
-              <PrimaryButton
-                label="Continue reading"
-                onPress={() => {
-                  const current = activeDetails[0]?.data as Detail | undefined;
-                  const day = current?.days?.find((item) => item.dayNumber === first.currentDay);
-                  if (day?.bookId && day.chapter) {
-                    navigateToScriptureByParts(day.bookId, day.chapter, day.verseStart || undefined, translation);
-                  } else {
-                    setDetailId(first.planId);
-                  }
-                }}
-                testID="devotions-preview-continue-action"
-              />
-              <Pressable
-                accessibilityLabel={`Mark day ${first.currentDay} complete`}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: false, disabled: completeDay.isPending }}
-                disabled={completeDay.isPending}
-                onPress={() => completeDay.mutate({ enrollmentId: first.id, day: first.currentDay })}
-                hitSlop={8}
-                testID="devotions-preview-primary-complete"
+        ) : active.length ? (
+          active.map((plan, index) => {
+            const detail = activeDetails[index]?.data as Detail | undefined;
+            const progress = plan.progress;
+            const focusDay = progress?.focusDay ?? plan.currentDay;
+            const focusParts = detail?.days?.filter((item) => item.dayNumber === focusDay) ?? [];
+            const passage = progress?.passage
+              || formatPlanDayReference(books.data, focusParts[0])
+              || plan.planDescription
+              || "Return to today's reading";
+            const doneToday = progress?.status === "done-today";
+            const percent = progress?.percent
+              ?? Math.round(((Math.max(0, plan.currentDay - 1)) / Math.max(1, plan.planDurationDays)) * 100);
+            return (
+              <View
+                key={plan.id}
+                style={s.continueCard}
+                testID={index === 0 ? "devotions-preview-continue-card" : `devotions-preview-active-${plan.planId}`}
               >
-                <Ionicons name="checkmark-circle-outline" size={25} color={D2.violet} />
-              </Pressable>
-            </View>
-          </View>
+                <View style={s.continueTop}>
+                  <View style={s.continueIcon}>
+                    <Ionicons name="book-outline" size={22} color={D2.coral} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.meta}>
+                      READING PLAN · DAY {focusDay} OF {plan.planDurationDays}
+                    </Text>
+                    {detail?.isAiGenerated ? (
+                      <View style={{ marginVertical: 4 }}>
+                        <AIGeneratedLabel />
+                      </View>
+                    ) : null}
+                    <Text style={s.cardTitle}>{plan.planTitle}</Text>
+                    <Text style={s.cardSub}>{passage}</Text>
+                    {progress && progress.partsTotal > 1 && progress.status === "reading" ? (
+                      <Text style={s.cardSub} testID={`devotions-preview-parts-${plan.planId}`}>
+                        {progress.partsDone} of {progress.partsTotal} chapters read
+                      </Text>
+                    ) : null}
+                  </View>
+                  {doneToday ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={25}
+                      color={D2.sage}
+                      accessibilityLabel={`Day ${focusDay} complete`}
+                    />
+                  ) : null}
+                  <Text style={s.percent}>{percent}%</Text>
+                </View>
+                {doneToday ? (
+                  <View>
+                    <Text style={s.cardTitle} testID={`devotions-preview-done-${plan.planId}`}>
+                      Day {focusDay} complete · Next reading tomorrow
+                    </Text>
+                    {progress?.nextPassage ? (
+                      <Text style={[s.cardSub, { color: D2.muted }]}>{progress.nextPassage}</Text>
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={s.continueActions}>
+                    <PrimaryButton
+                      label="Continue reading"
+                      onPress={() => openPlanReading(plan, detail)}
+                      testID={index === 0 ? "devotions-preview-continue-action" : `devotions-preview-resume-${plan.planId}`}
+                    />
+                  </View>
+                )}
+              </View>
+            );
+          })
         ) : (
           <EmptyState
             title="Begin with today"
@@ -449,46 +489,6 @@ export default function DevotionsPreview() {
             illustrationLabel="Reflection"
           />
         )}
-
-        {active.slice(1).map((item, index) => {
-          const info = activeDetails[index + 1]?.data as Detail | undefined;
-          const day = info?.days?.find((entry) => entry.dayNumber === item.currentDay);
-          return (
-            <View
-              key={item.id}
-              style={s.rowCard}
-              testID={`devotions-preview-active-${item.planId}`}
-            >
-              <View style={s.rowIcon}>
-                <Ionicons name="book-outline" size={19} color={D2.violet} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardTitle}>{item.planTitle}</Text>
-                <Text style={s.cardSub}>Day {item.currentDay} of {item.planDurationDays}</Text>
-              </View>
-              <Pressable
-                onPress={() =>
-                  day?.bookId && day.chapter
-                    ? navigateToScriptureByParts(day.bookId, day.chapter, day.verseStart || undefined, translation)
-                    : setDetailId(item.planId)
-                }
-                style={s.quietAction}
-              >
-                <Text style={s.quietText}>Resume</Text>
-              </Pressable>
-              <Pressable
-                accessibilityLabel={`Mark day ${item.currentDay} complete`}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: false, disabled: completeDay.isPending }}
-                disabled={completeDay.isPending}
-                onPress={() => completeDay.mutate({ enrollmentId: item.id, day: item.currentDay })}
-                hitSlop={8}
-              >
-                <Ionicons name="checkmark-circle-outline" size={23} color={D2.violet} />
-              </Pressable>
-            </View>
-          );
-        })}
 
         {today.data?.today ? (
           <Pressable
@@ -730,9 +730,24 @@ export default function DevotionsPreview() {
               <Ionicons name="checkmark-circle" size={22} color={D2.sage} />
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{p.planTitle}</Text>
-                <Text style={s.cardSub}>Completed · {p.planDurationDays} days</Text>
+                <Text style={s.cardSub}>Plan complete</Text>
+                <View style={s.continueActions}>
+                  <Pressable
+                    onPress={() => gate(() => enroll.mutate(p.planId))}
+                    style={s.quietAction}
+                    testID={`devotions-preview-restart-${p.planId}`}
+                  >
+                    <Text style={s.quietText}>Start again</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDetailId(featuredPlan && featuredPlan.id !== p.planId ? featuredPlan.id : (plans.data || []).find((plan) => plan.id !== p.planId)?.id || null)}
+                    style={s.quietAction}
+                    testID={`devotions-preview-choose-${p.planId}`}
+                  >
+                    <Text style={s.quietText}>Choose another plan</Text>
+                  </Pressable>
+                </View>
               </View>
-              <Ionicons name="bookmark" size={18} color={D2.sage} />
             </View>
           ))
         ) : (

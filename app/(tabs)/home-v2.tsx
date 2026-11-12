@@ -53,6 +53,7 @@ interface TodayResponse {
   completedCount?: number;
   totalDays?: number;
   planComplete?: boolean;
+  canComplete?: boolean;
 }
 
 export default function HomeV2Screen() {
@@ -221,9 +222,20 @@ export default function HomeV2Screen() {
     queryKey: [`/api/devotionals/today?userId=${userId}`],
   });
 
-  const { data: recentReads } = useQuery<
-    { id: string; bookId: number; bookName: string; chapter: number; translation: string; readAt: string }[]
-  >({ queryKey: [`/api/reading-history/recent?userId=${userId}`] });
+  const { data: homePlans } = useQuery<{
+    id: string;
+    planTitle: string;
+    completedAt: string | null;
+    progress?: {
+      status: "reading" | "done-today" | "finished";
+      focusDay: number;
+      passage: string | null;
+    } | null;
+  }[]>({
+    queryKey: ["/api/user-plans", "home", userId, localDay.dateKey],
+    queryFn: async () => (await apiRequest("GET", withDeviceTimeZone("/api/user-plans"))).json(),
+    enabled: isAuthenticated,
+  });
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
     queryKey: [
@@ -333,9 +345,10 @@ export default function HomeV2Screen() {
   const myGroups = myGroupsData?.groups ?? [];
 
   const streak = weeklyData?.currentStreak ?? 0;
-  const readToday = recentReads?.[0]?.readAt
-    ? getHomeLocalDay(new Date(recentReads[0].readAt)).dateKey === localDay.dateKey
-    : false;
+  const activeHomePlan = (homePlans ?? []).find((plan) => !plan.completedAt) ?? null;
+  const planDoneToday = activeHomePlan
+    ? activeHomePlan.progress?.status === "done-today"
+    : todayData?.canComplete === false && (todayData?.completedCount ?? 0) > 0;
 
   // Prefer the timezone-aware day number returned by the SS API. The local
   // value is only a loading fallback and uses the same Home clock.
@@ -382,17 +395,21 @@ export default function HomeV2Screen() {
     );
   };
 
-  const planTitle = todayData?.enrollment?.plan?.title;
+  const planTitle = activeHomePlan?.planTitle ?? todayData?.enrollment?.plan?.title;
   const rhythmRows: RhythmRowData[] = [
     {
       key: "plan",
       icon: require("@/assets/illustrations/rhythm-plan.png"),
       iconBg: "#EAE6FA",
       title: planTitle ? `Today's Plan — ${planTitle}` : "Today's Plan",
-      meta: todayData?.today
-        ? `Day ${todayData.today.dayNumber} · ${todayData.today.title}`
-        : "Choose a reading plan",
-      done: readToday,
+      meta: activeHomePlan?.progress?.status === "done-today"
+        ? `Day ${activeHomePlan.progress.focusDay} complete · Next reading tomorrow`
+        : activeHomePlan?.progress?.passage
+          ? `Day ${activeHomePlan.progress.focusDay} · ${activeHomePlan.progress.passage}`
+          : todayData?.today
+            ? `Day ${todayData.today.dayNumber} · ${todayData.today.title}`
+            : "Choose a reading plan",
+      done: planDoneToday,
       onPress: () => router.push("/devotions" as any),
     },
     {

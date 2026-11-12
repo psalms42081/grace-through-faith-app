@@ -1,4 +1,5 @@
 import { Platform, Linking } from "react-native";
+import { getDeviceTimeZone } from "@/lib/device-time-zone";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
@@ -275,8 +276,10 @@ export async function registerPushToken(authToken: string, apiBaseUrl: string): 
     const pushToken = tokenData.data;
     if (!pushToken) return;
 
+    const timeZone = getDeviceTimeZone();
+    const stamp = `${pushToken}|${timeZone}`;
     const lastRegistered = await AsyncStorage.getItem(PUSH_TOKEN_REGISTERED_KEY);
-    if (lastRegistered === pushToken) return;
+    if (lastRegistered === stamp) return;
 
     const url = new URL("/api/notifications/register-token", apiBaseUrl);
     const res = await globalThis.fetch(url.toString(), {
@@ -285,11 +288,11 @@ export async function registerPushToken(authToken: string, apiBaseUrl: string): 
         "Content-Type": "application/json",
         Authorization: `Bearer ${authToken}`,
       },
-      body: JSON.stringify({ pushToken, platform: Platform.OS }),
+      body: JSON.stringify({ pushToken, platform: Platform.OS, timeZone }),
     });
 
     if (res.ok) {
-      await AsyncStorage.setItem(PUSH_TOKEN_REGISTERED_KEY, pushToken);
+      await AsyncStorage.setItem(PUSH_TOKEN_REGISTERED_KEY, stamp);
       console.log("[push] Push token registered successfully");
     }
   } catch (err) {

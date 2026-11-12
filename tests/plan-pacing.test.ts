@@ -54,9 +54,15 @@ describe("devotional plan pacing wiring", () => {
     const complete = readFileSync(path.join(root, "server", "routes", "verse-tools.ts"), "utf8");
     assert.match(screen, /devotional-day-outline/);
     assert.match(screen, /canComplete/);
-    assert.match(screen, /You can mark this day complete tomorrow/);
+    assert.match(screen, /This day is complete when you reach the end of the reading/);
+    assert.match(screen, /Next reading tomorrow/);
+    assert.doesNotMatch(screen, /Mark day complete/);
     assert.doesNotMatch(screen, /setComplete\(true\)/);
-    assert.match(complete, /pacePlanDays/);
-    assert.match(complete, /completedLocalDate/);
+    const progress = readFileSync(path.join(root, "server", "services", "plan-reading-progress.ts"), "utf8");
+    const pacing = readFileSync(path.join(root, "lib", "plan-reading.ts"), "utf8");
+    assert.match(pacing, /pacePlanDays/);
+    assert.match(progress, /planCardState/);
+    assert.match(progress, /completedLocalDate/);
+    assert.match(complete, /recorded when its reading is finished/);
   });
 });

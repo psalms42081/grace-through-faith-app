@@ -1,9 +1,16 @@
 import { Router } from "express";
 import { db } from "../db";
-import { readingPlans, planDays, userPlans, bibleBooks } from "../../shared/schema";
+import { readingPlans, planDays, userPlans, userReadingPlanDays, bibleBooks } from "../../shared/schema";
 import { eq, asc, and, ne } from "drizzle-orm";
 import { requireAuth, getAuthUserId } from "../middleware/auth";
 import { cachedResponse } from "../middleware/response-cache";
+import { getCalendarDate, normalizeTimeZone } from "../../shared/calendar-date";
+import {
+  PlanProgressUnavailable,
+  openReadingTarget,
+  readingPlanCards,
+  recordPlanReading,
+} from "../services/plan-reading-progress";
 
 const router = Router();
 
@@ -77,6 +84,11 @@ router.post("/api/user-plans", requireAuth, async (req, res) => {
     }
 
     if (existing.length > 0) {
+      try {
+        await db.delete(userReadingPlanDays).where(eq(userReadingPlanDays.userPlanId, existing[0].id));
+      } catch (err) {
+        if (!(err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "42P01")) throw err;
+      }
       const [restarted] = await db
         .update(userPlans)
         .set({
@@ -133,59 +145,75 @@ router.get("/api/user-plans", requireAuth, async (req, res) => {
       .where(eq(userPlans.userId, userId))
       .orderBy(asc(userPlans.createdAt));
 
-    res.json(enrolled);
+    const today = getCalendarDate(new Date(), normalizeTimeZone(req.query.timeZone)).dateKey;
+    try {
+      const cards = await readingPlanCards(enrolled, today);
+      res.json(enrolled.map((row) => ({ ...row, progress: cards.get(row.id) ?? null })));
+    } catch (err) {
+      if (err instanceof PlanProgressUnavailable || (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "42P01")) {
+        res.json(enrolled.map((row) => ({ ...row, progress: null })));
+        return;
+      }
+      throw err;
+    }
   } catch (err) {
     console.error("User plans list error:", err);
     res.status(500).json({ error: "Failed to fetch user plans" });
   }
 });
 
-router.patch("/api/user-plans/:id/day/:day", requireAuth, async (req, res) => {
+router.patch("/api/user-plans/:id/day/:day", requireAuth, async (_req, res) => {
+  res.status(409).json({ error: "A plan day is recorded when its reading is finished." });
+});
+
+router.get("/api/user-plans/reading-target", requireAuth, async (req, res) => {
+  const bookId = Number(req.query.bookId);
+  const chapter = Number(req.query.chapter);
+  if (!bookId || !chapter) return res.status(400).json({ error: "bookId and chapter are required" });
   try {
-    const userId = req.authUserId!;
-    const id = String(req.params.id);
-    const day = String(req.params.day);
-    const dayNum = parseInt(day, 10);
-
-    if (isNaN(dayNum) || dayNum < 1) {
-      return res.status(400).json({ error: "Invalid day number" });
-    }
-
-    const [enrollment] = await db
-      .select()
-      .from(userPlans)
-      .where(and(eq(userPlans.id, id), eq(userPlans.userId, userId)));
-
-    if (!enrollment) {
-      return res.status(404).json({ error: "Enrollment not found" });
-    }
-
-    const [planDay] = await db
-      .select()
-      .from(planDays)
-      .where(and(eq(planDays.planId, enrollment.planId), eq(planDays.dayNumber, dayNum)));
-
-    const [plan] = await db
-      .select()
-      .from(readingPlans)
-      .where(eq(readingPlans.id, enrollment.planId));
-
-    const nextDay = dayNum + 1;
-    const isComplete = nextDay > (plan?.durationDays ?? dayNum);
-
-    const [updated] = await db
-      .update(userPlans)
-      .set({
-        currentDay: isComplete ? dayNum : nextDay,
-        completedAt: isComplete ? new Date() : null,
-      })
-      .where(eq(userPlans.id, id))
-      .returning();
-
-    res.json(updated);
+    const target = await openReadingTarget(
+      req.authUserId!,
+      bookId,
+      chapter,
+      normalizeTimeZone(req.query.timeZone),
+    );
+    res.json(target);
   } catch (err) {
-    console.error("Mark day complete error:", err);
-    res.status(500).json({ error: "Failed to mark day complete" });
+    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "42P01") {
+      return res.json({ active: false, verse: null });
+    }
+    console.error("Plan reading target error:", err);
+    res.status(500).json({ error: "Failed to look up the reading" });
+  }
+});
+
+router.post("/api/user-plans/read", requireAuth, async (req, res) => {
+  const bookId = Number(req.body?.bookId);
+  const chapter = Number(req.body?.chapter);
+  const verse = Number(req.body?.verse);
+  const translation = typeof req.body?.translation === "string" ? req.body.translation.trim().toUpperCase() : "";
+  const source = req.body?.source === "listen" ? "listen" : "scroll";
+  if (!bookId || !chapter || !verse || !translation) {
+    return res.status(400).json({ error: "bookId, chapter, verse, and translation are required" });
+  }
+  try {
+    const result = await recordPlanReading({
+      userId: req.authUserId!,
+      bookId,
+      chapter,
+      verse,
+      translation,
+      source,
+      timeZone: normalizeTimeZone(req.body?.timeZone ?? req.query.timeZone),
+      journalEntry: typeof req.body?.journalEntry === "string" ? req.body.journalEntry : null,
+    });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof PlanProgressUnavailable) {
+      return res.status(503).json({ error: "Reading progress storage is not ready. Apply migration 0032." });
+    }
+    console.error("Plan reading progress error:", err);
+    res.status(500).json({ error: "Failed to record reading" });
   }
 });
 

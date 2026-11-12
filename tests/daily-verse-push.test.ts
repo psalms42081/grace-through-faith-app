@@ -96,10 +96,25 @@ describe("daily verse push schedule", () => {
       new Date("2026-09-23T07:07:00Z"),
     );
     assert.deepEqual(due, ["verse", "plan"]);
-    const note = readingPlanNotification(2, "The Life of Christ", "plan-1");
-    assert.equal(note.title, "Reading plan");
-    assert.equal(note.body, "Day 2 of The Life of Christ is ready");
-    assert.equal(note.url, "/devotional-day-preview?planId=plan-1");
+    const note = readingPlanNotification({
+      dayNumber: 2,
+      planTitle: "The Life of Christ",
+      passage: "Isaiah 41",
+      url: "/scripture?bookId=23&chapter=41&verse=1",
+    });
+    assert.equal(note.title, "Day 2 of The Life of Christ is ready");
+    assert.equal(note.body, "Isaiah 41");
+    assert.equal(note.url, "/scripture?bookId=23&chapter=41&verse=1");
+    assert.equal(
+      readingPlanNotification({
+        dayNumber: 7,
+        planTitle: "The Life of Christ",
+        passage: "Colossians 3",
+        url: "/devotions",
+        planComplete: true,
+      }).title,
+      "Plan complete",
+    );
     const again = duePushKinds(
       { ...base, planReminder: true, lastPlanLocalDate: "2026-09-23" },
       new Date("2026-09-23T07:07:00Z"),
@@ -163,7 +178,7 @@ describe("daily verse push schedule", () => {
 describe("daily verse push wiring", () => {
   it("registers native tokens with pushToken", () => {
     const source = readFileSync(path.join(root, "lib", "notifications.ts"), "utf8");
-    assert.match(source, /JSON\.stringify\(\{ pushToken, platform: Platform\.OS \}\)/);
+    assert.match(source, /JSON\.stringify\(\{ pushToken, platform: Platform\.OS, timeZone \}\)/);
     assert.doesNotMatch(source, /token: pushToken/);
   });
 

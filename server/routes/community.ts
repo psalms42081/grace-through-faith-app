@@ -20,8 +20,10 @@ import { Router } from "express";
     userPlanProgress,
     deviceTokens,
     leaderRequests,
+    pushSubscriptions,
   } from "../../shared/schema";
   import { eq, and, or, ilike, sql, desc, asc } from "drizzle-orm";
+  import { normalizeTimeZone } from "../../shared/calendar-date";
   import { notifyGroupMembers, notifyUser } from "../services/push-notifications";
   import { generateCode, requireAuth, requireAdmin, optionalAuth, extractUserId, getAuthUserId, getEffectiveUserId } from "../middleware/auth";
   import { generateScripturalEncouragement } from "../services/ai-engine";
@@ -98,6 +100,26 @@ import { Router } from "express";
             sql`${deviceTokens.pushToken} != ${pushToken}`
           )
         );
+
+      const timeZone = normalizeTimeZone(req.body?.timeZone);
+      const [subscription] = await db
+        .select({ id: pushSubscriptions.id })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.endpoint, pushToken))
+        .limit(1);
+      if (subscription) {
+        await db
+          .update(pushSubscriptions)
+          .set({ userId, timezone: timeZone })
+          .where(eq(pushSubscriptions.id, subscription.id));
+      } else {
+        await db.insert(pushSubscriptions).values({
+          userId,
+          endpoint: pushToken,
+          timezone: timeZone,
+          keys: null,
+        });
+      }
 
       return res.json({ success: true });
     } catch (err) {

@@ -87,6 +87,7 @@ import { comparisonTranslation } from "@/lib/compare-translation";
 import { isKjvTranslation } from "@/lib/strong-map-policy";
 import { RED_LETTERS_STORAGE_KEY, redLettersFromStorage, spokenRangesForLine } from "@/lib/words-of-christ";
 import useBibleAudio from "@/hooks/useBibleAudio";
+import { usePassageEndWatch } from "@/hooks/usePassageEndWatch";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
   goBibleReaderBack,
@@ -1070,9 +1071,16 @@ export default function VerseReaderScreen() {
     Animated.timing(stripAnim, { toValue: hidden ? 1 : 0, duration: 180, useNativeDriver: true }).start();
   }, [stripAnim]);
 
+  const passageScrollRef = useRef<(y: number, viewport: number, content: number) => void>(() => {});
+  const passageViewportRef = useRef(0);
+  const passageContentRef = useRef(0);
+
   const handleReaderScroll = useCallback((event: any) => {
     const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
     const y = contentOffset.y;
+    passageViewportRef.current = layoutMeasurement?.height ?? passageViewportRef.current;
+    passageContentRef.current = contentSize?.height ?? passageContentRef.current;
+    passageScrollRef.current(y, passageViewportRef.current, passageContentRef.current);
     const dy = y - lastScrollY.current;
     lastScrollY.current = y;
     setStripHidden(
@@ -1466,7 +1474,16 @@ export default function VerseReaderScreen() {
     [data?.providerContent?.paragraphs]
   );
 
-  const audio = useBibleAudio(verses, bookId, chapter, translation, scrollViewRef, bookName);
+  const onChapterFinishedRef = useRef<() => void>(() => {});
+  const audio = useBibleAudio(
+    verses,
+    bookId,
+    chapter,
+    translation,
+    scrollViewRef,
+    bookName,
+    () => onChapterFinishedRef.current(),
+  );
   const { handleStop: audioHandleStop } = audio;
 
   const readingHistoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1551,6 +1568,16 @@ export default function VerseReaderScreen() {
     fontScale,
     chromeHeight: sheetOpen && !wordStudyMode ? VERSE_SHEET_COLLAPSED_HEIGHT : READER_FLOATING_CHROME_HEIGHT,
   });
+  const passageWatch = usePassageEndWatch({
+    enabled: isAuthenticated,
+    bookId: Number(bookId) || null,
+    chapter: chapterNum || null,
+    translation,
+    lastVerse: verses.length ? verses[verses.length - 1].verse : null,
+    bottomPadding: readerScrollBottomPad,
+  });
+  passageScrollRef.current = passageWatch.onScroll;
+  onChapterFinishedRef.current = passageWatch.onChapterAudioFinished;
   const listenClearance =
     !audio.isActive && !sheetOpen && !wordStudyTarget
       ? chromeBottom + READER_FLOATING_CHROME_HEIGHT
@@ -2155,6 +2182,22 @@ export default function VerseReaderScreen() {
               onScroll={(e) => {
                 handleReaderScroll(e);
                 if (splitMode && isSideBySide) handlePrimaryScroll(e);
+              }}
+              onLayout={(e) => {
+                passageViewportRef.current = e.nativeEvent.layout.height;
+                passageScrollRef.current(
+                  lastScrollY.current,
+                  passageViewportRef.current,
+                  passageContentRef.current,
+                );
+              }}
+              onContentSizeChange={(_width, height) => {
+                passageContentRef.current = height;
+                passageScrollRef.current(
+                  lastScrollY.current,
+                  passageViewportRef.current,
+                  height,
+                );
               }}
               onTouchStart={useNewTypography ? onPreviewChromeTouchStart : undefined}
               onTouchEnd={useNewTypography ? onPreviewChromeTouchEnd : undefined}
