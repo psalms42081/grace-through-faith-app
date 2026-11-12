@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Defs, FeColorMatrix, Filter, Image as SvgImage } from "react-native-svg";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import {
   SABBATH_SCHOOL_COVER_FRAME,
@@ -47,12 +48,81 @@ function siblingArtwork(quarterCode: string | null | undefined, coverUrl?: strin
   return { splash, cover, uris };
 }
 
+/** InVerse line-art splashes. A cover crop cuts the tower off; these are fitted whole. */
+function isLineArtSplash(uri: string): boolean {
+  return uri.includes("-cq/");
+}
+
 /**
- * Adult splash art is centred on the dove. InVerse splash art sits in the
- * upper half of a tall image, so a centred slice cuts the lighthouse off.
+ * The published InVerse canvas is tall, with the drawing in this band and
+ * empty colour below it. Fractions of the source image.
  */
-function splashCrop(uri: string): "center" | "top" {
-  return uri.includes("-cq/") ? "top" : "center";
+const LINE_ART_TOP = 0.157;
+const LINE_ART_BOTTOM = 0.627;
+
+function lineArtBox(bannerWidth: number, sourceWidth: number, sourceHeight: number) {
+  const padTop = 8;
+  const baseY = SABBATH_SCHOOL_BANNER_HEIGHT - SABBATH_SCHOOL_BANNER_FADE;
+  const span = LINE_ART_BOTTOM - LINE_ART_TOP;
+  let imageHeight = (baseY - padTop) / span;
+  let imageWidth = imageHeight * (sourceWidth / sourceHeight);
+  const maxWidth = Math.max(bannerWidth - 16, 1);
+  if (imageWidth > maxWidth) {
+    imageWidth = maxWidth;
+    imageHeight = imageWidth * (sourceHeight / sourceWidth);
+  }
+  return {
+    position: "absolute" as const,
+    width: imageWidth,
+    height: imageHeight,
+    left: (bannerWidth - imageWidth) / 2,
+    top: baseY - LINE_ART_BOTTOM * imageHeight,
+  };
+}
+
+/**
+ * The published splash is white line art on a flat olive that is lighter than
+ * the panel. Drop that olive so the drawing sits on the panel colour.
+ * Alpha stays 0 on the file background and reaches 1 on the white strokes.
+ */
+const LINE_ART_KNOCKOUT =
+  "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1.475 1.475 1.475 0 -1.655";
+
+function lineArtFilterId(uri: string) {
+  let hash = 0;
+  for (let i = 0; i < uri.length; i++) hash = (hash * 31 + uri.charCodeAt(i)) >>> 0;
+  return `ss-line-${hash.toString(36)}`;
+}
+
+function LineArtSplash({
+  uri,
+  box,
+}: {
+  uri: string;
+  box: { width: number; height: number; left: number; top: number };
+}) {
+  const id = lineArtFilterId(uri);
+  return (
+    <Svg
+      width={box.width}
+      height={box.height}
+      style={{ position: "absolute", left: box.left, top: box.top }}
+      pointerEvents="none"
+    >
+      <Defs>
+        <Filter id={id} x="0%" y="0%" width="100%" height="100%">
+          <FeColorMatrix type="matrix" values={LINE_ART_KNOCKOUT} />
+        </Filter>
+      </Defs>
+      <SvgImage
+        href={uri}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+        filter={`url(#${id})`}
+      />
+    </Svg>
+  );
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -78,29 +148,56 @@ function SplashFill({
   onError: () => void;
 }) {
   const [painted, setPainted] = useState<string | null>(warmed.has(uri) ? uri : null);
+  const [bannerWidth, setBannerWidth] = useState(0);
+  const [sourceSize, setSourceSize] = useState({ width: 745, height: 868 });
+  const lineArt = isLineArtSplash(uri);
+  const fitted = lineArt && bannerWidth > 0
+    ? lineArtBox(bannerWidth, sourceSize.width, sourceSize.height)
+    : null;
+
+  const onImageLoad = (event: { source?: { width?: number; height?: number } }) => {
+    const width = event.source?.width;
+    const height = event.source?.height;
+    if (width && height) setSourceSize({ width, height });
+    setPainted(uri);
+  };
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} pointerEvents="none">
+    <View
+      style={[StyleSheet.absoluteFill, { backgroundColor: color }]}
+      pointerEvents="none"
+      onLayout={(event) => {
+        const next = Math.round(event.nativeEvent.layout.width);
+        if (next > 0 && next !== bannerWidth) setBannerWidth(next);
+      }}
+    >
       {painted && painted !== uri ? (
-        <Image
-          source={{ uri: painted }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          contentPosition={splashCrop(uri)}
-          cachePolicy="memory-disk"
-          transition={0}
-        />
+        isLineArtSplash(painted) && fitted ? (
+          <LineArtSplash uri={painted} box={fitted} />
+        ) : (
+          <Image
+            source={{ uri: painted }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            contentPosition="center"
+            cachePolicy="memory-disk"
+            transition={0}
+          />
+        )
+      ) : null}
+      {lineArt && fitted ? (
+        <LineArtSplash uri={uri} box={fitted} />
       ) : null}
       <Image
         source={{ uri }}
-        style={StyleSheet.absoluteFill}
+        style={lineArt ? { width: 1, height: 1, opacity: 0 } : StyleSheet.absoluteFill}
         contentFit="cover"
-        contentPosition={splashCrop(uri)}
+        contentPosition="center"
         cachePolicy="memory-disk"
         recyclingKey={uri}
         priority="high"
         transition={0}
-        onLoad={() => setPainted(uri)}
+        onLoad={onImageLoad}
         onError={onError}
         accessibilityElementsHidden
         importantForAccessibility="no"
