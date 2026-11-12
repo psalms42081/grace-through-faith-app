@@ -47,9 +47,13 @@ describe("sabbath school artwork urls", () => {
     );
     assert.match(home, /SabbathSchoolCardSurface/);
     assert.match(overview, /SabbathSchoolCardSurface/);
-    assert.match(surface, /contentFit="cover"/);
-    assert.match(surface, /contentPosition="center"/);
+    assert.match(surface, /contentFit="fill"/);
+    assert.match(surface, /blurRadius=\{0\}/);
+    assert.doesNotMatch(surface, /contentPosition/);
+    assert.match(surface, /style=\{photo\}/);
+    assert.match(surface, /width: bannerWidth/);
     assert.match(surface, /uri\.includes\("-cq\/"\)/);
+    assert.match(surface, /SABBATH_SCHOOL_PHOTO_BANNER_HEIGHT = 170/);
     assert.match(surface, /FeColorMatrix/);
     assert.match(surface, /LINE_ART_KNOCKOUT/);
     assert.match(surface, /SABBATH_SCHOOL_BANNER_HEIGHT = 150/);

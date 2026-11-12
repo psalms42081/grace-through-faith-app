@@ -16,10 +16,20 @@ import {
 } from "@/lib/sabbath-school-tracks";
 import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
 
-/** Banner height. The picture lives here; the words live in the panel below. */
+/** Line-art banner height. The picture lives here; the words live in the panel below. */
 export const SABBATH_SCHOOL_BANNER_HEIGHT = 150;
+/**
+ * Photographic banner height on a phone-width card. Taller than the line-art
+ * banner so a top-weighted crop can hold the dove's head and both wings.
+ * Wider cards grow from this floor so the same fraction of the photo stays visible.
+ */
+export const SABBATH_SCHOOL_PHOTO_BANNER_HEIGHT = 170;
 /** Soft join from the picture into the solid quarterly colour. */
 export const SABBATH_SCHOOL_BANNER_FADE = 24;
+/** Empty manuscript above the dove. The wing tips start below this. */
+const PHOTO_TOP = 0.1;
+/** How much of the photo the banner shows. Head and both wings sit in this span. */
+const PHOTO_SPAN = 0.46;
 
 const warmed = new Set<string>();
 
@@ -125,6 +135,28 @@ function LineArtSplash({
   );
 }
 
+function photoBannerHeight(bannerWidth: number, sourceWidth: number, sourceHeight: number) {
+  if (bannerWidth <= 0 || sourceWidth <= 0 || sourceHeight <= 0) {
+    return SABBATH_SCHOOL_PHOTO_BANNER_HEIGHT;
+  }
+  const scaledHeight = bannerWidth * (sourceHeight / sourceWidth);
+  return Math.max(SABBATH_SCHOOL_PHOTO_BANNER_HEIGHT, Math.round(scaledHeight * PHOTO_SPAN));
+}
+
+/**
+ * Draw the whole photo into a box of its own aspect, then let the banner clip it.
+ * Android's cover alignment shifts the sharp bitmap off the blurred preview and
+ * leaves only the wash, so the crop is the banner's clip instead.
+ */
+function photoFrame(bannerWidth: number, sourceWidth: number, sourceHeight: number) {
+  const scaledHeight = bannerWidth * (sourceHeight / sourceWidth);
+  return {
+    width: bannerWidth,
+    height: scaledHeight,
+    marginTop: -Math.round(PHOTO_TOP * scaledHeight),
+  };
+}
+
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
   const red = parseInt(raw.slice(0, 2), 16);
@@ -142,10 +174,12 @@ function SplashFill({
   uri,
   color,
   onError,
+  onPhotoSize,
 }: {
   uri: string;
   color: string;
   onError: () => void;
+  onPhotoSize?: (size: { width: number; height: number }) => void;
 }) {
   const [painted, setPainted] = useState<string | null>(warmed.has(uri) ? uri : null);
   const [bannerWidth, setBannerWidth] = useState(0);
@@ -158,9 +192,16 @@ function SplashFill({
   const onImageLoad = (event: { source?: { width?: number; height?: number } }) => {
     const width = event.source?.width;
     const height = event.source?.height;
-    if (width && height) setSourceSize({ width, height });
+    if (width && height) {
+      setSourceSize({ width, height });
+      if (!lineArt) onPhotoSize?.({ width, height });
+    }
     setPainted(uri);
   };
+
+  const photo = !lineArt && bannerWidth > 0
+    ? photoFrame(bannerWidth, sourceSize.width, sourceSize.height)
+    : null;
 
   return (
     <View
@@ -171,38 +212,45 @@ function SplashFill({
         if (next > 0 && next !== bannerWidth) setBannerWidth(next);
       }}
     >
-      {painted && painted !== uri ? (
-        isLineArtSplash(painted) && fitted ? (
-          <LineArtSplash uri={painted} box={fitted} />
-        ) : (
+      {lineArt ? (
+        <>
+          {painted && painted !== uri && isLineArtSplash(painted) && fitted ? (
+            <LineArtSplash uri={painted} box={fitted} />
+          ) : null}
+          {fitted ? <LineArtSplash uri={uri} box={fitted} /> : null}
           <Image
-            source={{ uri: painted }}
-            style={StyleSheet.absoluteFill}
+            source={{ uri }}
+            style={{ width: 1, height: 1, opacity: 0 }}
             contentFit="cover"
-            contentPosition="center"
             cachePolicy="memory-disk"
+            recyclingKey={uri}
+            priority="high"
             transition={0}
+            blurRadius={0}
+            onLoad={onImageLoad}
+            onError={onError}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            alt=""
           />
-        )
+        </>
+      ) : photo ? (
+        <Image
+          source={{ uri }}
+          style={photo}
+          contentFit="fill"
+          cachePolicy="memory-disk"
+          recyclingKey={uri}
+          priority="high"
+          transition={0}
+          blurRadius={0}
+          onLoad={onImageLoad}
+          onError={onError}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          alt=""
+        />
       ) : null}
-      {lineArt && fitted ? (
-        <LineArtSplash uri={uri} box={fitted} />
-      ) : null}
-      <Image
-        source={{ uri }}
-        style={lineArt ? { width: 1, height: 1, opacity: 0 } : StyleSheet.absoluteFill}
-        contentFit="cover"
-        contentPosition="center"
-        cachePolicy="memory-disk"
-        recyclingKey={uri}
-        priority="high"
-        transition={0}
-        onLoad={onImageLoad}
-        onError={onError}
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-        alt=""
-      />
     </View>
   );
 }
@@ -243,13 +291,30 @@ export function SabbathSchoolCardSurface({
   const showSplash = !!splash && !splashFailed;
   const showCover = !showSplash && !!cover && !coverFailed;
   const showBanner = showSplash || showCover;
+  const lineArtSplash = !!splash && isLineArtSplash(splash);
+  const [bannerWidth, setBannerWidth] = useState(0);
+  const [photoSize, setPhotoSize] = useState({ width: 745, height: 868 });
+  const bannerHeight = !showSplash || lineArtSplash
+    ? SABBATH_SCHOOL_BANNER_HEIGHT
+    : photoBannerHeight(bannerWidth, photoSize.width, photoSize.height);
 
   return (
     <View style={{ backgroundColor: theme.primary }} testID={testID}>
       {showBanner ? (
-        <View style={[s.banner, { backgroundColor: theme.primary }]}>
+        <View
+          style={[s.banner, { backgroundColor: theme.primary, height: bannerHeight }]}
+          onLayout={(event) => {
+            const next = Math.round(event.nativeEvent.layout.width);
+            if (next > 0 && next !== bannerWidth) setBannerWidth(next);
+          }}
+        >
           {showSplash && splash ? (
-            <SplashFill uri={splash} color={theme.primary} onError={() => setSplashFailed(true)} />
+            <SplashFill
+              uri={splash}
+              color={theme.primary}
+              onError={() => setSplashFailed(true)}
+              onPhotoSize={setPhotoSize}
+            />
           ) : null}
           {showCover && cover ? (
             <View style={s.coverHold}>
@@ -282,7 +347,6 @@ export function SabbathSchoolCardSurface({
 
 const s = StyleSheet.create({
   banner: {
-    height: SABBATH_SCHOOL_BANNER_HEIGHT,
     overflow: "hidden",
   },
   coverHold: {
