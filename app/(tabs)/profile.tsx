@@ -32,6 +32,7 @@ import { shareInformedMinistries } from "@/lib/share-app";
 import NotificationSettings from "@/components/profile/NotificationSettings";
 import ReportProblem from "@/components/profile/ReportProblem";
 import { getSessionHighlights, subscribeSessionHighlights } from "@/lib/session-highlights";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 
 const C = {
   surface: PathB.surface,
@@ -107,7 +108,7 @@ function ProfileScreenInner() {
   const { showToast } = useToast();
   const pinnedTop = Platform.OS === "web" ? 0 : insets.top;
   const contentTop = (Platform.OS === "web" ? 67 : 0) + 12;
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const bottomPad = tabScrollBottomPad(insets.bottom, Platform.OS);
 
   const uid = user?.id || "guest";
 
@@ -281,7 +282,7 @@ function ProfileScreenInner() {
     <View style={[st.container, { backgroundColor: C.surface, paddingTop: pinnedTop }]}>
     <ScrollView
       style={{ flex: 1, backgroundColor: C.surface }}
-      contentContainerStyle={{ paddingTop: contentTop, paddingBottom: bottomPad + 120 }}
+      contentContainerStyle={{ paddingTop: contentTop, paddingBottom: bottomPad }}
       showsVerticalScrollIndicator={false}
     >
       <View style={st.headerSection}>

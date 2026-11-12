@@ -21,6 +21,8 @@ import {
   useHardwareBackToHomeWhenAtStackRoot,
 } from "@/lib/use-hardware-back-to-home";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
@@ -70,7 +72,9 @@ export default function BookPickerScreen() {
     apiTranslations ??
     DEFAULT_TRANSLATIONS.map((t) => ({ id: t.id, abbreviation: t.id, name: t.name, language: "en", languageName: "English" }));
 
-  const bottomPad = (Platform.OS === "web" ? 34 : 0) + (isBibleTabHome ? 80 : 0);
+  const bottomPad = isBibleTabHome
+    ? tabScrollBottomPad(insets.bottom, Platform.OS)
+    : readingScreenBottomPad(insets.bottom);
 
   const { data: books, isLoading, error } = useQuery<BibleBook[]>({
     queryKey: ["/api/books"],
@@ -149,7 +153,7 @@ export default function BookPickerScreen() {
       ) : (
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 120 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
         >
           <Pressable

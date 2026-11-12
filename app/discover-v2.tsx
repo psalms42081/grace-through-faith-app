@@ -27,6 +27,7 @@ import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
 import { isYouVersionCode } from "@/shared/youversion";
 import { openYouTubeVideo } from "@/lib/open-youtube-video";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 import { DISCOVER_WATCH_RAIL as WATCH_RAIL } from "@/data/curatedYoutubeVideos";
 import {
   DEVOTIONAL_CATALOG_QUERY_KEY,
@@ -295,7 +296,7 @@ export default function DiscoverV2Screen() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: contentTop, paddingBottom: 140 }}
+        contentContainerStyle={{ paddingTop: contentTop, paddingBottom: tabScrollBottomPad(insets.bottom, Platform.OS) }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

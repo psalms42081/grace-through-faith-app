@@ -19,9 +19,10 @@ import SDAVerifiedBadge from "@/components/SDAVerifiedBadge";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 import {
-  sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 
 interface DiscussionData {
   keyQuestions: string[];
@@ -51,9 +52,9 @@ export default function SabbathSchoolDiscussionScreen() {
   );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) +
-    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
+  const bottomPad = isTabContained
+    ? tabScrollBottomPad(insets.bottom, Platform.OS)
+    : readingScreenBottomPad(insets.bottom);
 
   const [data, setData] = useState<DiscussionData | null>(null);
 
@@ -91,7 +92,7 @@ export default function SabbathSchoolDiscussionScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.lessonTitle, { color: theme.text, fontSize: 20 }]}>

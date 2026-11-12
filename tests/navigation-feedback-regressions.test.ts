@@ -181,7 +181,7 @@ describe("external tester navigation feedback", () => {
     );
     assert.match(
       sabbathSchoolDaySource,
-      /sabbathSchoolTabBarClearance/,
+      /tabScrollBottomPad/,
     );
     assert.match(
       rootLayoutSource,

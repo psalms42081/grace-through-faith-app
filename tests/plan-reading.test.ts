@@ -6,8 +6,11 @@ import {
   passageEndOffset,
   passageEndReached,
   planCardState,
+  planContinueState,
+  readingPlansQueryKey,
   verseBottomReached,
 } from "../lib/plan-reading";
+import { readFileSync } from "node:fs";
 
 describe("passage end", () => {
   it("waits three seconds after the end is on screen", () => {
@@ -144,5 +147,35 @@ describe("plan card", () => {
     assert.equal(done.focusDay, 2);
     assert.equal(done.percent, 29);
     assert.equal(done.pace.find((day) => day.dayNumber === 3)?.canComplete, false);
+  });
+});
+
+describe("shared plan continue state", () => {
+  it("uses the server card for day, passage, and percent", () => {
+    const state = planContinueState({
+      currentDay: 7,
+      durationDays: 7,
+      progress: {
+        status: "reading",
+        focusDay: 3,
+        passage: "Romans 8",
+        percent: 29,
+      },
+      fallbackPassage: "Colossians 3",
+    });
+    assert.equal(state.focusDay, 3);
+    assert.equal(state.passage, "Romans 8");
+    assert.equal(state.percent, 29);
+    assert.deepEqual(readingPlansQueryKey("user", "2026-11-12"), ["/api/user-plans", "user", "2026-11-12"]);
+  });
+
+  it("is the only day and percent formula on Home and Devotions", () => {
+    const home = readFileSync(new URL("../app/(tabs)/home-v2.tsx", import.meta.url), "utf8");
+    const devotions = readFileSync(new URL("../components/devotions-v2/DevotionsPreview.tsx", import.meta.url), "utf8");
+    assert.match(home, /planContinueState\(/);
+    assert.match(devotions, /planContinueState\(/);
+    assert.match(home, /readingPlansQueryKey\(userId, localDay\.dateKey\)/);
+    assert.match(devotions, /readingPlansQueryKey\(userId, localDateKey\)/);
+    assert.doesNotMatch(devotions, /plan\.currentDay - 1/);
   });
 });

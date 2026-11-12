@@ -34,6 +34,8 @@ import {
 } from "@/lib/home-share-app";
 import { useTranslation as useAppTranslation } from "@/context/TranslationContext";
 import { apiRequest } from "@/lib/query-client";
+import { planContinueState, readingPlansQueryKey } from "@/lib/plan-reading";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 import { getDeviceTimeZone, withDeviceTimeZone } from "@/lib/device-time-zone";
 import {
   resolveSabbathSchoolContinueDay,
@@ -226,15 +228,20 @@ export default function HomeV2Screen() {
     id: string;
     planTitle: string;
     completedAt: string | null;
+    currentDay: number;
+    planDurationDays: number;
     progress?: {
       status: "reading" | "done-today" | "finished";
       focusDay: number;
       passage: string | null;
+      percent: number;
+      nextPassage?: string | null;
     } | null;
   }[]>({
-    queryKey: ["/api/user-plans", "home", userId, localDay.dateKey],
+    queryKey: readingPlansQueryKey(userId, localDay.dateKey),
     queryFn: async () => (await apiRequest("GET", withDeviceTimeZone("/api/user-plans"))).json(),
     enabled: isAuthenticated,
+    staleTime: 0,
   });
 
   const { data: weeklyData } = useQuery<WeeklyStreakData>({
@@ -396,16 +403,23 @@ export default function HomeV2Screen() {
   };
 
   const planTitle = activeHomePlan?.planTitle ?? todayData?.enrollment?.plan?.title;
+  const planSummary = activeHomePlan
+    ? planContinueState({
+        currentDay: activeHomePlan.currentDay,
+        durationDays: activeHomePlan.planDurationDays,
+        progress: activeHomePlan.progress,
+      })
+    : null;
   const rhythmRows: RhythmRowData[] = [
     {
       key: "plan",
       icon: require("@/assets/illustrations/rhythm-plan.png"),
       iconBg: "#EAE6FA",
       title: planTitle ? `Today's Plan — ${planTitle}` : "Today's Plan",
-      meta: activeHomePlan?.progress?.status === "done-today"
-        ? `Day ${activeHomePlan.progress.focusDay} complete · Next reading tomorrow`
-        : activeHomePlan?.progress?.passage
-          ? `Day ${activeHomePlan.progress.focusDay} · ${activeHomePlan.progress.passage}`
+      meta: planSummary?.status === "done-today"
+        ? `Day ${planSummary.focusDay} complete · Next reading tomorrow`
+        : planSummary?.passage
+          ? `Day ${planSummary.focusDay} · ${planSummary.passage} · ${planSummary.percent}%`
           : todayData?.today
             ? `Day ${todayData.today.dayNumber} · ${todayData.today.title}`
             : "Choose a reading plan",
@@ -443,7 +457,7 @@ export default function HomeV2Screen() {
     <ScrollView
       ref={scrollRef}
       style={{ flex: 1 }}
-      contentContainerStyle={{ paddingTop: contentTop, paddingBottom: 140 }}
+      contentContainerStyle={{ paddingTop: contentTop, paddingBottom: tabScrollBottomPad(insets.bottom, Platform.OS) }}
       showsVerticalScrollIndicator={false}
     >
       <HomeHeader

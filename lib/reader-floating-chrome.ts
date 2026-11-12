@@ -25,6 +25,21 @@ export function nativeTabBarHeight(safeBottom: number): number {
   return NATIVE_TAB_BAR_HEIGHT + Math.max(0, safeBottom);
 }
 
+/** Air between the last row and the top of the tab bar. */
+export const TAB_SCROLL_CLEARANCE = 24;
+
+/**
+ * Bottom padding for a scroll view that sits under the tab bar.
+ * Native bar height already includes the safe-area inset, so the inset
+ * is not added a second time. Web's bar is a fixed 84 and does not
+ * include the inset, so the inset is added there.
+ */
+export function tabScrollBottomPad(safeBottom: number, os: string): number {
+  const inset = Math.max(0, safeBottom);
+  if (os === "web") return WEB_TAB_BAR_HEIGHT + inset + TAB_SCROLL_CLEARANCE;
+  return nativeTabBarHeight(inset) + TAB_SCROLL_CLEARANCE;
+}
+
 /**
  * Distance from the screen bottom to the chrome row.
  * A positive tab bar height already includes the safe-area inset.

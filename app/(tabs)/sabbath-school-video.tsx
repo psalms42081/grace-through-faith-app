@@ -31,9 +31,9 @@ import { resolveSabbathSchoolContinueDay } from "@/lib/sabbath-school-continue";
 import {
   buildSabbathSchoolTabRoute,
   SABBATH_SCHOOL_TAB_ROOT,
-  sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 import { safeGoBack } from "@/lib/safe-back";
 import { HOME_TAB_PATH } from "@/lib/bible-tab-navigation";
 
@@ -168,9 +168,7 @@ export default function SabbathSchoolVideoScreen() {
       }) as any,
     );
   };
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) +
-    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
+  const bottomPad = tabScrollBottomPad(insets.bottom, Platform.OS);
 
   if (!isTabContained) return null;
 
@@ -198,7 +196,7 @@ export default function SabbathSchoolVideoScreen() {
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
         >
           {clips.length === 0 && moreVideos.length === 0 && earlierVideos.length === 0 ? (

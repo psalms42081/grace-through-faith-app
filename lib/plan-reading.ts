@@ -110,6 +110,59 @@ export function completedDayRows(input: {
     .map((dayNumber) => ({ dayNumber, localDate: null }));
 }
 
+export type PlanContinueProgress = {
+  status: PlanCardStatus;
+  focusDay: number;
+  passage: string | null;
+  percent: number;
+  nextPassage?: string | null;
+};
+
+export type PlanContinueState = {
+  focusDay: number;
+  passage: string | null;
+  percent: number;
+  status: PlanCardStatus;
+  nextPassage: string | null;
+};
+
+/**
+ * The day, passage, and percent Home and Devotions both display.
+ * A server progress card wins. Without one, both screens use currentDay
+ * the same way, so a cached copy cannot invent a second percentage.
+ */
+export function planContinueState(input: {
+  currentDay: number;
+  durationDays: number;
+  progress?: PlanContinueProgress | null;
+  fallbackPassage?: string | null;
+}): PlanContinueState {
+  const progress = input.progress;
+  if (progress && Number.isInteger(progress.focusDay) && progress.focusDay > 0) {
+    return {
+      focusDay: progress.focusDay,
+      passage: progress.passage ?? input.fallbackPassage ?? null,
+      percent: progress.percent,
+      status: progress.status,
+      nextPassage: progress.nextPassage ?? null,
+    };
+  }
+  const duration = Math.max(1, input.durationDays);
+  const focusDay = Math.max(1, input.currentDay || 1);
+  return {
+    focusDay,
+    passage: input.fallbackPassage ?? null,
+    percent: Math.round((Math.max(0, focusDay - 1) / duration) * 100),
+    status: "reading",
+    nextPassage: null,
+  };
+}
+
+/** One cache entry for Home and Devotions. The date keeps a new day from reusing yesterday. */
+export function readingPlansQueryKey(userId: string | null | undefined, dateKey: string) {
+  return ["/api/user-plans", userId ?? null, dateKey] as const;
+}
+
 export function planCardState(input: {
   dayNumbers: number[];
   completed: { dayNumber: number; localDate: string | null }[];

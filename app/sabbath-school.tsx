@@ -38,9 +38,9 @@ import {
 } from "@/lib/sabbath-school-continue";
 import {
   buildSabbathSchoolTabRoute,
-  sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 
 // ---- Screen tokens (SS owns teal; coral = today-dot only; no gold) ----
 const SS2 = {
@@ -202,9 +202,7 @@ export default function SabbathSchoolV2Screen() {
 
   const pastQuarters = (archiveData?.quarters || []).filter((q) => quarterly && q.id !== quarterly.id);
 
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) +
-    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
+  const bottomPad = tabScrollBottomPad(insets.bottom, Platform.OS);
   const openDay = (d: { dayNumber: number }) => {
     router.push(
       buildSabbathSchoolTabRoute("sabbath-school-day", {
@@ -246,7 +244,7 @@ export default function SabbathSchoolV2Screen() {
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
         >
           <View style={s.splash}>

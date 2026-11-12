@@ -23,10 +23,11 @@ import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolA
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import {
   buildSabbathSchoolTabRoute,
-  sabbathSchoolTabBarClearance,
   SABBATH_SCHOOL_TAB_ROOT,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 
 const SSQ = {
   surface: "#FBF7EE",
@@ -68,9 +69,9 @@ export default function SabbathSchoolQuarterV2Screen() {
     },
     !!quarterCode,
   );
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) +
-    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
+  const bottomPad = isTabContained
+    ? tabScrollBottomPad(insets.bottom, Platform.OS)
+    : readingScreenBottomPad(insets.bottom);
 
   const { selectedTrack } = useSabbathSchoolTrack();
   const { data, isLoading } = useQuery<{ quarterly: QuarterlyInfo; lessons: LessonInfo[] }>({
@@ -110,7 +111,7 @@ export default function SabbathSchoolQuarterV2Screen() {
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Quarter header — flat teal card, no gradient */}

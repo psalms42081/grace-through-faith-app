@@ -24,6 +24,8 @@ import {
   useCanPopNestedStack,
   useHardwareBackToHomeWhenAtStackRoot,
 } from "@/lib/use-hardware-back-to-home";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
+import { readingScreenBottomPad } from "@/lib/reading-screen-inset";
 
 // Read-state recolor (Batch 1 review packet) — gold is reserved for
 // streak/analytics and teal for Sabbath School, so read indicators remap.
@@ -95,7 +97,9 @@ export default function ChapterPickerScreen() {
     ? [...new Set(readChapters)].length
     : 0;
 
-  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const bottomPad = isTabContained
+    ? tabScrollBottomPad(insets.bottom, Platform.OS)
+    : readingScreenBottomPad(insets.bottom);
 
   return (
     <>
@@ -160,7 +164,7 @@ export default function ChapterPickerScreen() {
               data={chapters}
               keyExtractor={(item) => String(item)}
               numColumns={5}
-              contentContainerStyle={[styles.gridContent, { paddingBottom: bottomPad + 20 }]}
+              contentContainerStyle={[styles.gridContent, { paddingBottom: bottomPad }]}
               columnWrapperStyle={styles.gridRow}
               renderItem={({ item }) => {
                 const isRead = readSet.has(item);

@@ -49,10 +49,10 @@ import {
   weekdayNameForSabbathSchoolDay,
 } from "@/lib/sabbath-school-day-navigation";
 import {
-  sabbathSchoolTabBarClearance,
   SABBATH_SCHOOL_TAB_ROOT,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 import { useSabbathSchoolLastRead } from "@/lib/sabbath-school-continue";
 
 interface DayData {
@@ -166,9 +166,8 @@ export default function SabbathSchoolDayScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = isTabContained
-    ? (Platform.OS === "web" ? 34 : insets.bottom) +
-      sabbathSchoolTabBarClearance(isTabContained, Platform.OS)
-    : readingScreenBottomPad(Platform.OS === "web" ? 34 : insets.bottom);
+    ? tabScrollBottomPad(insets.bottom, Platform.OS)
+    : readingScreenBottomPad(insets.bottom);
 
   // `curriculum` lets the server open the chosen track when a deep link or
   // notification arrives without a quarter code.
@@ -617,7 +616,7 @@ export default function SabbathSchoolDayScreen() {
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingBottom: bottomPad + 40,
+              paddingBottom: bottomPad,
               width: "100%",
               maxWidth: useWideReading ? 1120 : 760,
               alignSelf: "center",

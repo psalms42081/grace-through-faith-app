@@ -83,6 +83,9 @@ import {
 } from "@/lib/devotional-catalog";
 import { AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { ReportAiAnswer } from "@/components/ReportAiAnswer";
+import { getHomeLocalDay } from "@/components/home-v2/home-data";
+import { planContinueState, readingPlansQueryKey } from "@/lib/plan-reading";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 
 type Plan = {
   id: string;
@@ -241,10 +244,12 @@ export default function DevotionsPreview() {
   }, [paramSeriesId]);
 
   const plans = useQuery<Plan[]>({ queryKey: ["/api/plans"] });
+  const localDateKey = getHomeLocalDay().dateKey;
   const userPlans = useQuery<UserPlan[]>({
-    queryKey: ["/api/user-plans", "devotions-preview", userId],
+    queryKey: readingPlansQueryKey(userId, localDateKey),
     queryFn: async () => (await apiRequest("GET", withDeviceTimeZone("/api/user-plans"))).json(),
     enabled: isAuthenticated,
+    staleTime: 0,
   });
   const books = useQuery<Book[]>({ queryKey: ["/api/books"] });
   const devotionalPlans = useQuery<DevotionalPlan[]>({ queryKey: [...DEVOTIONAL_CATALOG_QUERY_KEY] });
@@ -359,7 +364,11 @@ export default function DevotionsPreview() {
 
   const openPlanReading = (plan: UserPlan, detail: Detail | undefined) => {
     const target = plan.progress?.continueReading;
-    const focusDay = plan.progress?.focusDay ?? plan.currentDay;
+    const focusDay = planContinueState({
+      currentDay: plan.currentDay,
+      durationDays: plan.planDurationDays,
+      progress: plan.progress,
+    }).focusDay;
     const day = detail?.days?.find((item) => item.dayNumber === focusDay);
     const bookId = target?.bookId ?? day?.bookId;
     const chapter = target?.chapter ?? day?.chapter;
@@ -389,8 +398,7 @@ export default function DevotionsPreview() {
         contentContainerStyle={[
           s.content,
           {
-            paddingBottom:
-              (Platform.OS === "web" ? 110 : insets.bottom) + 28,
+            paddingBottom: tabScrollBottomPad(insets.bottom, Platform.OS),
           },
         ]}
       >
@@ -411,15 +419,19 @@ export default function DevotionsPreview() {
           active.map((plan, index) => {
             const detail = activeDetails[index]?.data as Detail | undefined;
             const progress = plan.progress;
-            const focusDay = progress?.focusDay ?? plan.currentDay;
-            const focusParts = detail?.days?.filter((item) => item.dayNumber === focusDay) ?? [];
-            const passage = progress?.passage
-              || formatPlanDayReference(books.data, focusParts[0])
-              || plan.planDescription
-              || "Return to today's reading";
-            const doneToday = progress?.status === "done-today";
-            const percent = progress?.percent
-              ?? Math.round(((Math.max(0, plan.currentDay - 1)) / Math.max(1, plan.planDurationDays)) * 100);
+            const focusParts = detail?.days?.filter((item) => item.dayNumber === (progress?.focusDay ?? plan.currentDay)) ?? [];
+            const summary = planContinueState({
+              currentDay: plan.currentDay,
+              durationDays: plan.planDurationDays,
+              progress,
+              fallbackPassage: formatPlanDayReference(books.data, focusParts[0])
+                || plan.planDescription
+                || "Return to today's reading",
+            });
+            const focusDay = summary.focusDay;
+            const passage = summary.passage;
+            const doneToday = summary.status === "done-today";
+            const percent = summary.percent;
             return (
               <View
                 key={plan.id}
@@ -462,8 +474,8 @@ export default function DevotionsPreview() {
                     <Text style={s.cardTitle} testID={`devotions-preview-done-${plan.planId}`}>
                       Day {focusDay} complete · Next reading tomorrow
                     </Text>
-                    {progress?.nextPassage ? (
-                      <Text style={[s.cardSub, { color: D2.muted }]}>{progress.nextPassage}</Text>
+                    {summary.nextPassage ? (
+                      <Text style={[s.cardSub, { color: D2.muted }]}>{summary.nextPassage}</Text>
                     ) : null}
                   </View>
                 ) : (

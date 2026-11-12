@@ -7,6 +7,8 @@ import {
   WEB_TAB_BAR_HEIGHT,
   floatingChromeHiddenAfterScroll,
   nativeTabBarHeight,
+  TAB_SCROLL_CLEARANCE,
+  tabScrollBottomPad,
   readerChromeBottom,
   readerScrollBottomPad,
   readerScrollEndAir,
@@ -18,6 +20,9 @@ describe("reader floating chrome", () => {
     assert.equal(readerChromeBottom(WEB_TAB_BAR_HEIGHT), 84);
     assert.equal(readerChromeBottom(0, 48), 48);
     assert.equal(nativeTabBarHeight(48), NATIVE_TAB_BAR_HEIGHT + 48);
+    assert.equal(tabScrollBottomPad(0, "android"), NATIVE_TAB_BAR_HEIGHT + TAB_SCROLL_CLEARANCE);
+    assert.equal(tabScrollBottomPad(48, "android"), nativeTabBarHeight(48) + TAB_SCROLL_CLEARANCE);
+    assert.equal(tabScrollBottomPad(34, "web"), WEB_TAB_BAR_HEIGHT + 34 + TAB_SCROLL_CLEARANCE);
     assert.equal(readerChromeBottom(nativeTabBarHeight(48), 48), nativeTabBarHeight(48));
     assert.equal(readerTabBarClearance(false), 0);
     assert.equal(readerTabBarClearance(true, undefined, "web"), 84);

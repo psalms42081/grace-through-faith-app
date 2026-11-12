@@ -23,9 +23,9 @@ import {
   isFreshTutorContextVerified,
 } from "@/lib/sabbath-school-tutor";
 import {
-  sabbathSchoolTabBarClearance,
   useSabbathSchoolTabContainment,
 } from "@/lib/sabbath-school-route-containment";
+import { tabScrollBottomPad } from "@/lib/reader-floating-chrome";
 import { AIAdventistNote, AIGeneratedLabel } from "@/components/AIGeneratedLabel";
 import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
@@ -161,9 +161,7 @@ export default function SabbathSchoolDayTutorScreen() {
   };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad =
-    (Platform.OS === "web" ? 34 : insets.bottom) +
-    sabbathSchoolTabBarClearance(isTabContained, Platform.OS);
+  const bottomPad = tabScrollBottomPad(insets.bottom, Platform.OS);
   const requestError = requestMutation.error instanceof Error
     ? requestMutation.error.message
     : "The Study Tutor could not answer right now. Please try again.";
@@ -362,7 +360,7 @@ export default function SabbathSchoolDayTutorScreen() {
           )}
         </ScrollView>
 
-        <View style={[styles.inputArea, { paddingBottom: bottomPad + 10, flexDirection: "column", alignItems: "stretch" }]}>
+        <View style={[styles.inputArea, { paddingBottom: bottomPad, flexDirection: "column", alignItems: "stretch" }]}>
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
             <TextInput
               style={styles.input}
