@@ -6,9 +6,9 @@ import { D2, F } from "@/components/devotions-v2/tokens";
 import { useScriptureForToday, type ScriptureTodayCard } from "@/hooks/useScriptureForToday";
 import { navigateToScriptureByParts } from "@/lib/scripture-nav";
 import { buildSabbathSchoolTabRoute } from "@/lib/sabbath-school-route-containment";
+import { fullPassageMarker, shownScriptureLine } from "@/lib/scripture-for-today";
 
-function openVerse(card: ScriptureTodayCard) {
-  const verses = card.linkVerses;
+function openVerses(card: ScriptureTodayCard, verses: number[]) {
   const contiguous = verses.every((verse, index) => index === 0 || verse === verses[index - 1] + 1);
   if (verses.length === 0) {
     navigateToScriptureByParts(card.bookId, card.chapter, undefined, card.shownTranslation);
@@ -49,19 +49,38 @@ export default function ScriptureForTodayCard({
     Array.isArray(questions) && typeof questions[questionIndex] === "string"
       ? questions[questionIndex]
       : "";
+  const shownLine = card
+    ? shownScriptureLine(card.bookId, card.chapter, card.displayVerses, card.shownTranslation)
+    : "";
+  const fullMarker = card
+    ? fullPassageMarker(card.chapter, card.displayVerses, card.linkVerses)
+    : null;
+  const fullLabel = fullMarker
+    ? t("scriptureForToday.readFull", { passage: fullMarker })
+    : "";
 
   return (
     <View style={[styles.card, style]} testID={testID}>
       <Text style={styles.label}>{t("scriptureForToday.label")}</Text>
       {card ? (
         <Pressable
-          onPress={() => openVerse(card)}
+          onPress={() => openVerses(card, card.displayVerses)}
           accessibilityRole="button"
-          accessibilityLabel={card.reference}
+          accessibilityLabel={shownLine}
           testID="scripture-for-today-verse"
         >
           <Text style={styles.verse}>{card.text}</Text>
-          <Text style={styles.reference}>{card.reference}</Text>
+          <Text style={styles.reference}>{shownLine}</Text>
+        </Pressable>
+      ) : null}
+      {card && fullMarker && fullLabel !== "scriptureForToday.readFull" ? (
+        <Pressable
+          onPress={() => openVerses(card, card.linkVerses)}
+          accessibilityRole="button"
+          accessibilityLabel={fullLabel}
+          testID="scripture-for-today-full"
+        >
+          <Text style={styles.lesson}>{fullLabel}</Text>
         </Pressable>
       ) : null}
       {card?.fromLesson ? (

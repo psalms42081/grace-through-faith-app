@@ -139,5 +139,43 @@
     "retry": "Subukan muli",
     "justNow": "Ngayon lang",
     "yesterday": "Kahapon"
+  },
+  "scriptureForToday": {
+    "label": "Kasulatan para sa araw na ito",
+    "fromLesson": "Mula sa liksyon ng Paaralang Pangsabbath ngayong linggo",
+    "discoverTitle": "Talata ngayong araw",
+    "readFull": "Basahin ang buong talata ({{passage}})",
+    "questions": [
+      "Ano ang ipinapakita nito tungkol sa Diyos?",
+      "Ano ang hinihingi nito sa iyo ngayon?",
+      "Aling salita rito ang nananatili sa iyo?",
+      "Saan mo nakikita ang biyaya rito?",
+      "Ano ang magbabago kung pagtitiwalaan mo ito?",
+      "Sino ang nangangailangan ng sinasabi nito?",
+      "Anong takot ang kinakausap nito?",
+      "Paano itong mabuting balita?",
+      "Anong pangako ang narito?",
+      "Ano ang inihahayag nito tungkol sa mga tao?",
+      "Saan mo ito kailangan ngayon?",
+      "Ano ang maaari mong pasalamatan sa Diyos dito?",
+      "Ano ang mahirap tanggapin dito?",
+      "Paano ito tumuturo kay Jesus?",
+      "Ano ang sinasabi nito tungkol sa panalangin?",
+      "Ano ang magiging anyo ng pagsunod ngayon?",
+      "Anong kaaliwan ang nasa mga salitang ito?",
+      "Anong babala ang dapat pakinggan?",
+      "Paano nito hinuhubog ang iyong pananalita?",
+      "Ano ang sinasabi nito tungkol sa pag-asa?",
+      "Saan inilalarawan ang pag-ibig dito?",
+      "Ano ang hinihiling nitong bitawan mo?",
+      "Paano mo ito maaalala sa buong araw?",
+      "Ano ang sinasabi nito tungkol sa pahinga?",
+      "Para kanino ang Diyos sa talatang ito?",
+      "Anong tanong ang iniwan nito sa iyo?",
+      "Paano ka nito sinalubong sa kahinaan?",
+      "Ano ang anyo ng katapatan dito?",
+      "Ano ang maidudulot mo sa panalangin?",
+      "Ano ang paanyaya sa mga salitang ito?"
+    ]
   }
 }

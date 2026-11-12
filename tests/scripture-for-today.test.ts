@@ -7,9 +7,11 @@ const LOCALE_CODES = readdirSync(new URL("../lib/i18n/locales", import.meta.url)
   .filter((name) => name.endsWith(".json"))
   .map((name) => name.replace(/\.json$/, ""));
 import {
+  fullPassageMarker,
   joinVerseWords,
   scriptureQuestionIndex,
   selectLessonScripture,
+  shownScriptureLine,
   verseTranslationOrder,
 } from "../lib/scripture-for-today";
 import { SCRIPTURE_FOR_TODAY_REFERENCES } from "../lib/scripture-for-today-refs";
@@ -201,6 +203,15 @@ describe("scripture for today fallback", () => {
     assert.deepEqual(verseTranslationOrder("KJV", "en"), ["KJV"]);
   });
 
+  it("prints the verses on the card, and marks a longer lesson range for the reader", () => {
+    assert.equal(
+      shownScriptureLine(46, 10, [6, 7, 8], "KJV"),
+      "1 Corinthians 10:6–8 · KJV",
+    );
+    assert.equal(fullPassageMarker(10, [6, 7, 8], [6, 7, 8, 9, 10, 11, 12]), "10:6–12");
+    assert.equal(fullPassageMarker(10, [6, 7, 8], [6, 7, 8]), null);
+  });
+
   it("joins only the requested verses from our Bible rows", () => {
     const text = joinVerseWords(
       [
@@ -222,12 +233,20 @@ describe("scripture for today copy", () => {
       const json = JSON.parse(
         readFileSync(new URL(`../lib/i18n/locales/${code}.json`, import.meta.url), "utf8"),
       ) as {
-        scriptureForToday?: { label?: string; fromLesson?: string; discoverTitle?: string; questions?: string[] };
+        scriptureForToday?: {
+          label?: string;
+          fromLesson?: string;
+          discoverTitle?: string;
+          readFull?: string;
+          questions?: string[];
+        };
       };
       const copy = json.scriptureForToday;
       assert.ok(copy, code);
       assert.ok(copy.label && copy.label.length > 3, code);
       assert.ok((copy.fromLesson ?? "").length > 10, code);
+      assert.ok((copy.discoverTitle ?? "").length > 3, code);
+      assert.match(copy.readFull ?? "", /\{\{passage\}\}/, code);
       assert.equal(copy.questions?.length, 30, code);
       for (const question of copy.questions ?? []) {
         assert.equal(typeof question, "string");
@@ -238,13 +257,27 @@ describe("scripture for today copy", () => {
       readFileSync(new URL("../lib/i18n/locales/en.json", import.meta.url), "utf8"),
     ) as { scriptureForToday: { questions: string[] } };
     assert.equal(english.scriptureForToday.questions[0], "What does this show you about God?");
+    assert.equal(english.scriptureForToday.label, "Scripture for today");
+    assert.equal(english.scriptureForToday.fromLesson, "From this week's Sabbath School lesson");
+    assert.equal(english.scriptureForToday.readFull, "Read the full passage ({{passage}})");
+    const i18nIndex = readFileSync(new URL("../lib/i18n/index.ts", import.meta.url), "utf8");
+    const card = readFileSync(
+      new URL("../components/devotions-v2/ScriptureForTodayCard.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(card, /scriptureForToday\.questions", \{ returnObjects: true \}/);
+    assert.match(card, /shownScriptureLine/);
+    assert.match(card, /scriptureForToday\.readFull/);
+    assert.match(i18nIndex, /from "\.\/locales\/en\.json"/);
     for (const code of LOCALE_CODES) {
       if (code === "en") continue;
       const json = JSON.parse(
         readFileSync(new URL(`../lib/i18n/locales/${code}.json`, import.meta.url), "utf8"),
-      ) as { scriptureForToday: { label: string; questions: string[] } };
+      ) as { scriptureForToday: { label: string; questions: string[]; readFull: string } };
       assert.notEqual(json.scriptureForToday.label, "Scripture for today");
       assert.notEqual(json.scriptureForToday.questions[0], english.scriptureForToday.questions[0]);
+      assert.notEqual(json.scriptureForToday.readFull, english.scriptureForToday.readFull);
+      assert.match(i18nIndex, new RegExp(`from "./locales/${code}.json"`));
     }
   });
 });

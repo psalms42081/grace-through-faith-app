@@ -139,5 +139,43 @@
     "retry": "Reessayer",
     "justNow": "A l'instant",
     "yesterday": "Hier"
+  },
+  "scriptureForToday": {
+    "label": "Écriture du jour",
+    "fromLesson": "Tiré de la leçon de l'École du sabbat de cette semaine",
+    "discoverTitle": "Le verset du jour",
+    "readFull": "Lire le passage entier ({{passage}})",
+    "questions": [
+      "Qu'est-ce que cela te montre de Dieu ?",
+      "Qu'est-ce que cela te demande aujourd'hui ?",
+      "Quel mot ici reste avec toi ?",
+      "Où vois-tu la grâce dans ce texte ?",
+      "Qu'est-ce qui changerait si tu faisais confiance à cela ?",
+      "Qui a besoin de ce que cela dit ?",
+      "À quelle peur cela parle-t-il ?",
+      "En quoi est-ce une bonne nouvelle ?",
+      "Quelle promesse se trouve ici ?",
+      "Qu'est-ce que cela révèle des personnes ?",
+      "Où en as-tu besoin aujourd'hui ?",
+      "Pour quoi peux-tu remercier Dieu ici ?",
+      "Qu'est-ce qui est difficile à accepter ici ?",
+      "Comment cela désigne-t-il Jésus ?",
+      "Que dit cela de la prière ?",
+      "À quoi ressemblerait l'obéissance aujourd'hui ?",
+      "Quel réconfort y a-t-il dans ces mots ?",
+      "Quel avertissement mérite d'être entendu ?",
+      "Comment cela forme-t-il ta façon de parler ?",
+      "Que dit cela de l'espérance ?",
+      "Où l'amour est-il décrit ici ?",
+      "Qu'est-ce que cela te demande de lâcher ?",
+      "Comment t'en souvenir au long du jour ?",
+      "Que dit cela du repos ?",
+      "Pour qui Dieu est-il dans ce passage ?",
+      "Quelle question cela te laisse-t-il ?",
+      "Comment cela te rejoint-il dans la faiblesse ?",
+      "À quoi ressemble la fidélité ici ?",
+      "Qu'est-ce que tu peux emporter dans la prière ?",
+      "Quelle est l'invitation dans ces mots ?"
+    ]
   }
 }

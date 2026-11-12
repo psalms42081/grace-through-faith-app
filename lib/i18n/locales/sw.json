@@ -150,5 +150,43 @@
     "retry": "Jaribu tena",
     "justNow": "Sasa hivi",
     "yesterday": "Jana"
+  },
+  "scriptureForToday": {
+    "label": "Andiko la leo",
+    "fromLesson": "Kutoka somo la Shule ya Sabato la wiki hii",
+    "discoverTitle": "Aya ya leo",
+    "readFull": "Soma kifungu chote ({{passage}})",
+    "questions": [
+      "Hii inakuonyesha nini kuhusu Mungu?",
+      "Hii inakutaka nini leo?",
+      "Neno lipi hapa linakaa nawe?",
+      "Unaiona wapi neema hapa?",
+      "Nini kingebadilika ukiamini hii?",
+      "Nani anahitaji yanayosemwa hapa?",
+      "Hii inazungumza na hofu gani?",
+      "Hii ni habari njema vipi?",
+      "Ahadi gani iliyo hapa?",
+      "Hii inafunua nini kuhusu watu?",
+      "Unaihitaji wapi leo?",
+      "Unaweza kumshukuru Mungu nini hapa?",
+      "Nini kigumu kukubali hapa?",
+      "Hii inamwelekeza Yesu vipi?",
+      "Hii inasema nini kuhusu maombi?",
+      "Utiifu ungeonekanaje leo?",
+      "Faraja gani iliyo katika maneno haya?",
+      "Onyo lipi linafaa kusikilizwa?",
+      "Hii inaunda vipi namna unavyoongea?",
+      "Hii inasema nini kuhusu tumaini?",
+      "Upendo umeelezwa wapi hapa?",
+      "Hii inakuomba uachilie nini?",
+      "Unawezaje kukumbuka hii mchana kutwa?",
+      "Hii inasema nini kuhusu pumziko?",
+      "Mungu ni wa nani katika kifungu hiki?",
+      "Swali gani hii inakuachia?",
+      "Hii inakukuta vipi katika udhaifu?",
+      "Uaminifu unaonekanaje hapa?",
+      "Unaweza kubeba nini katika maombi?",
+      "Mwaliko gani ulio katika maneno haya?"
+    ]
   }
 }

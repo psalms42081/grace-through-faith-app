@@ -150,5 +150,43 @@
     "retry": "Coba Lagi",
     "justNow": "Baru saja",
     "yesterday": "Kemarin"
+  },
+  "scriptureForToday": {
+    "label": "Ayat untuk hari ini",
+    "fromLesson": "Dari pelajaran Sekolah Sabat minggu ini",
+    "discoverTitle": "Ayat hari ini",
+    "readFull": "Baca seluruh nas ({{passage}})",
+    "questions": [
+      "Apa yang ini tunjukkan tentang Allah?",
+      "Apa yang ini minta darimu hari ini?",
+      "Kata mana di sini yang tinggal padamu?",
+      "Di mana kamu melihat anugerah di sini?",
+      "Apa yang berubah jika kamu mempercayai ini?",
+      "Siapa yang membutuhkan apa yang dikatakan ini?",
+      "Ketakutan mana yang diajak bicara ini?",
+      "Bagaimana ini kabar baik?",
+      "Janji apa yang ada di sini?",
+      "Apa yang ini nyatakan tentang manusia?",
+      "Di mana kamu membutuhkan ini hari ini?",
+      "Apa yang dapat kamu syukuri kepada Allah di sini?",
+      "Apa yang sulit diterima di sini?",
+      "Bagaimana ini menunjuk kepada Yesus?",
+      "Apa yang ini katakan tentang doa?",
+      "Seperti apa ketaatan hari ini?",
+      "Penghiburan apa yang ada dalam kata-kata ini?",
+      "Peringatan apa yang layak didengar?",
+      "Bagaimana ini membentuk caramu berbicara?",
+      "Apa yang ini katakan tentang pengharapan?",
+      "Di mana kasih digambarkan di sini?",
+      "Apa yang ini minta kamu lepaskan?",
+      "Bagaimana kamu mengingat ini sepanjang hari?",
+      "Apa yang ini katakan tentang perhentian?",
+      "Allah adalah bagi siapa dalam nas ini?",
+      "Pertanyaan apa yang ini tinggalkan?",
+      "Bagaimana ini menjumpaimu dalam kelemahan?",
+      "Seperti apa kesetiaan di sini?",
+      "Apa yang dapat kamu bawa ke dalam doa?",
+      "Apa undangan dalam kata-kata ini?"
+    ]
   }
 }

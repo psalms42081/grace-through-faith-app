@@ -150,5 +150,43 @@
     "retry": "Riprova",
     "justNow": "Proprio ora",
     "yesterday": "Ieri"
+  },
+  "scriptureForToday": {
+    "label": "Scrittura per oggi",
+    "fromLesson": "Dalla lezione della Scuola del Sabato di questa settimana",
+    "discoverTitle": "Il versetto di oggi",
+    "readFull": "Leggi l'intero brano ({{passage}})",
+    "questions": [
+      "Che cosa ti mostra questo di Dio?",
+      "Che cosa ti chiede oggi?",
+      "Quale parola qui resta con te?",
+      "Dove vedi la grazia in questo?",
+      "Che cosa cambierebbe se ti fidassi?",
+      "Chi ha bisogno di ciò che dice?",
+      "A quale paura parla?",
+      "In che modo è una buona notizia?",
+      "Quale promessa c'è qui?",
+      "Che cosa rivela delle persone?",
+      "Dove ne hai bisogno oggi?",
+      "Di che cosa puoi ringraziare Dio qui?",
+      "Che cosa è difficile accettare qui?",
+      "Come indica Gesù?",
+      "Che cosa dice della preghiera?",
+      "Come sarebbe l'obbedienza oggi?",
+      "Quale conforto c'è in queste parole?",
+      "Quale avvertimento vale la pena ascoltare?",
+      "Come forma il modo in cui parli?",
+      "Che cosa dice della speranza?",
+      "Dove è descritto l'amore qui?",
+      "Che cosa ti chiede di lasciare?",
+      "Come puoi ricordarlo durante il giorno?",
+      "Che cosa dice del riposo?",
+      "Per chi è Dio in questo brano?",
+      "Quale domanda ti lascia?",
+      "Come ti incontra nella debolezza?",
+      "Come appare la fedeltà qui?",
+      "Che cosa puoi portare nella preghiera?",
+      "Qual è l'invito in queste parole?"
+    ]
   }
 }

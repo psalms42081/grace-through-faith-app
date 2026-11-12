@@ -150,5 +150,43 @@
     "retry": "Reîncearcă",
     "justNow": "Tocmai acum",
     "yesterday": "Ieri"
+  },
+  "scriptureForToday": {
+    "label": "Scriptura pentru azi",
+    "fromLesson": "Din lecția Școlii de Sabat de săptămâna aceasta",
+    "discoverTitle": "Versetul de azi",
+    "readFull": "Citește pasajul întreg ({{passage}})",
+    "questions": [
+      "Ce îți arată aceasta despre Dumnezeu?",
+      "Ce îți cere aceasta astăzi?",
+      "Care cuvânt de aici rămâne cu tine?",
+      "Unde vezi harul aici?",
+      "Ce s-ar schimba dacă ai avea încredere în aceasta?",
+      "Cine are nevoie de ce spune aceasta?",
+      "Cărei frici îi vorbește aceasta?",
+      "Cum este aceasta o veste bună?",
+      "Ce făgăduință este aici?",
+      "Ce descoperă aceasta despre oameni?",
+      "Unde ai nevoie de aceasta astăzi?",
+      "Pentru ce poți să-I mulțumești lui Dumnezeu aici?",
+      "Ce este greu de primit aici?",
+      "Cum arată aceasta spre Isus?",
+      "Ce spune aceasta despre rugăciune?",
+      "Cum ar arăta ascultarea astăzi?",
+      "Ce mângâiere este în aceste cuvinte?",
+      "Ce avertizare merită ascultată?",
+      "Cum îți modelează aceasta felul de a vorbi?",
+      "Ce spune aceasta despre nădejde?",
+      "Unde este descrisă dragostea aici?",
+      "Ce îți cere aceasta să lași?",
+      "Cum poți ține minte aceasta peste zi?",
+      "Ce spune aceasta despre odihnă?",
+      "Pentru cine este Dumnezeu în acest pasaj?",
+      "Ce întrebare îți lasă aceasta?",
+      "Cum te întâlnește aceasta în slăbiciune?",
+      "Cum arată credincioșia aici?",
+      "Ce poți duce în rugăciune?",
+      "Care este invitația din aceste cuvinte?"
+    ]
   }
 }

@@ -150,5 +150,43 @@
     "retry": "Erneut versuchen",
     "justNow": "Gerade eben",
     "yesterday": "Gestern"
+  },
+  "scriptureForToday": {
+    "label": "Schrift für heute",
+    "fromLesson": "Aus der Sabbatschullektion dieser Woche",
+    "discoverTitle": "Der Vers von heute",
+    "readFull": "Den ganzen Abschnitt lesen ({{passage}})",
+    "questions": [
+      "Was zeigt dir das über Gott?",
+      "Was verlangt das heute von dir?",
+      "Welches Wort bleibt bei dir?",
+      "Wo siehst du hier Gnade?",
+      "Was würde sich ändern, wenn du dem vertraust?",
+      "Wer braucht das, was hier gesagt wird?",
+      "Zu welcher Angst spricht das?",
+      "Inwiefern ist das eine gute Nachricht?",
+      "Welche Zusage steht hier?",
+      "Was offenbart das über Menschen?",
+      "Wo brauchst du das heute?",
+      "Wofür kannst du Gott hier danken?",
+      "Was ist hier schwer anzunehmen?",
+      "Wie weist das auf Jesus hin?",
+      "Was sagt das über das Gebet?",
+      "Wie sähe Gehorsam heute aus?",
+      "Welcher Trost liegt in diesen Worten?",
+      "Welche Warnung ist hörenswert?",
+      "Wie formt das deine Art zu sprechen?",
+      "Was sagt das über die Hoffnung?",
+      "Wo wird hier Liebe beschrieben?",
+      "Was sollst du hier loslassen?",
+      "Wie kannst du das über den Tag behalten?",
+      "Was sagt das über die Ruhe?",
+      "Für wen ist Gott in diesem Abschnitt?",
+      "Welche Frage bleibt dir?",
+      "Wie begegnet dir das in der Schwachheit?",
+      "Wie sieht Treue hier aus?",
+      "Was kannst du ins Gebet mitnehmen?",
+      "Welche Einladung liegt in diesen Worten?"
+    ]
   }
 }

@@ -206,3 +206,43 @@ function formatReference(bookId: number, chapter: number, verses: readonly numbe
   }
   return `${name} ${chapter}:${verses.join(", ")}`;
 }
+
+function sameVerses(left: readonly number[], right: readonly number[]): boolean {
+  return left.length === right.length && left.every((verse, index) => verse === right[index]);
+}
+
+function passageMarker(chapter: number, verses: readonly number[]): string {
+  if (verses.length === 0) return String(chapter);
+  if (verses.length === 1) return `${chapter}:${verses[0]}`;
+  if (isContiguous(verses)) return `${chapter}:${verses[0]}–${verses[verses.length - 1]}`;
+  return `${chapter}:${verses.join(", ")}`;
+}
+
+/** Reference for the verses printed on the card, with the Bible that supplied the words. */
+export function shownScriptureLine(
+  bookId: number,
+  chapter: number,
+  displayVerses: readonly number[],
+  translation: string,
+): string {
+  const reference = formatReference(bookId, chapter, displayVerses);
+  const code = translation.trim();
+  return code ? `${reference} · ${code}` : reference;
+}
+
+/**
+ * Chapter-and-verse marker for the lesson's full range, when that range is
+ * longer than the verses printed on the card. Null when the card already
+ * shows the whole passage.
+ */
+export function fullPassageMarker(
+  chapter: number,
+  displayVerses: readonly number[],
+  linkVerses: readonly number[],
+): string | null {
+  if (linkVerses.length === 0) {
+    return displayVerses.length > 0 ? String(chapter) : null;
+  }
+  if (sameVerses(displayVerses, linkVerses)) return null;
+  return passageMarker(chapter, linkVerses);
+}

@@ -150,5 +150,43 @@
     "retry": "Opnieuw proberen",
     "justNow": "Zojuist",
     "yesterday": "Gisteren"
+  },
+  "scriptureForToday": {
+    "label": "Schrift voor vandaag",
+    "fromLesson": "Uit de sabbatschoolles van deze week",
+    "discoverTitle": "Het vers van vandaag",
+    "readFull": "Lees het hele gedeelte ({{passage}})",
+    "questions": [
+      "Wat laat dit je over God zien?",
+      "Wat vraagt dit vandaag van je?",
+      "Welk woord blijft hier bij je?",
+      "Waar zie je hier genade?",
+      "Wat zou veranderen als je dit vertrouwde?",
+      "Wie heeft nodig wat dit zegt?",
+      "Tot welke angst spreekt dit?",
+      "Hoe is dit goed nieuws?",
+      "Welke belofte staat hier?",
+      "Wat laat dit over mensen zien?",
+      "Waar heb je dit vandaag nodig?",
+      "Waarvoor kun je God hier danken?",
+      "Wat is hier moeilijk te aanvaarden?",
+      "Hoe wijst dit naar Jezus?",
+      "Wat zegt dit over gebed?",
+      "Hoe zou gehoorzaamheid er vandaag uitzien?",
+      "Welke troost zit in deze woorden?",
+      "Welke waarschuwing is het waard te horen?",
+      "Hoe vormt dit de manier waarop je spreekt?",
+      "Wat zegt dit over hoop?",
+      "Waar wordt liefde hier beschreven?",
+      "Wat vraagt dit je los te laten?",
+      "Hoe kun je dit de dag door onthouden?",
+      "Wat zegt dit over rust?",
+      "Voor wie is God in dit gedeelte?",
+      "Welke vraag laat dit achter?",
+      "Hoe ontmoet dit je in zwakheid?",
+      "Hoe ziet trouw er hier uit?",
+      "Wat kun je meenemen in gebed?",
+      "Wat is de uitnodiging in deze woorden?"
+    ]
   }
 }

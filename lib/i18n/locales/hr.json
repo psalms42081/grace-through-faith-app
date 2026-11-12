@@ -150,5 +150,43 @@
     "retry": "Pokušaj ponovo",
     "justNow": "Upravo sad",
     "yesterday": "Jučer"
+  },
+  "scriptureForToday": {
+    "label": "Pismo za danas",
+    "fromLesson": "Iz lekcije subotne škole za ovaj tjedan",
+    "discoverTitle": "Današnji redak",
+    "readFull": "Pročitaj cijeli odlomak ({{passage}})",
+    "questions": [
+      "Što ti ovo pokazuje o Bogu?",
+      "Što ovo danas traži od tebe?",
+      "Koja riječ ovdje ostaje s tobom?",
+      "Gdje ovdje vidiš milost?",
+      "Što bi se promijenilo ako bi ovome vjerovao?",
+      "Kome treba ono što ovo kaže?",
+      "Kojem strahu ovo govori?",
+      "Kako je ovo dobra vijest?",
+      "Koje je obećanje ovdje?",
+      "Što ovo otkriva o ljudima?",
+      "Gdje ti ovo treba danas?",
+      "Na čemu ovdje možeš zahvaliti Bogu?",
+      "Što je ovdje teško prihvatiti?",
+      "Kako ovo upućuje na Isusa?",
+      "Što ovo kaže o molitvi?",
+      "Kako bi poslušnost danas izgledala?",
+      "Koja je utjeha u ovim riječima?",
+      "Koje upozorenje vrijedi čuti?",
+      "Kako ovo oblikuje način na koji govoriš?",
+      "Što ovo kaže o nadi?",
+      "Gdje je ovdje opisana ljubav?",
+      "Što ovo traži da pustiš?",
+      "Kako ovo pamtiti tijekom dana?",
+      "Što ovo kaže o počinku?",
+      "Za koga je Bog u ovom odlomku?",
+      "Koje pitanje ovo ostavlja?",
+      "Kako te ovo susreće u slabosti?",
+      "Kako ovdje izgleda vjernost?",
+      "Što možeš ponijeti u molitvu?",
+      "Koji je poziv u ovim riječima?"
+    ]
   }
 }

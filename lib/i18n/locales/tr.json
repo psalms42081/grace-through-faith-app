@@ -150,5 +150,43 @@
     "retry": "Tekrar Dene",
     "justNow": "Az önce",
     "yesterday": "Dün"
+  },
+  "scriptureForToday": {
+    "label": "Bugünün ayeti",
+    "fromLesson": "Bu haftanın Sebt Okulu dersinden",
+    "discoverTitle": "Bugünün ayeti",
+    "readFull": "Tüm bölümü oku ({{passage}})",
+    "questions": [
+      "Bu, Tanrı hakkında sana ne gösteriyor?",
+      "Bu bugün senden ne istiyor?",
+      "Burada hangi söz seninle kalıyor?",
+      "Bunda lütfu nerede görüyorsun?",
+      "Buna güvensen ne değişirdi?",
+      "Bunun söylediğine kimin ihtiyacı var?",
+      "Bu hangi korkuya sesleniyor?",
+      "Bu nasıl iyi haber?",
+      "Burada hangi vaat var?",
+      "Bu insanlar hakkında neyi açığa çıkarıyor?",
+      "Bugün buna nerede ihtiyacın var?",
+      "Bunda Tanrı'ya ne için şükredebilirsin?",
+      "Burada kabul etmesi zor olan ne?",
+      "Bu İsa'ya nasıl işaret ediyor?",
+      "Bu dua hakkında ne diyor?",
+      "Bugün itaat nasıl görünürdü?",
+      "Bu sözlerde hangi teselli var?",
+      "Hangi uyarı dinlemeye değer?",
+      "Bu konuşma biçimini nasıl şekillendiriyor?",
+      "Bu umut hakkında ne diyor?",
+      "Sevgi burada nerede anlatılıyor?",
+      "Bu senden neyi bırakmanı istiyor?",
+      "Bunu gün boyunca nasıl hatırlayabilirsin?",
+      "Bu dinlenme hakkında ne diyor?",
+      "Bu bölümde Tanrı kim için?",
+      "Bu sende hangi soruyu bırakıyor?",
+      "Bu zayıflıkta seni nasıl karşılıyor?",
+      "Sadakat burada nasıl görünüyor?",
+      "Duaya ne taşıyabilirsin?",
+      "Bu sözlerdeki davet nedir?"
+    ]
   }
 }

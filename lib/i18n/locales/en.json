@@ -151,5 +151,43 @@
     "retry": "Retry",
     "justNow": "Just now",
     "yesterday": "Yesterday"
+  },
+  "scriptureForToday": {
+    "label": "Scripture for today",
+    "fromLesson": "From this week's Sabbath School lesson",
+    "discoverTitle": "Today's verse",
+    "readFull": "Read the full passage ({{passage}})",
+    "questions": [
+      "What does this show you about God?",
+      "What does this ask of you today?",
+      "Which word here stays with you?",
+      "Where do you see grace in this?",
+      "What would change if you trusted this?",
+      "Who needs what this says?",
+      "What fear does this speak to?",
+      "How is this good news?",
+      "What promise is here?",
+      "What does this reveal about people?",
+      "Where do you need this today?",
+      "What can you thank God for in this?",
+      "What is hard to accept here?",
+      "How does this point to Jesus?",
+      "What does this say about prayer?",
+      "What would obedience look like today?",
+      "What comfort is in these words?",
+      "What warning is worth hearing?",
+      "How does this shape the way you speak?",
+      "What does this say about hope?",
+      "Where is love described here?",
+      "What does this ask you to let go of?",
+      "How can you remember this through the day?",
+      "What does this say about rest?",
+      "Who is God for in this passage?",
+      "What question does this leave you with?",
+      "How does this meet you in weakness?",
+      "What does faithfulness look like here?",
+      "What can you carry into prayer?",
+      "What is the invitation in these words?"
+    ]
   }
 }

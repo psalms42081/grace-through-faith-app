@@ -139,5 +139,43 @@
     "retry": "Tentar novamente",
     "justNow": "Agora mesmo",
     "yesterday": "Ontem"
+  },
+  "scriptureForToday": {
+    "label": "Escritura de hoje",
+    "fromLesson": "Da lição da Escola Sabatina desta semana",
+    "discoverTitle": "O versículo de hoje",
+    "readFull": "Leia a passagem completa ({{passage}})",
+    "questions": [
+      "O que isto mostra sobre Deus?",
+      "O que isto pede de você hoje?",
+      "Qual palavra daqui fica com você?",
+      "Onde você vê a graça nisto?",
+      "O que mudaria se você confiasse nisto?",
+      "Quem precisa do que isto diz?",
+      "A que medo isto fala?",
+      "Em que sentido isto é uma boa notícia?",
+      "Que promessa há aqui?",
+      "O que isto revela sobre as pessoas?",
+      "Onde você precisa disto hoje?",
+      "Pelo que você pode agradecer a Deus nisto?",
+      "O que é difícil aceitar aqui?",
+      "Como isto aponta para Jesus?",
+      "O que isto diz sobre a oração?",
+      "Como seria a obediência hoje?",
+      "Que conforto há nestas palavras?",
+      "Que aviso vale a pena ouvir?",
+      "Como isto forma o seu modo de falar?",
+      "O que isto diz sobre a esperança?",
+      "Onde o amor é descrito aqui?",
+      "O que isto pede que você deixe?",
+      "Como você pode lembrar disto durante o dia?",
+      "O que isto diz sobre o descanso?",
+      "Para quem Deus é neste texto?",
+      "Que pergunta isto deixa com você?",
+      "Como isto encontra você na fraqueza?",
+      "Como é a fidelidade aqui?",
+      "O que você pode levar para a oração?",
+      "Qual é o convite nestas palavras?"
+    ]
   }
 }

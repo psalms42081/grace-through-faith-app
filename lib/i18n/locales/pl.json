@@ -150,5 +150,43 @@
     "retry": "Spróbuj ponownie",
     "justNow": "Przed chwilą",
     "yesterday": "Wczoraj"
+  },
+  "scriptureForToday": {
+    "label": "Pismo na dziś",
+    "fromLesson": "Z lekcji Szkoły Sobotniej na ten tydzień",
+    "discoverTitle": "Dzisiejszy werset",
+    "readFull": "Przeczytaj cały fragment ({{passage}})",
+    "questions": [
+      "Co to pokazuje ci o Bogu?",
+      "O co to prosi cię dzisiaj?",
+      "Które słowo tutaj zostaje z tobą?",
+      "Gdzie widzisz tu łaskę?",
+      "Co by się zmieniło, gdybyś temu zaufał?",
+      "Kto potrzebuje tego, co tu jest powiedziane?",
+      "Do jakiego lęku to mówi?",
+      "W jaki sposób to jest dobra nowina?",
+      "Jaka obietnica tu jest?",
+      "Co to ujawnia o ludziach?",
+      "Gdzie tego dziś potrzebujesz?",
+      "Za co możesz tu podziękować Bogu?",
+      "Co trudno tu przyjąć?",
+      "Jak to wskazuje na Jezusa?",
+      "Co to mówi o modlitwie?",
+      "Jak wyglądałoby dziś posłuszeństwo?",
+      "Jaka pociecha jest w tych słowach?",
+      "Jakie ostrzeżenie warto usłyszeć?",
+      "Jak to kształtuje sposób, w jaki mówisz?",
+      "Co to mówi o nadziei?",
+      "Gdzie opisana jest tu miłość?",
+      "Czego to każe ci się wyrzec?",
+      "Jak możesz pamiętać o tym przez dzień?",
+      "Co to mówi o odpoczynku?",
+      "Dla kogo jest Bóg w tym fragmencie?",
+      "Jakie pytanie to zostawia?",
+      "Jak to spotyka cię w słabości?",
+      "Jak wygląda tu wierność?",
+      "Co możesz wnieść w modlitwę?",
+      "Jakie zaproszenie jest w tych słowach?"
+    ]
   }
 }
