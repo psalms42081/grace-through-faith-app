@@ -35,16 +35,20 @@ describe("Pioneer writings surfaces stay source-only", () => {
     const dailyBlock = source.match(
       /<View style=\{s\.dailySection\}>[\s\S]*?<\/View>\s*\n\s*<SectionHeading\s+title="Inspiration"/,
     );
-    assert.ok(dailyBlock, "Daily Reading heading and ODB card should share a section above Inspiration");
+    assert.ok(dailyBlock, "Daily Reading heading and Scripture card should share a section above Inspiration");
     assert.match(dailyBlock[0], /<SectionHeading[\s\S]*title="Daily Reading"/);
-    assert.match(dailyBlock[0], /testID="devotions-preview-odb-card"/);
+    assert.match(dailyBlock[0], /testID="devotions-preview-scripture-card"/);
     assert.ok(
-      dailyBlock[0].indexOf('title="Daily Reading"') < dailyBlock[0].indexOf('testID="devotions-preview-odb-card"'),
-      "Daily Reading heading must render above the ODB card, not inside it",
+      dailyBlock[0].indexOf('title="Daily Reading"') <
+        dailyBlock[0].indexOf('testID="devotions-preview-scripture-card"'),
+      "Daily Reading heading must render above the Scripture card, not inside it",
     );
-    const odbCard = dailyBlock[0].match(/testID="devotions-preview-odb-card"[\s\S]*?<\/Pressable>/);
-    assert.ok(odbCard);
-    assert.doesNotMatch(odbCard[0], /Daily Reading/);
+    const scriptureCard = readFileSync(
+      new URL("../components/devotions-v2/ScriptureForTodayCard.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.doesNotMatch(scriptureCard, /Daily Reading/);
+    assert.doesNotMatch(scriptureCard, /Our Daily Bread/);
     const inspirationAt = source.indexOf('title="Inspiration"');
     const dailyAt = source.indexOf('title="Daily Reading"');
     const egwAt = source.indexOf('testID="devotions-preview-egw-card"');
@@ -59,14 +63,19 @@ describe("Pioneer writings surfaces stay source-only", () => {
     assert.doesNotMatch(between, /publicDomain/);
   });
 
-  it("lets the full-width ODB card size to its content", () => {
+  it("lets the full-width Scripture card size to its content", () => {
     const source = readFileSync(files[0], "utf8");
     const card = source.match(/dailyCard:\s*\{[\s\S]*?\n  \},/);
     assert.ok(card, "dailyCard style should exist");
     assert.doesNotMatch(card[0], /\b(height|minHeight|maxHeight)\s*:/);
     assert.doesNotMatch(card[0], /flex:\s*1/);
     assert.doesNotMatch(source, /dailyCardFull|dailyRow/);
-    assert.match(source, /testID="odb-afternoon-hint"/);
+    assert.match(source, /testID="devotions-preview-scripture-card"/);
+    const scriptureCard = readFileSync(
+      new URL("../components/devotions-v2/ScriptureForTodayCard.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.doesNotMatch(scriptureCard, /\b(height|minHeight|maxHeight)\s*:/);
     const section = source.match(/dailySection:\s*\{[\s\S]*?\n  \},/);
     assert.ok(section, "dailySection style should exist");
     assert.doesNotMatch(section[0], /\b(height|minHeight|maxHeight)\s*:/);

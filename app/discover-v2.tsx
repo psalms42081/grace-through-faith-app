@@ -21,6 +21,7 @@ import { HV2, F } from "@/components/home-v2/theme";
 import { ScriptureCredit, type ChapterAttributionData } from "@/components/reader/ChapterAttribution";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/context/TranslationContext";
+import { useTranslation as useI18n } from "react-i18next";
 import { apiRequest } from "@/lib/query-client";
 import { isSearchableTranslation } from "@/lib/translation-catalog";
 import { useTranslationCatalog } from "@/hooks/useTranslationCatalog";
@@ -115,7 +116,6 @@ interface TouchpointsResponse {
   categories: string[];
   topics: { id: string; title: string; category: string; questionCount?: number }[];
 }
-interface OdbDevotional { id: number; title: string; date: string; author: string }
 interface WatchThisWeekVideo {
   youtubeId: string;
   title: string;
@@ -140,6 +140,7 @@ export default function DiscoverV2Screen() {
   const [activeQuery, setActiveQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const { translation: contextTranslation, setTranslation: setContextTranslation } = useTranslation();
+  const { t } = useI18n();
   const inputRef = useRef<TextInput>(null);
 
   // ---- Available translations (live) ----
@@ -201,11 +202,6 @@ export default function DiscoverV2Screen() {
     () => (devotionalPlans ?? []).filter(isApprovedHumanDevotionalPlan),
     [devotionalPlans],
   );
-  const { data: odbToday } = useQuery<OdbDevotional>({
-    queryKey: [withDeviceTimeZone("/api/odb/today")],
-    staleTime: 10 * 60 * 1000,
-    refetchOnMount: "always",
-  });
   const { data: weeklyStreak } = useQuery<{ currentStreak: number }>({
     queryKey: [withDeviceTimeZone(`/api/reading-streaks/weekly?userId=${userId}`)],
     enabled: !!userId,
@@ -574,8 +570,7 @@ export default function DiscoverV2Screen() {
             </View>
 
             {/* ---- Daily Devotionals rail (§A.2.5) ---- */}
-            {((catalogSeries.length ?? 0) > 0 || !!odbToday) && (
-              <View style={s.section}>
+            <View style={s.section}>
                 <Text style={s.sectionTitle}>Daily Devotionals</Text>
                 <ScrollView
                   horizontal
@@ -600,20 +595,17 @@ export default function DiscoverV2Screen() {
                       </Pressable>
                     );
                   })}
-                  {odbToday ? (
-                    <Pressable
-                      key={`odb-${odbToday.id}`}
-                      onPress={() => router.push("/odb-devotional-preview" as any)}
-                      style={({ pressed }) => [s.devoCard, { backgroundColor: "#DDF0FB", opacity: pressed ? 0.85 : 1 }]}
-                    >
-                      <Text style={[s.devoEyebrow, { color: "#175F94" }]}>OUR DAILY BREAD</Text>
-                      <Text style={s.devoTitle} numberOfLines={2}>{odbToday.title}</Text>
-                      <Text style={s.devoMeta} numberOfLines={1}>{odbToday.author}</Text>
-                    </Pressable>
-                  ) : null}
+                  <Pressable
+                    onPress={() => router.push("/devotions" as any)}
+                    style={({ pressed }) => [s.devoCard, { backgroundColor: "#E7F2DF", opacity: pressed ? 0.85 : 1 }]}
+                    testID="discover-scripture-for-today"
+                  >
+                    <Text style={[s.devoEyebrow, { color: "#3E7A4E", textTransform: "uppercase" }]}>{t("scriptureForToday.label")}</Text>
+                    <Text style={s.devoTitle} numberOfLines={2}>{t("scriptureForToday.discoverTitle")}</Text>
+                    <Text style={s.devoMeta} numberOfLines={2}>{t("scriptureForToday.fromLesson")}</Text>
+                  </Pressable>
                 </ScrollView>
               </View>
-            )}
 
             <View style={s.section}>
               <Pressable

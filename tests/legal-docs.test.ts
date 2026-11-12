@@ -76,7 +76,7 @@ describe("legal markdown source", () => {
     assert.match(LEGAL_TERMS.title, /Terms of Use/);
     assert.match(LEGAL_PRIVACY.title, /Privacy Policy/);
     assert.equal(LEGAL_TERMS.banner, "Version 1.0 — effective 9 November 2026");
-    assert.equal(LEGAL_PRIVACY.banner, "Version 1.2 — effective 10 November 2026");
+    assert.equal(LEGAL_PRIVACY.banner, "Version 1.3 — effective 12 November 2026");
     const parsedTerms = parseLegalMarkdown(termsMd);
     assert.deepEqual(LEGAL_TERMS, parsedTerms);
     assert.doesNotMatch(JSON.stringify(LEGAL_TERMS), /Drafting notes for review/);
@@ -88,7 +88,7 @@ function LEGAL_GENERATED_IS_IN_FORCE() {
   const generated = readFileSync(new URL("../lib/legal/generated.ts", import.meta.url), "utf8");
   return (
     generated.includes("Version 1.0 — effective 9 November 2026") &&
-    generated.includes("Version 1.2 — effective 10 November 2026") &&
+    generated.includes("Version 1.3 — effective 12 November 2026") &&
     !/Draft for legal review|not yet in force|Version 0\.1/.test(generated)
   );
 }

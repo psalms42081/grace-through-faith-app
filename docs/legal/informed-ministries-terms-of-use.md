@@ -32,7 +32,7 @@ You may delete your account at any time from within the App or by contacting us.
 
 ### Scripture and third-party material
 
-Bible text, Sabbath School lessons, devotional series and other material in the App come from a range of sources. Some are in the public domain (for example the King James Version, and writings by Ellen G. White and Adventist pioneers first published before 1929). Others are used under licence or with permission (for example Sabbath School lesson content via Adventech, and *Our Daily Bread* devotionals with the permission of Our Daily Bread Ministries). Each is credited where it appears.
+Bible text, Sabbath School lessons, devotional series and other material in the App come from a range of sources. Some are in the public domain (for example the King James Version, and writings by Ellen G. White and Adventist pioneers first published before 1929). Others are used under licence or with permission (for example Sabbath School lesson content via Adventech). Each is credited where it appears.
 
 You may read, listen to and share content from the App for personal, non-commercial devotional use. You may not copy, republish, sell or distribute licensed content outside the App, or remove attributions or copyright notices.
 

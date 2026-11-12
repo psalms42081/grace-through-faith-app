@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,8 +28,9 @@ import { flattenSabbathSchoolLessonClips } from "@/lib/sabbath-school-video-clip
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
-import { sabbathSchoolCoverUrl, sabbathSchoolSplashUrl } from "@/lib/sabbath-school-artwork";
 import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
+import { SabbathSchoolCardSurface } from "@/components/sabbath-school/SabbathSchoolCardSurface";
+import { SABBATH_SCHOOL_COVER_FRAME } from "@/lib/sabbath-school-artwork";
 import {
   resolveSabbathSchoolContinueDay,
   sabbathSchoolContinueProgressCount,
@@ -247,17 +247,6 @@ export default function SabbathSchoolV2Screen() {
           contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={s.splash}>
-            <SabbathSchoolArtwork
-              uri={sabbathSchoolSplashUrl(quarterly.quarterCode)}
-              title={quarterly.title}
-              color={quarterTheme.primary}
-              width="100%"
-              height={148}
-              radius={0}
-              testID="ss-quarter-splash"
-            />
-          </View>
           {availableTracks.length > 1 ? (
             <View style={s.trackRow}>
               <TrackSegmentedControl
@@ -267,32 +256,42 @@ export default function SabbathSchoolV2Screen() {
               />
             </View>
           ) : null}
-          {/* 1. Lesson hero — the screen's ONE gradient */}
+          {/* 1. Lesson hero — same splash treatment as the Home card */}
           <View style={s.heroWrap}>
-            <LinearGradient
-              colors={[...quarterTheme.gradient]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.8, y: 1 }}
-              style={s.heroInner}
+            <SabbathSchoolCardSurface
+              quarterCode={quarterly.quarterCode}
+              coverUrl={quarterly.coverUrl}
+              color={quarterly.colorPrimary || quarterTheme.primary}
+              testID="ss-quarter-splash"
             >
-              <View style={s.heroHead}>
-                <SabbathSchoolArtwork
-                  uri={sabbathSchoolCoverUrl(quarterly.quarterCode, quarterly.coverUrl)}
-                  title={quarterly.title}
-                  color="rgba(255,255,255,0.28)"
-                  width={72}
-                  height={96}
-                  testID="ss-quarter-cover"
-                />
+              {({ showCover, coverUri, onCoverError }) => (
+            <View style={s.heroInner}>
+              <View style={[s.heroHead, showCover && s.heroHeadWithCover]}>
+                {showCover && coverUri ? (
+                  <SabbathSchoolArtwork
+                    uri={coverUri}
+                    title={quarterly.title}
+                    color={quarterTheme.primary}
+                    width={SABBATH_SCHOOL_COVER_FRAME.width}
+                    height={SABBATH_SCHOOL_COVER_FRAME.height}
+                    radius={10}
+                    style={s.coverShadow}
+                    onError={onCoverError}
+                    testID="ss-quarter-cover"
+                  />
+                ) : null}
                 <View style={{ flex: 1 }}>
-              <Text style={s.heroEyebrow} numberOfLines={2}>
-                {quarterly.title.toUpperCase()} · {chipLabel} quarterly
-              </Text>
-              <View style={s.heroBadge}>
-                <Text style={s.heroBadgeText}>
-                  Lesson {data?.currentLessonNumber || lesson.lessonNumber} of {totalLessons}
+              <View style={s.heroTop}>
+                <Text style={s.heroEyebrow} numberOfLines={1} maxFontSizeMultiplier={1.4}>
+                  {chipLabel.toUpperCase()} QUARTERLY
                 </Text>
+                <View style={s.heroBadge}>
+                  <Text style={s.heroBadgeText} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+                    Lesson {data?.currentLessonNumber || lesson.lessonNumber} of {totalLessons}
+                  </Text>
+                </View>
               </View>
+              <Text style={s.heroQuarter} numberOfLines={2}>{quarterly.title}</Text>
               <Text style={s.heroTitle} numberOfLines={3}>{lesson.title}</Text>
               <Text style={s.heroMeta} numberOfLines={3}>
                 {lesson.startDate && lesson.endDate ? `${lesson.startDate} — ${lesson.endDate}` : quarterly.humanDate}
@@ -317,7 +316,9 @@ export default function SabbathSchoolV2Screen() {
                   </Text>
                 </Pressable>
               )}
-            </LinearGradient>
+            </View>
+              )}
+            </SabbathSchoolCardSurface>
           </View>
 
           {/* 2. Watch This Lesson */}
@@ -474,18 +475,33 @@ const s = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   topTitle: { flex: 1, textAlign: "center", fontFamily: F.interSemi, fontSize: 16, color: SS2.ink },
   trackRow: { paddingBottom: 4 },
-  splash: { marginHorizontal: -20 },
-  heroHead: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
+  heroHead: { },
+  heroHeadWithCover: { flexDirection: "row", alignItems: "center", gap: 14 },
+  heroTop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  coverShadow: {
+    shadowColor: "#1F1A12",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
   centerText: { fontFamily: F.inter, fontSize: 14, color: SS2.inkMuted, textAlign: "center", lineHeight: 22 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
 
   heroWrap: { borderRadius: 24, overflow: "hidden", ...HV2.cardShadow },
   heroInner: { padding: 22 },
-  heroEyebrow: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.6, color: "#FFFFFF", marginBottom: 10 },
-  heroBadge: { alignSelf: "flex-start", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  heroEyebrow: { flexShrink: 0, fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.4, color: "#FFFFFF" },
+  heroBadge: { flexShrink: 0, backgroundColor: "rgba(0,0,0,0.28)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   heroBadgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
-  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 10 },
+  heroQuarter: { fontFamily: F.interSemi, fontSize: 15, lineHeight: 20, color: "#FFFFFF", marginTop: 6 },
+  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 8 },
   heroMeta: { fontFamily: F.interMed, fontSize: 12.5, color: "#FFFFFF", marginTop: 6, lineHeight: 18 },
   heroTrack: { marginTop: 14, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" },
   heroFill: { height: 6, borderRadius: 3, backgroundColor: "#FFFFFF" },

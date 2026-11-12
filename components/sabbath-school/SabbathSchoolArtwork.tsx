@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, type StyleProp, type ViewStyle } from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { Image } from "expo-image";
 
 /**
@@ -15,6 +15,7 @@ export function SabbathSchoolArtwork({
   radius = 10,
   style,
   testID,
+  onError,
 }: {
   uri: string | null;
   title: string;
@@ -24,6 +25,7 @@ export function SabbathSchoolArtwork({
   radius?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  onError?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -37,15 +39,19 @@ export function SabbathSchoolArtwork({
     >
       <Image
         source={{ uri }}
-        style={{ width: "100%", height: "100%" }}
+        style={StyleSheet.absoluteFill}
         contentFit="cover"
+        contentPosition="center"
         cachePolicy="memory-disk"
         recyclingKey={uri}
         priority="low"
         transition={0}
         accessibilityLabel={`Cover of ${title}`}
         alt={`Cover of ${title}`}
-        onError={() => setFailed(true)}
+        onError={() => {
+          setFailed(true);
+          onError?.();
+        }}
       />
     </View>
   );

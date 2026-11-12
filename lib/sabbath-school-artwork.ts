@@ -1,5 +1,8 @@
 const ART_BASE = "https://sabbath-school.adventech.io/api/v2";
 
+/** Portrait cover frame. 96×144 is 2:3, so cover crops edges instead of leaving strips. */
+export const SABBATH_SCHOOL_COVER_FRAME = { width: 96, height: 144 } as const;
+
 function lessonCode(lessonNumber: number): string | null {
   if (!Number.isInteger(lessonNumber) || lessonNumber < 1) return null;
   return String(lessonNumber).padStart(2, "0");

@@ -5,7 +5,7 @@ import { PathB } from "@/constants/colors";
  * Sabbath sea-glass (#DFF6F2) is used around the app but is not a named token
  * in constants/colors.ts (only catSabbath ink #2A8C82 and ssGradient).
  * Use PathB.catPlans violet at 10% so the card reads live — not slate catBible,
- * and not ODB amber or EGW oat.
+ * and not the amber devotional wash or EGW oat.
  */
 export const VOTW_CATEGORY_TOKEN = "catPlans" as const;
 export const VOTW_CATEGORY_HEX = PathB.catPlans;

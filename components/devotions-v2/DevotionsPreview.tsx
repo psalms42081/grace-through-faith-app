@@ -72,10 +72,7 @@ import {
 } from "./PreviewPrimitives";
 import { useTranslation } from "@/context/TranslationContext";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
-import {
-  ODB_AFTERNOON_HINT,
-  shouldShowOdbAfternoonHint,
-} from "@/lib/odb-afternoon-hint";
+import ScriptureForTodayCard from "@/components/devotions-v2/ScriptureForTodayCard";
 import {
   DEVOTIONAL_CATALOG_QUERY_KEY,
   isApprovedHumanDevotionalPlan,
@@ -138,7 +135,6 @@ type Day = {
 };
 type Detail = Plan & { days: Day[] };
 type Book = { id: number; name: string; abbreviation: string; testament: string; chapterCount: number };
-type Odb = { id: number; title: string; date: string; author: string };
 type Egw = { title: string; content: string; bookTitle: string; bookId: number; chapterNumber?: number; date: string; sourceUrl?: string; source?: "local" | "live" };
 type DevotionalPlanDay = { id: string; dayNumber: number; title: string; passageLabel: string | null };
 
@@ -253,11 +249,6 @@ export default function DevotionsPreview() {
   });
   const books = useQuery<Book[]>({ queryKey: ["/api/books"] });
   const devotionalPlans = useQuery<DevotionalPlan[]>({ queryKey: [...DEVOTIONAL_CATALOG_QUERY_KEY] });
-  const odb = useQuery<Odb>({
-    queryKey: [withDeviceTimeZone("/api/odb/today")],
-    staleTime: 600000,
-    refetchOnMount: "always",
-  });
   const egw = useQuery<Egw>({ queryKey: [withDeviceTimeZone("/api/egw/devotional/today")], staleTime: 86400000 });
   const pioneerWeek = useQuery<PioneerWeekResponse>({
     queryKey: ["/api/pioneers/week"],
@@ -537,31 +528,10 @@ export default function DevotionsPreview() {
             subtitle="A short pause for the day"
             testID="devotions-preview-daily-section"
           />
-          <Pressable
-            style={[s.dailyCard, { backgroundColor: D2.amberSoft }]}
-            onPress={() => router.push("/odb-devotional-preview" as any)}
-            testID="devotions-preview-odb-card"
-          >
-            <Ionicons name="sunny-outline" size={21} color={D2.amber} />
-            <Text style={s.metaAmber}>OUR DAILY BREAD</Text>
-            <Text style={s.cardTitle} numberOfLines={2}>
-              {odb.data?.title || "Today's bread"}
-            </Text>
-            <Text style={s.cardSub}>
-              {odb.data?.date
-                ? new Date(`${odb.data.date}T00:00:00`).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "A short pause for the day"}
-            </Text>
-            {shouldShowOdbAfternoonHint(odb.data?.date) ? (
-              <Text style={s.cardSub} testID="odb-afternoon-hint">
-                {ODB_AFTERNOON_HINT}
-              </Text>
-            ) : null}
-          </Pressable>
+          <ScriptureForTodayCard
+            testID="devotions-preview-scripture-card"
+            style={s.dailyCard}
+          />
         </View>
 
         <SectionHeading

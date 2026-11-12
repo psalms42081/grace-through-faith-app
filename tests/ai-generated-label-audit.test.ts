@@ -33,7 +33,7 @@ const AI_SURFACES = [
 
 const HUMAN_SURFACES = [
   "components/devotions-v2/PioneerReading.tsx",
-  "components/devotions-v2/OdbDevotionalPreview.tsx",
+  "components/devotions-v2/ScriptureForTodayCard.tsx",
   "components/devotions-v2/PioneerShelf.tsx",
   "app/(tabs)/sabbath-school-day.tsx",
 ] as const;
@@ -79,7 +79,7 @@ describe("AI content surfaces use the shared marker", () => {
 });
 
 describe("human-authored surfaces keep their source and skip the AI chip", () => {
-  it("does not import AIGeneratedLabel on pioneer, ODB, or Sabbath School lesson screens", () => {
+  it("does not import AIGeneratedLabel on pioneer, Scripture for Today, or Sabbath School lesson screens", () => {
     for (const file of HUMAN_SURFACES) {
       assert.doesNotMatch(source(file), /AIGeneratedLabel/);
     }
@@ -87,7 +87,7 @@ describe("human-authored surfaces keep their source and skip the AI chip", () =>
 
   it("names the human source on those screens", () => {
     assert.match(source("components/devotions-v2/PioneerReading.tsx"), /A note from Informed Ministries/);
-    assert.match(source("components/devotions-v2/OdbDevotionalPreview.tsx"), /Our Daily Bread/);
+    assert.match(source("components/devotions-v2/ScriptureForTodayCard.tsx"), /scriptureForToday\.fromLesson/);
     assert.match(source("components/devotions-v2/PioneerShelf.tsx"), /Public domain/);
     assert.match(
       source("app/(tabs)/sabbath-school-day.tsx"),

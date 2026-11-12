@@ -79,3 +79,49 @@ export function getSabbathSchoolQuarterTheme(
     border: `${primary}40`,
   };
 }
+
+function withAlpha(hex: string, alpha: number): string {
+  const [red, green, blue] = channels(hex);
+  return `rgba(${red},${green},${blue},${alpha})`;
+}
+
+export interface SabbathSchoolSplashScrim {
+  /** Even veil so white text stays readable across the photograph. */
+  base: string;
+  /** Extra darkness down the left side. */
+  left: string;
+  /** Extra darkness along the bottom, behind the progress bar and buttons. */
+  bottom: string;
+}
+
+/**
+ * Dark veil for a splash photograph. Tinted with the quarterly colour.
+ * Strongest at the bottom and the left; the base veil alone stays dark
+ * enough for white text over a white image.
+ */
+export function sabbathSchoolSplashScrim(
+  colorPrimary?: string | null,
+): SabbathSchoolSplashScrim {
+  const primary = getSabbathSchoolQuarterTheme(colorPrimary).primary;
+  return {
+    base: withAlpha(mixWithBlack(primary, 0.58), 0.74),
+    left: withAlpha(mixWithBlack(primary, 0.72), 0.55),
+    bottom: withAlpha(mixWithBlack(primary, 0.78), 0.72),
+  };
+}
+
+function compositeOverWhite(rgba: string): string {
+  const match = rgba.match(/^rgba\((\d+),(\d+),(\d+),([0-9.]+)\)$/);
+  if (!match) return "#FFFFFF";
+  const alpha = Number(match[4]);
+  const mixed = [1, 2, 3].map((index) => {
+    const channel = Number(match[index]);
+    return channel * alpha + 255 * (1 - alpha);
+  }) as [number, number, number];
+  return toHex(mixed);
+}
+
+/** White-text contrast of the even veil, worst case over a white photograph. */
+export function sabbathSchoolSplashTextContrast(colorPrimary?: string | null): number {
+  return whiteContrast(compositeOverWhite(sabbathSchoolSplashScrim(colorPrimary).base));
+}

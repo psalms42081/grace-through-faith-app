@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
 import {
+  SABBATH_SCHOOL_COVER_FRAME,
   sabbathSchoolCoverUrl,
   sabbathSchoolLessonCoverUrl,
   sabbathSchoolSplashUrl,
@@ -33,5 +35,24 @@ describe("sabbath school artwork urls", () => {
     );
     assert.equal(sabbathSchoolLessonCoverUrl("not-a-quarter", 1), null);
     assert.equal(sabbathSchoolCoverUrl("", "not-a-url"), null);
+  });
+
+  it("uses a 2:3 cover frame and the splash as the Home and lesson-screen background", () => {
+    assert.equal(SABBATH_SCHOOL_COVER_FRAME.width / SABBATH_SCHOOL_COVER_FRAME.height, 2 / 3);
+    const home = readFileSync(new URL("../components/home-v2/SSGradientCard.tsx", import.meta.url), "utf8");
+    const overview = readFileSync(new URL("../app/sabbath-school.tsx", import.meta.url), "utf8");
+    const surface = readFileSync(
+      new URL("../components/sabbath-school/SabbathSchoolCardSurface.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(home, /SabbathSchoolCardSurface/);
+    assert.match(overview, /SabbathSchoolCardSurface/);
+    assert.match(surface, /contentFit="cover"/);
+    assert.match(surface, /contentPosition="center"/);
+    assert.match(surface, /cachePolicy="memory-disk"/);
+    assert.match(home, />\s*SABBATH SCHOOL\s*</);
+    assert.match(home, /numberOfLines=\{2\}/);
+    assert.doesNotMatch(home, /SABBATH SCHOOL\$\{/);
+    assert.match(home, /SABBATH_SCHOOL_COVER_FRAME/);
   });
 });

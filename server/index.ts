@@ -585,13 +585,6 @@ function setupErrorHandler(app: express.Application) {
         console.error("[inverse-bible] cache warm failed:", err);
       }
 
-      try {
-        const { initOdbRefresh } = await import("./services/odb-refresh");
-        initOdbRefresh();
-      } catch (err) {
-        console.error("[ODB] refresh init failed:", err);
-      }
-
       setTimeout(async () => {
         try {
           const { runCacheWarmup } = await import("./services/cache-warmup");

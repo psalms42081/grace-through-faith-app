@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   getSabbathSchoolQuarterTheme,
+  sabbathSchoolSplashTextContrast,
   SABBATH_SCHOOL_FALLBACK_COLOR,
   SABBATH_SCHOOL_PENDING_SURFACE,
 } from "../lib/sabbath-school-quarter-theme";
@@ -49,5 +50,14 @@ describe("Sabbath School quarterly color theme", () => {
 
     assert.notEqual(theme.primary, "#FDE047");
     assert.match(theme.primary, /^#[0-9A-F]{6}$/);
+  });
+
+  it("keeps white card text readable on the splash veil, even over a white photo", () => {
+    for (const color of [null, "#FDE047", "#6D28D9", "#F4C7A4"]) {
+      assert.ok(
+        sabbathSchoolSplashTextContrast(color) >= 4.5,
+        `${color} veil contrast ${sabbathSchoolSplashTextContrast(color)}`,
+      );
+    }
   });
 });
