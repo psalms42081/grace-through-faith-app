@@ -2,11 +2,9 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import {
-  getSabbathSchoolQuarterTheme,
-  sabbathSchoolSplashScrim,
-} from "@/lib/sabbath-school-quarter-theme";
-import {
+  SABBATH_SCHOOL_COVER_FRAME,
   sabbathSchoolCoverUrl,
   sabbathSchoolSplashUrl,
 } from "@/lib/sabbath-school-artwork";
@@ -15,20 +13,14 @@ import {
   quarterCodeForTrack,
   type SabbathSchoolTrackId,
 } from "@/lib/sabbath-school-tracks";
+import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
+
+/** Banner height. The picture lives here; the words live in the panel below. */
+export const SABBATH_SCHOOL_BANNER_HEIGHT = 150;
+/** Soft join from the picture into the solid quarterly colour. */
+export const SABBATH_SCHOOL_BANNER_FADE = 24;
 
 const warmed = new Set<string>();
-
-/**
- * Zoom toward the top-left of the splash and let the card clip the rest,
- * so the dove or lighthouse lands in the right half, clear of the title.
- */
-const splashFocus = {
-  position: "absolute" as const,
-  width: "142%",
-  height: "142%",
-  left: 0,
-  top: 0,
-};
 
 /** Keep Adult and InVerse art in the image cache before the switch is tapped. */
 export function warmSabbathSchoolImages(uris: Array<string | null | undefined>) {
@@ -56,9 +48,25 @@ function siblingArtwork(quarterCode: string | null | undefined, coverUrl?: strin
 }
 
 /**
- * Full-card splash. The quarterly colour shows until the file is on screen.
+ * Adult splash art is centred on the dove. InVerse splash art sits in the
+ * upper half of a tall image, so a centred slice cuts the lighthouse off.
+ */
+function splashCrop(uri: string): "center" | "top" {
+  return uri.includes("-cq/") ? "top" : "center";
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "");
+  const red = parseInt(raw.slice(0, 2), 16);
+  const green = parseInt(raw.slice(2, 4), 16);
+  const blue = parseInt(raw.slice(4, 6), 16);
+  return `rgba(${red},${green},${blue},${alpha})`;
+}
+
+/**
+ * Splash banner. The quarterly colour shows until the file is on screen.
  * A picture that has already loaded stays up until the next one is ready,
- * so Adult / InVerse does not flash empty.
+ * so Adult / InVerse does not flash empty. No tint on the picture.
  */
 function SplashFill({
   uri,
@@ -76,18 +84,18 @@ function SplashFill({
       {painted && painted !== uri ? (
         <Image
           source={{ uri: painted }}
-          style={splashFocus}
+          style={StyleSheet.absoluteFill}
           contentFit="cover"
-          contentPosition="left top"
+          contentPosition={splashCrop(uri)}
           cachePolicy="memory-disk"
           transition={0}
         />
       ) : null}
       <Image
         source={{ uri }}
-        style={splashFocus}
+        style={StyleSheet.absoluteFill}
         contentFit="cover"
-        contentPosition="left top"
+        contentPosition={splashCrop(uri)}
         cachePolicy="memory-disk"
         recyclingKey={uri}
         priority="high"
@@ -107,18 +115,16 @@ export function SabbathSchoolCardSurface({
   coverUrl,
   color,
   testID,
+  bannerAccessory,
   children,
 }: {
   quarterCode?: string | null;
   coverUrl?: string | null;
   color: string;
   testID?: string;
-  children: (art: {
-    showSplash: boolean;
-    showCover: boolean;
-    coverUri: string | null;
-    onCoverError: () => void;
-  }) => React.ReactNode;
+  /** Lesson pill. Sits on the banner when there is a picture, otherwise at the top of the panel. */
+  bannerAccessory?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   const { splash, cover } = siblingArtwork(quarterCode, coverUrl);
   const [splashFailed, setSplashFailed] = useState(false);
@@ -136,48 +142,72 @@ export function SabbathSchoolCardSurface({
     warmSabbathSchoolImages(siblingArtwork(quarterCode, coverUrl).uris);
   }, [quarterCode, coverUrl]);
 
+  const theme = getSabbathSchoolQuarterTheme(color);
   const showSplash = !!splash && !splashFailed;
   const showCover = !showSplash && !!cover && !coverFailed;
-  const theme = getSabbathSchoolQuarterTheme(color);
-  const scrim = sabbathSchoolSplashScrim(color);
+  const showBanner = showSplash || showCover;
 
   return (
-    <View style={{ backgroundColor: showSplash ? color : theme.primary }} testID={testID}>
-      {showSplash && splash ? (
-        <>
-          <SplashFill uri={splash} color={color} onError={() => setSplashFailed(true)} />
+    <View style={{ backgroundColor: theme.primary }} testID={testID}>
+      {showBanner ? (
+        <View style={[s.banner, { backgroundColor: theme.primary }]}>
+          {showSplash && splash ? (
+            <SplashFill uri={splash} color={theme.primary} onError={() => setSplashFailed(true)} />
+          ) : null}
+          {showCover && cover ? (
+            <View style={s.coverHold}>
+              <SabbathSchoolArtwork
+                uri={cover}
+                title="Sabbath School"
+                color={theme.primary}
+                width={SABBATH_SCHOOL_COVER_FRAME.width}
+                height={SABBATH_SCHOOL_COVER_FRAME.height}
+                radius={10}
+                onError={() => setCoverFailed(true)}
+              />
+            </View>
+          ) : null}
+          {bannerAccessory ? <View style={s.pillSlot}>{bannerAccessory}</View> : null}
           <LinearGradient
-            colors={[scrim.strong, scrim.strong, scrim.light]}
-            locations={[0, 0.32, 0.68]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
+            colors={[hexToRgba(theme.primary, 0), theme.primary]}
+            style={s.fade}
             pointerEvents="none"
           />
-          <LinearGradient
-            colors={[scrim.clear, scrim.bottom]}
-            locations={[0.62, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-        </>
-      ) : (
-        <LinearGradient
-          colors={[...theme.gradient]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.8, y: 1 }}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
-      )}
-      {children({
-        showSplash,
-        showCover,
-        coverUri: cover,
-        onCoverError: () => setCoverFailed(true),
-      })}
+        </View>
+      ) : null}
+      <View style={{ backgroundColor: theme.primary }}>
+        {!showBanner && bannerAccessory ? <View style={s.panelPill}>{bannerAccessory}</View> : null}
+        {children}
+      </View>
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  banner: {
+    height: SABBATH_SCHOOL_BANNER_HEIGHT,
+    overflow: "hidden",
+  },
+  coverHold: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pillSlot: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+  },
+  fade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: SABBATH_SCHOOL_BANNER_FADE,
+  },
+  panelPill: {
+    alignSelf: "flex-end",
+    marginTop: 16,
+    marginRight: 16,
+  },
+});

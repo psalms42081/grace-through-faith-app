@@ -27,10 +27,8 @@ import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { flattenSabbathSchoolLessonClips } from "@/lib/sabbath-school-video-clips";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
-import { getSabbathSchoolQuarterTheme, SABBATH_SCHOOL_SPLASH_TEXT_SHADOW } from "@/lib/sabbath-school-quarter-theme";
-import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
+import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
 import { SabbathSchoolCardSurface } from "@/components/sabbath-school/SabbathSchoolCardSurface";
-import { SABBATH_SCHOOL_COVER_FRAME } from "@/lib/sabbath-school-artwork";
 import {
   resolveSabbathSchoolContinueDay,
   sabbathSchoolContinueProgressCount,
@@ -256,68 +254,49 @@ export default function SabbathSchoolV2Screen() {
               />
             </View>
           ) : null}
-          {/* 1. Lesson hero — same splash treatment as the Home card */}
+          {/* 1. Lesson hero — banner plus a solid quarterly-colour panel */}
           <View style={s.heroWrap}>
             <SabbathSchoolCardSurface
               quarterCode={quarterly.quarterCode}
               coverUrl={quarterly.coverUrl}
               color={quarterly.colorPrimary || quarterTheme.primary}
               testID="ss-quarter-splash"
-            >
-              {({ showCover, coverUri, onCoverError }) => (
-            <View style={s.heroInner}>
-              <View style={[s.heroHead, showCover && s.heroHeadWithCover]}>
-                {showCover && coverUri ? (
-                  <SabbathSchoolArtwork
-                    uri={coverUri}
-                    title={quarterly.title}
-                    color={quarterTheme.primary}
-                    width={SABBATH_SCHOOL_COVER_FRAME.width}
-                    height={SABBATH_SCHOOL_COVER_FRAME.height}
-                    radius={10}
-                    style={s.coverShadow}
-                    onError={onCoverError}
-                    testID="ss-quarter-cover"
-                  />
-                ) : null}
-                <View style={{ flex: 1 }}>
-              <View style={s.heroTop}>
-                <Text style={s.heroEyebrow} numberOfLines={1} maxFontSizeMultiplier={1.4}>
-                  {chipLabel.toUpperCase()} QUARTERLY
-                </Text>
+              bannerAccessory={
                 <View style={s.heroBadge}>
                   <Text style={s.heroBadgeText} numberOfLines={1} maxFontSizeMultiplier={1.3}>
                     Lesson {data?.currentLessonNumber || lesson.lessonNumber} of {totalLessons}
                   </Text>
                 </View>
-              </View>
-              <Text style={s.heroQuarter} numberOfLines={2}>{quarterly.title}</Text>
-              <Text style={s.heroTitle} numberOfLines={3}>{lesson.title}</Text>
-              <Text style={s.heroMeta} numberOfLines={3}>
-                {lesson.startDate && lesson.endDate ? `${lesson.startDate} — ${lesson.endDate}` : quarterly.humanDate}
-                {memoryText?.reference ? `  ·  Memory verse: ${memoryText.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
-              </Text>
+              }
+            >
+              <View style={s.heroInner}>
+                <Text style={s.heroEyebrow} numberOfLines={1} maxFontSizeMultiplier={1.4}>
+                  {chipLabel.toUpperCase()} QUARTERLY
+                </Text>
+                <Text style={s.heroQuarter} numberOfLines={2}>{quarterly.title}</Text>
+                <Text style={s.heroTitle} numberOfLines={3}>{lesson.title}</Text>
+                <Text style={s.heroMeta} numberOfLines={3}>
+                  {lesson.startDate && lesson.endDate ? `${lesson.startDate} — ${lesson.endDate}` : quarterly.humanDate}
+                  {memoryText?.reference ? `  ·  Memory verse: ${memoryText.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
+                </Text>
+                <View style={s.heroTrack}>
+                  <View style={[s.heroFill, { width: `${Math.round((progressDays / Math.max(days.length, 1)) * 100)}%` }]} />
                 </View>
+                <Text style={s.heroProgressText}>{progressDays} of {days.length || 7} days</Text>
+                {currentDay && (
+                  <Pressable
+                    onPress={() => openDay(currentDay)}
+                    style={({ pressed }) => [s.heroCta, { opacity: pressed ? 0.85 : 1 }]}
+                    accessibilityRole="button"
+                    testID="ss2-hero-cta"
+                  >
+                    <Text style={[s.heroCtaText, { color: quarterTheme.primary }]} numberOfLines={2}>
+                      Continue — {weekdayFromDate(currentDay.date) || DAY_FALLBACK[currentDay.dayNumber - 1] || `Day ${currentDay.dayNumber}`}
+                      {currentDay.title ? `: ${currentDay.title}` : ""}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
-              <View style={s.heroTrack}>
-                <View style={[s.heroFill, { width: `${Math.round((progressDays / Math.max(days.length, 1)) * 100)}%` }]} />
-              </View>
-              <Text style={s.heroProgressText}>{progressDays} of {days.length || 7} days</Text>
-              {currentDay && (
-                <Pressable
-                  onPress={() => openDay(currentDay)}
-                  style={({ pressed }) => [s.heroCta, { opacity: pressed ? 0.85 : 1 }]}
-                  accessibilityRole="button"
-                  testID="ss2-hero-cta"
-                >
-                  <Text style={[s.heroCtaText, { color: quarterTheme.primary }]} numberOfLines={2}>
-                    Continue — {weekdayFromDate(currentDay.date) || DAY_FALLBACK[currentDay.dayNumber - 1] || `Day ${currentDay.dayNumber}`}
-                    {currentDay.title ? `: ${currentDay.title}` : ""}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-              )}
             </SabbathSchoolCardSurface>
           </View>
 
@@ -475,34 +454,18 @@ const s = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   topTitle: { flex: 1, textAlign: "center", fontFamily: F.interSemi, fontSize: 16, color: SS2.ink },
   trackRow: { paddingBottom: 4 },
-  heroHead: { },
-  heroHeadWithCover: { flexDirection: "row", alignItems: "center", gap: 14 },
-  heroTop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  coverShadow: {
-    shadowColor: "#1F1A12",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
   centerText: { fontFamily: F.inter, fontSize: 14, color: SS2.inkMuted, textAlign: "center", lineHeight: 22 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
 
   heroWrap: { borderRadius: 24, overflow: "hidden", ...HV2.cardShadow },
   heroInner: { padding: 22 },
-  heroEyebrow: { flexShrink: 0, fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.4, color: "#FFFFFF", ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
-  heroBadge: { flexShrink: 0, backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  heroBadgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF", ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
-  heroQuarter: { fontFamily: F.interSemi, fontSize: 15, lineHeight: 20, color: "#FFFFFF", marginTop: 6, ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
-  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 8, ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
-  heroMeta: { fontFamily: F.interMed, fontSize: 12.5, color: "#FFFFFF", marginTop: 6, lineHeight: 18, ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
+  heroEyebrow: { flexShrink: 0, fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.4, color: "#FFFFFF" },
+  heroBadge: { backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  heroBadgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
+  heroQuarter: { fontFamily: F.interSemi, fontSize: 15, lineHeight: 20, color: "#FFFFFF", marginTop: 6 },
+  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 8 },
+  heroMeta: { fontFamily: F.interMed, fontSize: 12.5, color: "#FFFFFF", marginTop: 6, lineHeight: 18 },
   heroTrack: { marginTop: 14, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" },
   heroFill: { height: 6, borderRadius: 3, backgroundColor: "#FFFFFF" },
   heroProgressText: { fontFamily: F.interSemi, fontSize: 11.5, color: "#FFFFFF", marginTop: 6 },

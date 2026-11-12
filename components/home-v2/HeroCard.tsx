@@ -182,7 +182,17 @@ export default function HeroCard({
 
   const body =
     activeTab === "verse" ? (
-      <View style={s.body} testID="hero-body">
+      <View
+        style={[
+          s.body,
+          {
+            marginTop: -(artHeight - 36),
+            paddingRight: artWidth + 32,
+            paddingTop: 0,
+          },
+        ]}
+        testID="hero-body"
+      >
         {verseLoading ? (
           <ActivityIndicator size="small" color={HV2.coral} style={{ marginTop: 4, marginBottom: 8 }} />
         ) : verseUnavailable ? (
@@ -247,11 +257,13 @@ export default function HeroCard({
           accessible={false}
           importantForAccessibility="no"
         >
-          <Image
-            source={artSource}
-            style={{ width: artWidth, height: artHeight }}
-            resizeMode="contain"
-          />
+          <View style={{ transform: [{ translateY: -Math.round(artHeight * 0.34) }] }}>
+            <Image
+              source={artSource}
+              style={{ width: artWidth, height: artHeight }}
+              resizeMode="contain"
+            />
+          </View>
         </View>
       </View>
 
@@ -325,8 +337,8 @@ const s = StyleSheet.create({
   contentRow: {
     width: "100%",
     flexDirection: "row",
-    alignItems: "flex-end",
-    paddingTop: 16,
+    alignItems: "flex-start",
+    paddingTop: 12,
     paddingBottom: 0,
   },
   textCol: {
