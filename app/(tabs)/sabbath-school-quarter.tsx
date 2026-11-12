@@ -18,6 +18,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { HV2, F } from "@/components/home-v2/theme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import { sabbathSchoolCoverUrl, sabbathSchoolLessonCoverUrl } from "@/lib/sabbath-school-artwork";
+import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import {
   buildSabbathSchoolTabRoute,
@@ -48,6 +50,8 @@ interface LessonInfo {
 interface QuarterlyInfo {
   id: string;
   title: string;
+  coverUrl?: string | null;
+  quarterCode?: string;
   humanDate: string | null;
   colorPrimary: string | null;
 }
@@ -111,9 +115,21 @@ export default function SabbathSchoolQuarterV2Screen() {
         >
           {/* Quarter header — flat teal card, no gradient */}
           <View style={[s.quarterCard, { backgroundColor: quarterTheme.primary }]}>
-            <Text style={s.quarterEyebrow}>SABBATH SCHOOL QUARTERLY</Text>
-            <Text style={s.quarterTitle}>{data.quarterly.title}</Text>
-            {data.quarterly.humanDate && <Text style={s.quarterDate}>{data.quarterly.humanDate}</Text>}
+            <View style={s.quarterHead}>
+              <SabbathSchoolArtwork
+                uri={sabbathSchoolCoverUrl(data.quarterly.quarterCode || quarterCode, data.quarterly.coverUrl)}
+                title={data.quarterly.title}
+                color="rgba(255,255,255,0.28)"
+                width={64}
+                height={86}
+                testID="ss-quarter-list-cover"
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={s.quarterEyebrow}>SABBATH SCHOOL QUARTERLY</Text>
+                <Text style={s.quarterTitle}>{data.quarterly.title}</Text>
+                {data.quarterly.humanDate && <Text style={s.quarterDate}>{data.quarterly.humanDate}</Text>}
+              </View>
+            </View>
           </View>
 
           <View style={{ gap: 10 }}>
@@ -131,6 +147,15 @@ export default function SabbathSchoolQuarterV2Screen() {
                 }
                 style={({ pressed }) => [s.lessonCard, { opacity: pressed ? 0.7 : 1 }]}
               >
+                <SabbathSchoolArtwork
+                  uri={sabbathSchoolLessonCoverUrl(data.quarterly.quarterCode || quarterCode, lesson.lessonNumber)}
+                  title={lesson.title}
+                  color={quarterTheme.tint}
+                  width={52}
+                  height={70}
+                  testID={`ss-lesson-cover-${lesson.lessonNumber}`}
+                />
+                <View style={{ flex: 1 }}>
                 <View style={s.lessonCardTop}>
                   <Text style={[s.lessonNumber, { color: quarterTheme.primary }]}>
                     {t("sabbathSchool.lesson", { defaultValue: "Lesson" }).toUpperCase()} {lesson.lessonNumber}
@@ -154,6 +179,7 @@ export default function SabbathSchoolQuarterV2Screen() {
                     <Ionicons name="chevron-forward" size={12} color={SSQ.violet} />
                   </Pressable>
                 )}
+                </View>
               </Pressable>
             ))}
           </View>
@@ -176,10 +202,11 @@ const s = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, gap: 16 },
   attribution: { fontFamily: F.inter, fontSize: 12, lineHeight: 18, color: SSQ.inkMuted },
   quarterCard: { borderRadius: 20, padding: 20, gap: 6, ...HV2.cardShadow },
+  quarterHead: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   quarterEyebrow: { fontFamily: F.interBold, fontSize: 10.5, letterSpacing: 1.6, color: "rgba(255,255,255,0.9)" },
   quarterTitle: { fontFamily: F.loraBold, fontSize: 20, color: "#FFFFFF", lineHeight: 28 },
   quarterDate: { fontFamily: F.inter, fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 2 },
-  lessonCard: { backgroundColor: SSQ.card, borderRadius: 14, padding: 14, gap: 4, ...HV2.rowShadow },
+  lessonCard: { flexDirection: "row", alignItems: "center", backgroundColor: SSQ.card, borderRadius: 14, padding: 14, gap: 12, ...HV2.rowShadow },
   lessonCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   lessonNumber: { fontFamily: F.interBold, fontSize: 11, letterSpacing: 1 },
   lessonTitle: { fontFamily: F.interMed, fontSize: 14, lineHeight: 20, color: SSQ.ink },

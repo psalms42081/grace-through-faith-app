@@ -29,6 +29,8 @@ import { flattenSabbathSchoolLessonClips } from "@/lib/sabbath-school-video-clip
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import { sabbathSchoolCoverUrl, sabbathSchoolSplashUrl } from "@/lib/sabbath-school-artwork";
+import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
 import {
   resolveSabbathSchoolContinueDay,
   sabbathSchoolContinueProgressCount,
@@ -92,6 +94,7 @@ interface QuarterlyData {
   humanDate: string | null;
   colorPrimary: string | null;
   quarterCode?: string;
+  coverUrl?: string | null;
 }
 interface CompanionData { id: string; slug: string; title: string; description: string | null }
 
@@ -229,15 +232,6 @@ export default function SabbathSchoolV2Screen() {
         <Text style={s.topTitle}>{t("sabbathSchool.title", { defaultValue: "Sabbath School" })}</Text>
         <View style={s.backBtn} />
       </View>
-      {availableTracks.length > 1 ? (
-        <View style={s.trackRow}>
-          <TrackSegmentedControl
-            tracks={availableTracks}
-            selected={selectedTrack}
-            onSelect={(id) => void setTrack(id)}
-          />
-        </View>
-      ) : null}
 
       {isLoading ? (
         <View style={s.center}>
@@ -255,6 +249,26 @@ export default function SabbathSchoolV2Screen() {
           contentContainerStyle={[s.scrollContent, { paddingBottom: bottomPad + 40 }]}
           showsVerticalScrollIndicator={false}
         >
+          <View style={s.splash}>
+            <SabbathSchoolArtwork
+              uri={sabbathSchoolSplashUrl(quarterly.quarterCode)}
+              title={quarterly.title}
+              color={quarterTheme.primary}
+              width="100%"
+              height={148}
+              radius={0}
+              testID="ss-quarter-splash"
+            />
+          </View>
+          {availableTracks.length > 1 ? (
+            <View style={s.trackRow}>
+              <TrackSegmentedControl
+                tracks={availableTracks}
+                selected={selectedTrack}
+                onSelect={(id) => void setTrack(id)}
+              />
+            </View>
+          ) : null}
           {/* 1. Lesson hero — the screen's ONE gradient */}
           <View style={s.heroWrap}>
             <LinearGradient
@@ -263,7 +277,17 @@ export default function SabbathSchoolV2Screen() {
               end={{ x: 0.8, y: 1 }}
               style={s.heroInner}
             >
-              <Text style={s.heroEyebrow} numberOfLines={1}>
+              <View style={s.heroHead}>
+                <SabbathSchoolArtwork
+                  uri={sabbathSchoolCoverUrl(quarterly.quarterCode, quarterly.coverUrl)}
+                  title={quarterly.title}
+                  color="rgba(255,255,255,0.28)"
+                  width={72}
+                  height={96}
+                  testID="ss-quarter-cover"
+                />
+                <View style={{ flex: 1 }}>
+              <Text style={s.heroEyebrow} numberOfLines={2}>
                 {quarterly.title.toUpperCase()} · {chipLabel} quarterly
               </Text>
               <View style={s.heroBadge}>
@@ -272,10 +296,12 @@ export default function SabbathSchoolV2Screen() {
                 </Text>
               </View>
               <Text style={s.heroTitle} numberOfLines={3}>{lesson.title}</Text>
-              <Text style={s.heroMeta} numberOfLines={2}>
+              <Text style={s.heroMeta} numberOfLines={3}>
                 {lesson.startDate && lesson.endDate ? `${lesson.startDate} — ${lesson.endDate}` : quarterly.humanDate}
                 {memoryText?.reference ? `  ·  Memory verse: ${memoryText.reference.replace(/,\s*(NKJV|KJV|ESV|NIV|NASB)\s*$/i, "")}` : ""}
               </Text>
+                </View>
+              </View>
               <View style={s.heroTrack}>
                 <View style={[s.heroFill, { width: `${Math.round((progressDays / Math.max(days.length, 1)) * 100)}%` }]} />
               </View>
@@ -287,7 +313,7 @@ export default function SabbathSchoolV2Screen() {
                   accessibilityRole="button"
                   testID="ss2-hero-cta"
                 >
-                  <Text style={[s.heroCtaText, { color: quarterTheme.primary }]} numberOfLines={1}>
+                  <Text style={[s.heroCtaText, { color: quarterTheme.primary }]} numberOfLines={2}>
                     Continue — {weekdayFromDate(currentDay.date) || DAY_FALLBACK[currentDay.dayNumber - 1] || `Day ${currentDay.dayNumber}`}
                     {currentDay.title ? `: ${currentDay.title}` : ""}
                   </Text>
@@ -449,7 +475,9 @@ const s = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingBottom: 8 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   topTitle: { flex: 1, textAlign: "center", fontFamily: F.interSemi, fontSize: 16, color: SS2.ink },
-  trackRow: { paddingHorizontal: 20, paddingBottom: 12 },
+  trackRow: { paddingBottom: 4 },
+  splash: { marginHorizontal: -20 },
+  heroHead: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 40 },
   centerText: { fontFamily: F.inter, fontSize: 14, color: SS2.inkMuted, textAlign: "center", lineHeight: 22 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },

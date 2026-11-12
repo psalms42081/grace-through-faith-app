@@ -510,7 +510,7 @@ function setupErrorHandler(app: express.Application) {
         connectSrc: ["'self'", ...liveKitCspConnectSrc(), "https://www.youtube.com", "https://*.tile.openstreetmap.org"],
         mediaSrc: ["'self'", "blob:", "https://res.cloudinary.com"],
         workerSrc: ["'self'", "blob:"],
-        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com", "https://*.tile.openstreetmap.org", "https://res.cloudinary.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://img.youtube.com", "https://i.ytimg.com", "https://*.tile.openstreetmap.org", "https://res.cloudinary.com", "https://sabbath-school.adventech.io"],
         fontSrc: ["'self'", "https:", "data:"],
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
         frameSrc: ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://informedministries.app", "https://www.informedministries.app", "https://informed-ministries-api.onrender.com", "https://grace-through-faith.replit.app", "https://*.replit.dev"],

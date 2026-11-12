@@ -22,6 +22,8 @@ import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { sabbathSchoolAudioUrl } from "@/lib/sabbath-school-media";
 import { useTheme } from "@/hooks/useTheme";
 import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import { sabbathSchoolLessonCoverUrl } from "@/lib/sabbath-school-artwork";
+import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSabbathSchoolTrack } from "@/hooks/useSabbathSchoolTrack";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
@@ -74,6 +76,7 @@ interface LessonResponse {
   quarterly: {
     title: string;
     colorPrimary: string | null;
+    quarterCode?: string;
   };
 }
 
@@ -637,6 +640,17 @@ export default function SabbathSchoolDayScreen() {
             noteReachedEnd(contentOffset.y, layoutMeasurement.height, contentSize.height);
           }}
         >
+          <View style={styles.dayBanner}>
+            <SabbathSchoolArtwork
+              uri={sabbathSchoolLessonCoverUrl(data?.quarterly?.quarterCode || quarterCode, lessonNumber)}
+              title={data?.lesson?.title || data?.quarterly?.title || "Sabbath School"}
+              color={quarterTheme.primary}
+              width="100%"
+              height={72}
+              radius={0}
+              testID="ss-day-banner"
+            />
+          </View>
           {day.title && (
             <Text style={[styles.dayMainTitle, { color: theme.text }]}>
               {day.title}
@@ -971,6 +985,7 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 8 },
+  dayBanner: { marginHorizontal: -20 },
   dayMainTitle: {
     fontFamily: "Lora_700Bold",
     fontSize: 22,

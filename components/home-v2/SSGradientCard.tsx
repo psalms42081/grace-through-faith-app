@@ -7,11 +7,15 @@ import {
   SABBATH_SCHOOL_PENDING_SURFACE,
 } from "@/lib/sabbath-school-quarter-theme";
 import { HomeTrackSwitch } from "@/components/sabbath-school/TrackSwitch";
+import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
+import { sabbathSchoolCoverUrl } from "@/lib/sabbath-school-artwork";
 import type { SabbathSchoolTrackId, SabbathSchoolTrackMeta } from "@/lib/sabbath-school-tracks";
 
 interface Props {
   quarterTitle?: string | null;
   quarterColor?: string | null;
+  quarterCode?: string | null;
+  coverUrl?: string | null;
   lessonTitle?: string | null;
   lessonNumber?: number | null;
   progressDays: number;
@@ -28,7 +32,7 @@ interface Props {
 
 // The ONE gradient on this screen (§1.3). All other cards are flat white.
 export default function SSGradientCard({
-  quarterTitle, quarterColor, lessonTitle, lessonNumber, progressDays, dayLabel,
+  quarterTitle, quarterColor, quarterCode, coverUrl, lessonTitle, lessonNumber, progressDays, dayLabel,
   onContinue, onOpenOverview, onWatch, showWatch = false,
   tracks = [], selectedTrack = "adult", onSelectTrack,
 }: Props) {
@@ -66,15 +70,27 @@ export default function SSGradientCard({
             <HomeTrackSwitch tracks={tracks} selected={selectedTrack} onSelect={onSelectTrack} />
           </View>
         ) : null}
-        <Pressable
-          onPress={onOpenOverview}
-          accessibilityRole="button"
-          accessibilityLabel="Open lesson overview"
-        >
-          <Text style={s.title} numberOfLines={2}>
-            {lessonTitle ?? "This week's lesson"}
-          </Text>
-        </Pressable>
+        <View style={s.titleRow}>
+          <Pressable
+            onPress={onOpenOverview}
+            accessibilityRole="button"
+            accessibilityLabel="Open lesson overview"
+            style={{ flex: 1 }}
+          >
+            <Text style={s.title} numberOfLines={3}>
+              {lessonTitle ?? "This week's lesson"}
+            </Text>
+          </Pressable>
+          <SabbathSchoolArtwork
+            uri={sabbathSchoolCoverUrl(quarterCode, coverUrl)}
+            title={quarterTitle || "Sabbath School"}
+            color="rgba(255,255,255,0.28)"
+            width={56}
+            height={74}
+            radius={8}
+            testID="home-ss-cover"
+          />
+        </View>
         <View style={s.track}>
           <View style={[s.fill, { width: `${Math.round(progress * 100)}%` }]} />
         </View>
@@ -131,7 +147,8 @@ const s = StyleSheet.create({
   badgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
   // Own row under the eyebrow so the pill stays tappable at 390px / large text.
   trackRow: { marginTop: 10, alignSelf: "flex-start" },
-  title: { fontFamily: F.loraSemi, fontSize: 21, lineHeight: 28, color: "#FFFFFF", marginTop: 12 },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginTop: 12 },
+  title: { fontFamily: F.loraSemi, fontSize: 21, lineHeight: 28, color: "#FFFFFF" },
   track: {
     marginTop: 16,
     height: 6,
