@@ -4,6 +4,7 @@ import { HV2, F } from "./theme";
 import {
   getSabbathSchoolQuarterTheme,
   SABBATH_SCHOOL_PENDING_SURFACE,
+  SABBATH_SCHOOL_SPLASH_TEXT_SHADOW,
 } from "@/lib/sabbath-school-quarter-theme";
 import { HomeTrackSwitch } from "@/components/sabbath-school/TrackSwitch";
 import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
@@ -156,28 +157,41 @@ const s = StyleSheet.create({
     fontSize: 11.5,
     letterSpacing: 1.4,
     color: "#FFFFFF",
+    ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW,
   },
   badge: {
     flexShrink: 0,
-    backgroundColor: "rgba(0,0,0,0.28)",
+    backgroundColor: "rgba(255,255,255,0.18)",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  badgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
+  badgeText: {
+    fontFamily: F.interSemi,
+    fontSize: 11,
+    color: "#FFFFFF",
+    ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW,
+  },
   quarterTitle: {
     marginTop: 6,
     fontFamily: F.interSemi,
     fontSize: 15,
     lineHeight: 20,
     color: "#FFFFFF",
+    ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW,
   },
   // Own row under the eyebrow so the pill stays tappable at 390px / large text.
   trackRow: { marginTop: 10, alignSelf: "flex-start" },
   titleRow: { marginTop: 8 },
   titleRowWithCover: { flexDirection: "row", alignItems: "center", gap: 12 },
   titlePress: { flex: 1 },
-  title: { fontFamily: F.loraSemi, fontSize: 21, lineHeight: 28, color: "#FFFFFF" },
+  title: {
+    fontFamily: F.loraSemi,
+    fontSize: 21,
+    lineHeight: 28,
+    color: "#FFFFFF",
+    ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW,
+  },
   coverShadow: {
     shadowColor: "#1F1A12",
     shadowOffset: { width: 0, height: 6 },
@@ -203,12 +217,16 @@ const s = StyleSheet.create({
   },
   continueLabel: { fontFamily: F.interSemi, fontSize: 13.5, lineHeight: 18 },
   watchBtn: {
-    backgroundColor: "rgba(0,0,0,0.32)",
+    backgroundColor: "rgba(255,255,255,0.24)",
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.45)",
   },
-  watchLabel: { fontFamily: F.interSemi, fontSize: 13.5, lineHeight: 18, color: "#FFFFFF" },
+  watchLabel: {
+    fontFamily: F.interSemi,
+    fontSize: 13.5,
+    lineHeight: 18,
+    color: "#FFFFFF",
+    ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW,
+  },
 });

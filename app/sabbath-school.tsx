@@ -27,7 +27,7 @@ import { extractMemoryText } from "@/lib/sabbath-school-memory-text";
 import { flattenSabbathSchoolLessonClips } from "@/lib/sabbath-school-video-clips";
 import { withDeviceTimeZone } from "@/lib/device-time-zone";
 import { getHomeLocalDay } from "@/components/home-v2/home-data";
-import { getSabbathSchoolQuarterTheme } from "@/lib/sabbath-school-quarter-theme";
+import { getSabbathSchoolQuarterTheme, SABBATH_SCHOOL_SPLASH_TEXT_SHADOW } from "@/lib/sabbath-school-quarter-theme";
 import { SabbathSchoolArtwork } from "@/components/sabbath-school/SabbathSchoolArtwork";
 import { SabbathSchoolCardSurface } from "@/components/sabbath-school/SabbathSchoolCardSurface";
 import { SABBATH_SCHOOL_COVER_FRAME } from "@/lib/sabbath-school-artwork";
@@ -497,12 +497,12 @@ const s = StyleSheet.create({
 
   heroWrap: { borderRadius: 24, overflow: "hidden", ...HV2.cardShadow },
   heroInner: { padding: 22 },
-  heroEyebrow: { flexShrink: 0, fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.4, color: "#FFFFFF" },
-  heroBadge: { flexShrink: 0, backgroundColor: "rgba(0,0,0,0.28)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  heroBadgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF" },
-  heroQuarter: { fontFamily: F.interSemi, fontSize: 15, lineHeight: 20, color: "#FFFFFF", marginTop: 6 },
-  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 8 },
-  heroMeta: { fontFamily: F.interMed, fontSize: 12.5, color: "#FFFFFF", marginTop: 6, lineHeight: 18 },
+  heroEyebrow: { flexShrink: 0, fontFamily: F.interBold, fontSize: 11, letterSpacing: 1.4, color: "#FFFFFF", ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
+  heroBadge: { flexShrink: 0, backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  heroBadgeText: { fontFamily: F.interSemi, fontSize: 11, color: "#FFFFFF", ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
+  heroQuarter: { fontFamily: F.interSemi, fontSize: 15, lineHeight: 20, color: "#FFFFFF", marginTop: 6, ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
+  heroTitle: { fontFamily: F.loraSemi, fontSize: 23, lineHeight: 30, color: "#FFFFFF", marginTop: 8, ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
+  heroMeta: { fontFamily: F.interMed, fontSize: 12.5, color: "#FFFFFF", marginTop: 6, lineHeight: 18, ...SABBATH_SCHOOL_SPLASH_TEXT_SHADOW },
   heroTrack: { marginTop: 14, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" },
   heroFill: { height: 6, borderRadius: 3, backgroundColor: "#FFFFFF" },
   heroProgressText: { fontFamily: F.interSemi, fontSize: 11.5, color: "#FFFFFF", marginTop: 6 },

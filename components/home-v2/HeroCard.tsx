@@ -325,9 +325,9 @@ const s = StyleSheet.create({
   contentRow: {
     width: "100%",
     flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 24,
-    paddingBottom: 8,
+    alignItems: "flex-end",
+    paddingTop: 16,
+    paddingBottom: 0,
   },
   textCol: {
     paddingLeft: 24,
@@ -342,17 +342,17 @@ const s = StyleSheet.create({
     marginRight: 20,
     flexGrow: 0,
     flexShrink: 0,
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "center",
   },
   eyebrow: { fontFamily: F.interBold, fontSize: 11.5, letterSpacing: 1.6, color: HV2.coralInk },
-  verseQuote: { fontFamily: F.loraSemi, fontSize: 20, lineHeight: 28, color: HV2.ink, marginTop: 12 },
+  verseQuote: { fontFamily: F.loraSemi, fontSize: 20, lineHeight: 28, color: HV2.ink, marginTop: 0 },
   verse: { fontFamily: F.loraSemi, fontSize: 22, lineHeight: 32, color: HV2.ink, marginTop: 12 },
   cite: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText, marginTop: 12 },
   body: {
     width: "100%",
     paddingHorizontal: HERO_BODY_PAD_LEFT,
-    paddingTop: 12,
+    paddingTop: 8,
   },
   bodyText: { fontFamily: F.interSemi, fontSize: 13.5, color: HV2.inkMutedText },
   actions: {

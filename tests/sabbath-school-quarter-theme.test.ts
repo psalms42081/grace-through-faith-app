@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   getSabbathSchoolQuarterTheme,
-  sabbathSchoolSplashTextContrast,
+  sabbathSchoolSplashScrim,
   SABBATH_SCHOOL_FALLBACK_COLOR,
   SABBATH_SCHOOL_PENDING_SURFACE,
 } from "../lib/sabbath-school-quarter-theme";
@@ -52,12 +52,17 @@ describe("Sabbath School quarterly color theme", () => {
     assert.match(theme.primary, /^#[0-9A-F]{6}$/);
   });
 
-  it("keeps white card text readable on the splash veil, even over a white photo", () => {
-    for (const color of [null, "#FDE047", "#6D28D9", "#F4C7A4"]) {
-      assert.ok(
-        sabbathSchoolSplashTextContrast(color) >= 4.5,
-        `${color} veil contrast ${sabbathSchoolSplashTextContrast(color)}`,
-      );
-    }
+  it("tints the splash with the quarterly colour, light on the right and stronger on the left", () => {
+    const scrim = sabbathSchoolSplashScrim("#54292F");
+    assert.equal(scrim.light, "rgba(84,41,47,0.35)");
+    assert.equal(scrim.strong, "rgba(84,41,47,0.8)");
+    assert.equal(scrim.clear, "rgba(84,41,47,0)");
+    assert.match(scrim.bottom, /^rgba\(84,41,47,0\.[0-9]+\)$/);
+    const bright = sabbathSchoolSplashScrim("#FDE047");
+    assert.doesNotMatch(bright.strong, /rgba\(0,0,0/);
+    assert.match(bright.strong, /^rgba\(\d+,\d+,\d+,0\.8\)$/);
+    assert.match(cardSource, /SABBATH_SCHOOL_SPLASH_TEXT_SHADOW/);
+    assert.match(cardSource, /rgba\(255,255,255,0\.24\)/);
+    assert.doesNotMatch(cardSource, /rgba\(0,0,0,0\.32\)/);
   });
 });

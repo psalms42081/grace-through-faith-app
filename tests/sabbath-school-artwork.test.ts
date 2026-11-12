@@ -48,7 +48,8 @@ describe("sabbath school artwork urls", () => {
     assert.match(home, /SabbathSchoolCardSurface/);
     assert.match(overview, /SabbathSchoolCardSurface/);
     assert.match(surface, /contentFit="cover"/);
-    assert.match(surface, /contentPosition="center"/);
+    assert.match(surface, /contentPosition="left top"/);
+    assert.match(surface, /width: "142%"/);
     assert.match(surface, /cachePolicy="memory-disk"/);
     assert.match(home, />\s*SABBATH SCHOOL\s*</);
     assert.match(home, /numberOfLines=\{2\}/);

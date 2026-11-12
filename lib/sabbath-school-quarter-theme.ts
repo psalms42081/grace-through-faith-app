@@ -86,42 +86,35 @@ function withAlpha(hex: string, alpha: number): string {
 }
 
 export interface SabbathSchoolSplashScrim {
-  /** Even veil so white text stays readable across the photograph. */
-  base: string;
-  /** Extra darkness down the left side. */
-  left: string;
-  /** Extra darkness along the bottom, behind the progress bar and buttons. */
+  /** Quarterly colour at about 35% — the top-right, where the artwork shows. */
+  light: string;
+  /** Quarterly colour at about 80% — the left side, behind the title and switch. */
+  strong: string;
+  /** Same colour, fully clear, so gradients fade instead of turning black. */
+  clear: string;
+  /** Extra quarterly tint along the bottom, behind the buttons. */
   bottom: string;
 }
 
+/** Soft shadow so white words stay readable on the lighter splash. */
+export const SABBATH_SCHOOL_SPLASH_TEXT_SHADOW = {
+  textShadowColor: "rgba(0,0,0,0.55)",
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 8,
+};
+
 /**
- * Dark veil for a splash photograph. Tinted with the quarterly colour.
- * Strongest at the bottom and the left; the base veil alone stays dark
- * enough for white text over a white image.
+ * Quarterly-coloured veil. Light at the top-right so the picture stays
+ * visible; stronger down the left and along the bottom where the words sit.
  */
 export function sabbathSchoolSplashScrim(
   colorPrimary?: string | null,
 ): SabbathSchoolSplashScrim {
   const primary = getSabbathSchoolQuarterTheme(colorPrimary).primary;
   return {
-    base: withAlpha(mixWithBlack(primary, 0.58), 0.74),
-    left: withAlpha(mixWithBlack(primary, 0.72), 0.55),
-    bottom: withAlpha(mixWithBlack(primary, 0.78), 0.72),
+    light: withAlpha(primary, 0.35),
+    strong: withAlpha(primary, 0.8),
+    clear: withAlpha(primary, 0),
+    bottom: withAlpha(primary, 0.22),
   };
-}
-
-function compositeOverWhite(rgba: string): string {
-  const match = rgba.match(/^rgba\((\d+),(\d+),(\d+),([0-9.]+)\)$/);
-  if (!match) return "#FFFFFF";
-  const alpha = Number(match[4]);
-  const mixed = [1, 2, 3].map((index) => {
-    const channel = Number(match[index]);
-    return channel * alpha + 255 * (1 - alpha);
-  }) as [number, number, number];
-  return toHex(mixed);
-}
-
-/** White-text contrast of the even veil, worst case over a white photograph. */
-export function sabbathSchoolSplashTextContrast(colorPrimary?: string | null): number {
-  return whiteContrast(compositeOverWhite(sabbathSchoolSplashScrim(colorPrimary).base));
 }

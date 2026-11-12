@@ -18,6 +18,18 @@ import {
 
 const warmed = new Set<string>();
 
+/**
+ * Zoom toward the top-left of the splash and let the card clip the rest,
+ * so the dove or lighthouse lands in the right half, clear of the title.
+ */
+const splashFocus = {
+  position: "absolute" as const,
+  width: "142%",
+  height: "142%",
+  left: 0,
+  top: 0,
+};
+
 /** Keep Adult and InVerse art in the image cache before the switch is tapped. */
 export function warmSabbathSchoolImages(uris: Array<string | null | undefined>) {
   for (const uri of uris) {
@@ -64,18 +76,18 @@ function SplashFill({
       {painted && painted !== uri ? (
         <Image
           source={{ uri: painted }}
-          style={StyleSheet.absoluteFill}
+          style={splashFocus}
           contentFit="cover"
-          contentPosition="center"
+          contentPosition="left top"
           cachePolicy="memory-disk"
           transition={0}
         />
       ) : null}
       <Image
         source={{ uri }}
-        style={StyleSheet.absoluteFill}
+        style={splashFocus}
         contentFit="cover"
-        contentPosition="center"
+        contentPosition="left top"
         cachePolicy="memory-disk"
         recyclingKey={uri}
         priority="high"
@@ -135,19 +147,16 @@ export function SabbathSchoolCardSurface({
         <>
           <SplashFill uri={splash} color={color} onError={() => setSplashFailed(true)} />
           <LinearGradient
-            colors={[scrim.base, scrim.base]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <LinearGradient
-            colors={[scrim.left, "rgba(0,0,0,0)"]}
+            colors={[scrim.strong, scrim.strong, scrim.light]}
+            locations={[0, 0.32, 0.68]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
           <LinearGradient
-            colors={["rgba(0,0,0,0)", scrim.bottom]}
+            colors={[scrim.clear, scrim.bottom]}
+            locations={[0.62, 1]}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFill}

@@ -131,7 +131,11 @@ export function HomeTrackSwitch({ tracks, selected, onSelect, style }: Props) {
             testID={`home-ss-track-option-${track.id}`}
           >
             <Text
-              style={[s.homeLabel, isSelected && s.homeLabelSelected]}
+              style={[
+                s.homeLabel,
+                isSelected && s.homeLabelSelected,
+                isSelected && { textShadowColor: "transparent", textShadowRadius: 0 },
+              ]}
               numberOfLines={1}
               maxFontSizeMultiplier={1.5}
             >
@@ -196,7 +200,10 @@ const s = StyleSheet.create({
     fontFamily: F.interSemi,
     fontSize: 13,
     lineHeight: 18,
-    color: "rgba(255,255,255,0.78)",
+    color: "rgba(255,255,255,0.92)",
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   homeLabelSelected: { color: "#1F1A12" },
 });
